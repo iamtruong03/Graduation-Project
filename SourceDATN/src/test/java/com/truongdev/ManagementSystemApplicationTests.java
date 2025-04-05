@@ -1,4 +1,4 @@
-package com.truongdev.ms;
+package com.truongdev;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

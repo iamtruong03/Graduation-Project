@@ -1,5 +1,7 @@
 package com.truongdev.entity;
 
-public class User {
+import com.truongdev.xdevbase.entity.BaseEntity;
+
+public class User extends BaseEntity {
 
 }

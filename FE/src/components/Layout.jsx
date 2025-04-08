@@ -27,11 +27,8 @@ import {
   Groups,
   Person,
   Assessment,
-  Logout
+  Close
 } from '@mui/icons-material';
-
-// Remove this line
-// import { BarChartOutlined, TeamOutlined, UserOutlined, ProjectOutlined } from '@ant-design/icons';
 
 const drawerWidth = 280;
 
@@ -109,7 +106,6 @@ const Layout = ({ children }) => {
     }
   ];
 
-  // Update the ListItemButton in the drawer mapping
   const drawer = (
     <Box sx={{ mt: 8 }}>
       <List>
@@ -164,11 +160,8 @@ const Layout = ({ children }) => {
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             THT
           </Typography>
-          <IconButton color="inherit" onClick={() => {
-            localStorage.removeItem('token');
-            window.location.href = '/login';
-          }}>
-            <Logout />
+          <IconButton color="inherit" onClick={() => window.close()}>
+            <Close />
           </IconButton>
         </Toolbar>
       </AppBar>
@@ -207,10 +200,10 @@ const Layout = ({ children }) => {
           flexGrow: 1,
           p: 3,
           width: { sm: `calc(100% - ${drawerWidth}px)` },
+          mt: 8,
         }}
       >
-        <Toolbar />
-        <Outlet /> {/* Ensure Outlet is used to render nested routes */}
+        <Outlet />
       </Box>
     </Box>
   );

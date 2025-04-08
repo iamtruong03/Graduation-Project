@@ -21,12 +21,12 @@ import DepartmentTypeList from './components/DepartmentTypeList';
 import StaffCreate from './components/StaffCreate';
 import StaffDetail from './components/StaffDetail';
 import Login from './components/Login';
+import Home from './components/Home';
 
 function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/login" element={<Login />} />
         <Route path="/" element={<Layout />}>
           <Route index element={<Home />} />
           <Route path="/dashboard/department" element={<DepartmentStats />} />
@@ -48,6 +48,7 @@ function App() {
           <Route path="/staff/create" element={<StaffCreate />} />
           <Route path="/staff/detail/:id" element={<StaffDetail />} />
         </Route>
+        <Route path="/login" element={<Login />} />
       </Routes>
     </Router>
   );

@@ -1,35 +1,30 @@
 import React from 'react';
-import {
-  Box,
-  Typography,
-  Paper,
-  Button,
-} from '@mui/material';
+import { Card, Button, Typography } from 'antd';
 
 const StaffDetail = ({ staff }) => {
   if (!staff) {
-    return <Typography variant="h6">Không có thông tin nhân viên.</Typography>;
+    return <Typography.Title level={4}>Không có thông tin nhân viên.</Typography.Title>;
   }
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h5" sx={{ mb: 3 }}>
+    <div style={{ padding: 24 }}>
+      <Typography.Title level={3} style={{ marginBottom: 24 }}>
         Chi tiết nhân viên
-      </Typography>
+      </Typography.Title>
 
-      <Paper sx={{ p: 3 }}>
-        <Typography variant="body1"><strong>Mã nhân viên:</strong> {staff.code}</Typography>
-        <Typography variant="body1"><strong>Tên nhân viên:</strong> {staff.name}</Typography>
-        <Typography variant="body1"><strong>Phòng ban:</strong> {staff.department}</Typography>
-        <Typography variant="body1"><strong>Chức vụ:</strong> {staff.position}</Typography>
-        <Typography variant="body1"><strong>Email:</strong> {staff.email}</Typography>
-        <Typography variant="body1"><strong>Số điện thoại:</strong> {staff.phone}</Typography>
-        <Typography variant="body1"><strong>Trạng thái:</strong> {staff.status}</Typography>
-        <Button variant="contained" color="primary" sx={{ mt: 2 }}>
+      <Card style={{ padding: 24 }}>
+        <Typography.Text strong>Mã nhân viên:</Typography.Text> {staff.code}<br />
+        <Typography.Text strong>Tên nhân viên:</Typography.Text> {staff.name}<br />
+        <Typography.Text strong>Phòng ban:</Typography.Text> {staff.department}<br />
+        <Typography.Text strong>Chức vụ:</Typography.Text> {staff.position}<br />
+        <Typography.Text strong>Email:</Typography.Text> {staff.email}<br />
+        <Typography.Text strong>Số điện thoại:</Typography.Text> {staff.phone}<br />
+        <Typography.Text strong>Trạng thái:</Typography.Text> {staff.status}<br />
+        <Button type="primary" style={{ marginTop: 16 }}>
           Chỉnh sửa
         </Button>
-      </Paper>
-    </Box>
+      </Card>
+    </div>
   );
 };
 

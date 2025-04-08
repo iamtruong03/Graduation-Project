@@ -11,10 +11,14 @@ import {
   Typography,
   Paper,
   Grid,
-  TextareaAutosize
+  TextareaAutosize,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material';
 
-const TaskCreate = () => {
+const TaskCreate = ({ open, onClose }) => {
   const [formData, setFormData] = useState({
     code: '',
     name: '',
@@ -43,11 +47,11 @@ const TaskCreate = () => {
   };
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h5" sx={{ mb: 3 }}>TẠO CÔNG VIỆC MỚI</Typography>
-      
-      <Paper sx={{ p: 3 }}>
-        <form onSubmit={handleSubmit}>
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+      <DialogTitle>TẠO CÔNG VIỆC MỚI</DialogTitle>
+      <DialogContent>
+        <Paper sx={{ p: 3, mt: 2 }}>
+          <form onSubmit={handleSubmit}>
           <Grid container spacing={3}>
             <Grid item xs={12} md={6}>
               <TextField
@@ -195,14 +199,15 @@ const TaskCreate = () => {
             </Grid>
             <Grid item xs={12}>
               <Stack direction="row" spacing={2} justifyContent="flex-end">
-                <Button variant="outlined">Hủy</Button>
+                <Button variant="outlined" onClick={onClose}>Hủy</Button>
                 <Button type="submit" variant="contained">Lưu</Button>
               </Stack>
             </Grid>
           </Grid>
         </form>
-      </Paper>
-    </Box>
+        </Paper>
+      </DialogContent>
+    </Dialog>
   );
 };
 

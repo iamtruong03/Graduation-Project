@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, Outlet } from 'react-router-dom';
 import {
   Box,
   Drawer,
@@ -23,7 +23,15 @@ import {
   Assignment,
   People,
   Task,
+  BarChart,
+  Groups,
+  Person,
+  Assessment,
+  Logout
 } from '@mui/icons-material';
+
+// Remove this line
+// import { BarChartOutlined, TeamOutlined, UserOutlined, ProjectOutlined } from '@ant-design/icons';
 
 const drawerWidth = 280;
 
@@ -44,13 +52,13 @@ const Layout = ({ children }) => {
     }
   };
 
-  const menuItems = [
+  const items = [
     {
       id: 'risk',
       text: 'Quản lý',
       icon: <Warning />,
       subItems: [
-        { id: 'risk-list', text: 'Danh sách' },
+        { id: 'risk-list', text: 'Danh sách', path: '/risk/list' },
       ],
     },
     {
@@ -58,8 +66,8 @@ const Layout = ({ children }) => {
       text: 'Quản lý phòng ban',
       icon: <Business />,
       subItems: [
-        { id: 'department-list', text: 'Danh sách phòng ban' },
-        { id: 'department-type', text: 'Loại phòng ban' },
+        { id: 'department-list', text: 'Danh sách phòng ban', path: '/department/list' },
+        { id: 'department-type', text: 'Loại phòng ban', path: '/department/type' },
       ],
     },
     {
@@ -67,7 +75,7 @@ const Layout = ({ children }) => {
       text: 'Quản lý dự án',
       icon: <Assignment />,
       subItems: [
-        { id: 'project-list', text: 'Danh sách dự án' },
+        { id: 'project-list', text: 'Danh sách dự án', path: '/project/list' },
       ],
     },
     {
@@ -75,8 +83,8 @@ const Layout = ({ children }) => {
       text: 'Quản lý nhân sự',
       icon: <People />,
       subItems: [
-        { id: 'department-staff', text: 'Nhân sự phòng ban' },
-        { id: 'staff-management', text: 'Quản lý nhân sự' },
+        { id: 'department-staff', text: 'Nhân sự phòng ban', path: '/staff/department' },
+        { id: 'staff-management', text: 'Quản lý nhân sự', path: '/staff/management' },
       ],
     },
     {
@@ -84,17 +92,28 @@ const Layout = ({ children }) => {
       text: 'Quản lý công việc',
       icon: <Task />,
       subItems: [
-        { id: 'task-list', text: 'Danh sách công việc' },
-        { id: 'task-type', text: 'Loại công việc' },
-        { id: 'task-status', text: 'Trạng thái công việc' },
+        { id: 'task-list', text: 'Danh sách công việc', path: '/task/list' },
+        { id: 'task-type', text: 'Loại công việc', path: '/task/type' },
+        { id: 'task-status', text: 'Trạng thái công việc', path: '/task/status' },
       ],
     },
+    {
+      id: 'statistics',
+      text: 'Thống kê',
+      icon: <BarChart />,
+      subItems: [
+        { id: 'department-stats', text: 'Thống kê phòng ban', icon: <Groups />, path: '/dashboard/department' },
+        { id: 'employee-stats', text: 'Thống kê nhân viên', icon: <Person />, path: '/dashboard/employee' },
+        { id: 'project-stats', text: 'Thống kê dự án', icon: <Assessment />, path: '/dashboard/project' }
+      ]
+    }
   ];
 
+  // Update the ListItemButton in the drawer mapping
   const drawer = (
     <Box sx={{ mt: 8 }}>
       <List>
-        {menuItems.map((item) => (
+        {items.map((item) => (
           <React.Fragment key={item.id}>
             <ListItem disablePadding>
               <ListItemButton onClick={() => handleClick(item.id)}>
@@ -110,16 +129,9 @@ const Layout = ({ children }) => {
                     key={subItem.id}
                     sx={{ pl: 4 }}
                     component={Link}
-                    to={subItem.id === 'department-list' ? '/department/list' : 
-                       subItem.id === 'department-type' ? '/department/type' :
-                       subItem.id === 'risk-list' ? '/risk/list' :
-                       subItem.id === 'project-list' ? '/project/list' :
-                       subItem.id === 'department-staff' ? '/staff/department' :
-                       subItem.id === 'staff-management' ? '/staff/management' :
-                       subItem.id === 'task-list' ? '/task/list' :
-                       subItem.id === 'task-type' ? '/task/type' :
-                       subItem.id === 'task-status' ? '/task/status' : '#'}
+                    to={subItem.path}
                   >
+                    <ListItemIcon>{subItem.icon}</ListItemIcon>
                     <ListItemText primary={subItem.text} />
                   </ListItemButton>
                 ))}
@@ -149,9 +161,15 @@ const Layout = ({ children }) => {
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" noWrap component="div">
+          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             THT
           </Typography>
+          <IconButton color="inherit" onClick={() => {
+            localStorage.removeItem('token');
+            window.location.href = '/login';
+          }}>
+            <Logout />
+          </IconButton>
         </Toolbar>
       </AppBar>
       <Box
@@ -192,7 +210,7 @@ const Layout = ({ children }) => {
         }}
       >
         <Toolbar />
-        {children}
+        <Outlet /> {/* Ensure Outlet is used to render nested routes */}
       </Box>
     </Box>
   );

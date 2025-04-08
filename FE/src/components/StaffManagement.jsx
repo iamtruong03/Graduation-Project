@@ -27,11 +27,20 @@ import {
   CloudUpload as CloudUploadIcon,
   CloudDownload as CloudDownloadIcon,
 } from '@mui/icons-material';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
+} from '@mui/material';
 
 const StaffManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
+  const [openDialog, setOpenDialog] = useState(false);
+  const [dialogType, setDialogType] = useState('create');
+  const [selectedStaff, setSelectedStaff] = useState(null);
 
   // Mock data - sẽ được thay thế bằng dữ liệu thực từ API
   const departments = [
@@ -136,6 +145,10 @@ const StaffManagement = () => {
           <Button
             variant="contained"
             startIcon={<PersonAddIcon />}
+            onClick={() => {
+              setDialogType('create');
+              setOpenDialog(true);
+            }}
           >
             Thêm nhân viên
           </Button>
@@ -176,7 +189,15 @@ const StaffManagement = () => {
                   />
                 </TableCell>
                 <TableCell align="center">
-                  <IconButton size="small" color="primary">
+                  <IconButton 
+                    size="small" 
+                    color="primary"
+                    onClick={() => {
+                      setDialogType('edit');
+                      setSelectedStaff(staff);
+                      setOpenDialog(true);
+                    }}
+                  >
                     <EditIcon />
                   </IconButton>
                   <IconButton size="small" color="error">
@@ -188,6 +209,21 @@ const StaffManagement = () => {
           </TableBody>
         </Table>
       </TableContainer>
+
+      <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
+        <DialogTitle>
+          {dialogType === 'create' ? 'Thêm nhân viên mới' : 'Chỉnh sửa thông tin nhân viên'}
+        </DialogTitle>
+        <DialogContent>
+          {/* Form sẽ được thêm vào đây */}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenDialog(false)}>Hủy</Button>
+          <Button variant="contained" color="primary">
+            {dialogType === 'create' ? 'Thêm' : 'Lưu'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

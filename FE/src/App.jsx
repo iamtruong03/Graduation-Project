@@ -1,28 +1,37 @@
+import './styles/dashboard.css';
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
-import DepartmentList from './components/DepartmentList';
+import DepartmentStats from './components/DepartmentStats';
+import EmployeeStats from './components/EmployeeStats';
+import ProjectStats from './components/ProjectStats';
 import RiskList from './components/RiskList';
+import DepartmentList from './components/DepartmentList';
 import ProjectList from './components/ProjectList';
+import ProjectCreate from './components/ProjectCreate';
+import ProjectDetail from './components/ProjectDetail';
 import DepartmentStaffList from './components/DepartmentStaffList';
 import StaffManagement from './components/StaffManagement';
 import TaskList from './components/TaskList';
+import TaskCreate from './components/TaskCreate';
+import TaskDetail from './components/TaskDetail';
 import TaskTypeList from './components/TaskTypeList';
 import TaskStatusList from './components/TaskStatusList';
 import DepartmentTypeList from './components/DepartmentTypeList';
-import TaskCreate from './components/TaskCreate';
-import TaskDetail from './components/TaskDetail';
-import ProjectCreate from './components/ProjectCreate';
-import ProjectDetail from './components/ProjectDetail';
 import StaffCreate from './components/StaffCreate';
 import StaffDetail from './components/StaffDetail';
+import Login from './components/Login';
 
-const App = () => {
+function App() {
   return (
     <Router>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<Navigate to="/risk/list" replace />} />
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/" element={<Layout />}>
+          <Route index element={<Home />} />
+          <Route path="/dashboard/department" element={<DepartmentStats />} />
+          <Route path="/dashboard/employee" element={<EmployeeStats />} />
+          <Route path="/dashboard/project" element={<ProjectStats />} />
           <Route path="/risk/list" element={<RiskList />} />
           <Route path="/department/list" element={<DepartmentList />} />
           <Route path="/project/list" element={<ProjectList />} />
@@ -38,10 +47,10 @@ const App = () => {
           <Route path="/department/type" element={<DepartmentTypeList />} />
           <Route path="/staff/create" element={<StaffCreate />} />
           <Route path="/staff/detail/:id" element={<StaffDetail />} />
-        </Routes>
-      </Layout>
+        </Route>
+      </Routes>
     </Router>
   );
-};
+}
 
 export default App;

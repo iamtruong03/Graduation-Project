@@ -18,7 +18,12 @@ import {
   MenuItem,
   InputLabel,
   Stack,
-  Pagination
+  Pagination,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Grid
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import EditIcon from '@mui/icons-material/Edit';
@@ -35,6 +40,9 @@ const DepartmentList = () => {
   const [searchName, setSearchName] = useState('');
   const [status, setStatus] = useState('all');
   const [page, setPage] = useState(1);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [dialogType, setDialogType] = useState('create');
+  const [selectedDepartment, setSelectedDepartment] = useState(null);
   const rowsPerPage = 10;
 
   const handlePageChange = (event, newPage) => {
@@ -80,6 +88,10 @@ const DepartmentList = () => {
           variant="contained"
           color="primary"
           sx={{ ml: 'auto' }}
+          onClick={() => {
+            setDialogType('create');
+            setOpenDialog(true);
+          }}
         >
           Tạo bộ phận
         </Button>
@@ -110,7 +122,14 @@ const DepartmentList = () => {
                 </TableCell>
                 <TableCell>{row.updatedAt}</TableCell>
                 <TableCell align="center">
-                  <IconButton size="small">
+                  <IconButton 
+                    size="small"
+                    onClick={() => {
+                      setDialogType('edit');
+                      setSelectedDepartment(row);
+                      setOpenDialog(true);
+                    }}
+                  >
                     <EditIcon />
                   </IconButton>
                 </TableCell>
@@ -128,6 +147,60 @@ const DepartmentList = () => {
           color="primary"
         />
       </Box>
+
+      <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
+        <DialogTitle>
+          {dialogType === 'create' ? 'Tạo bộ phận mới' : 'Chỉnh sửa bộ phận'}
+        </DialogTitle>
+        <DialogContent>
+          <Paper sx={{ p: 3 }}>
+            <Grid container spacing={3}>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Mã bộ phận"
+                  required
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Tên bộ phận"
+                  required
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Bộ phận cha</InputLabel>
+                  <Select
+                    label="Bộ phận cha"
+                  >
+                    <MenuItem value="">Không có</MenuItem>
+                    <MenuItem value="dept1">Phòng kế toán</MenuItem>
+                    <MenuItem value="dept2">Phòng hành chính</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12}>
+                <Stack direction="row" spacing={2} justifyContent="flex-end">
+                  <Button variant="outlined" onClick={() => setOpenDialog(false)}>Hủy</Button>
+                  <Button variant="contained" color="primary">
+                    {dialogType === 'create' ? 'Tạo' : 'Lưu'}
+                  </Button>
+                </Stack>
+              </Grid>
+            </Grid>
+          </Paper>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenDialog(false)}>Hủy</Button>
+          <Button variant="contained" color="primary">
+            {dialogType === 'create' ? 'Tạo' : 'Lưu'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

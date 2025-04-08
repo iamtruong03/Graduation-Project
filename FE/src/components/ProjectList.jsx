@@ -1,0 +1,174 @@
+import React, { useState } from 'react';
+import {
+  Box,
+  Button,
+  TextField,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Typography,
+  IconButton,
+  Switch,
+  FormControl,
+  Select,
+  MenuItem,
+  InputLabel,
+  Stack,
+  Pagination
+} from '@mui/material';
+import SearchIcon from '@mui/icons-material/Search';
+import EditIcon from '@mui/icons-material/Edit';
+import { Link } from 'react-router-dom';
+
+const mockData = [
+  { 
+    id: 1, 
+    code: 'PRJ001', 
+    name: 'Dự án A', 
+    manager: 'Nguyễn Văn A',
+    department: 'Phòng kế toán',
+    startDate: '01/08/2023',
+    endDate: '31/12/2023',
+    status: 'Đang thực hiện',
+    active: true 
+  },
+  { 
+    id: 2, 
+    code: 'PRJ002', 
+    name: 'Dự án B', 
+    manager: 'Trần Thị B',
+    department: 'Phòng hành chính',
+    startDate: '01/07/2023',
+    endDate: '30/11/2023',
+    status: 'Đang thực hiện',
+    active: true 
+  },
+  { 
+    id: 3, 
+    code: 'PRJ003', 
+    name: 'Dự án C', 
+    manager: 'Lê Văn C',
+    department: 'Phòng kỹ thuật',
+    startDate: '01/06/2023',
+    endDate: '31/08/2023',
+    status: 'Hoàn thành',
+    active: false 
+  },
+];
+
+const ProjectList = () => {
+  const [searchCode, setSearchCode] = useState('');
+  const [searchName, setSearchName] = useState('');
+  const [status, setStatus] = useState('all');
+  const [page, setPage] = useState(1);
+  const rowsPerPage = 10;
+
+  const handlePageChange = (event, newPage) => {
+    setPage(newPage);
+  };
+
+  return (
+    <Box sx={{ p: 3 }}>
+      <Typography variant="h5" sx={{ mb: 3 }}>DANH SÁCH DỰ ÁN</Typography>
+      
+      <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
+        <TextField
+          size="small"
+          placeholder="Mã dự án"
+          value={searchCode}
+          onChange={(e) => setSearchCode(e.target.value)}
+          InputProps={{
+            endAdornment: <SearchIcon color="action" />
+          }}
+        />
+        <TextField
+          size="small"
+          placeholder="Tên dự án"
+          value={searchName}
+          onChange={(e) => setSearchName(e.target.value)}
+          InputProps={{
+            endAdornment: <SearchIcon color="action" />
+          }}
+        />
+        <FormControl size="small" sx={{ minWidth: 200 }}>
+          <InputLabel>Trạng thái</InputLabel>
+          <Select
+            value={status}
+            label="Trạng thái"
+            onChange={(e) => setStatus(e.target.value)}
+          >
+            <MenuItem value="all">Tất cả</MenuItem>
+            <MenuItem value="active">Đang thực hiện</MenuItem>
+            <MenuItem value="completed">Hoàn thành</MenuItem>
+            <MenuItem value="pending">Chưa bắt đầu</MenuItem>
+          </Select>
+        </FormControl>
+        <Button
+          component={Link}
+          to="/project/create"
+          variant="contained"
+          color="primary"
+          sx={{ ml: 'auto' }}
+        >
+          Tạo dự án
+        </Button>
+      </Stack>
+
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>STT</TableCell>
+              <TableCell>Mã dự án</TableCell>
+              <TableCell>Tên dự án</TableCell>
+              <TableCell>Người quản lý</TableCell>
+              <TableCell>Phòng ban thực hiện</TableCell>
+              <TableCell>Ngày bắt đầu</TableCell>
+              <TableCell>Ngày kết thúc</TableCell>
+              <TableCell>Trạng thái</TableCell>
+              <TableCell>Hoạt động</TableCell>
+              <TableCell align="center">Thao tác</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {mockData.map((row, index) => (
+              <TableRow key={row.id}>
+                <TableCell>{index + 1}</TableCell>
+                <TableCell>{row.code}</TableCell>
+                <TableCell>{row.name}</TableCell>
+                <TableCell>{row.manager}</TableCell>
+                <TableCell>{row.department}</TableCell>
+                <TableCell>{row.startDate}</TableCell>
+                <TableCell>{row.endDate}</TableCell>
+                <TableCell>{row.status}</TableCell>
+                <TableCell>
+                  <Switch checked={row.active} />
+                </TableCell>
+                <TableCell align="center">
+                  <IconButton size="small">
+                    <EditIcon />
+                  </IconButton>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+        <Pagination
+          count={Math.ceil(mockData.length / rowsPerPage)}
+          page={page}
+          onChange={handlePageChange}
+          color="primary"
+        />
+      </Box>
+    </Box>
+  );
+};
+
+export default ProjectList;

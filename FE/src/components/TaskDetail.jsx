@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Paper,
@@ -18,6 +19,7 @@ import DescriptionIcon from '@mui/icons-material/Description';
 import HistoryIcon from '@mui/icons-material/History';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
 import DownloadIcon from '@mui/icons-material/Download';
+import CloseIcon from '@mui/icons-material/Close';
 
 const mockTask = {
   id: 1,
@@ -49,8 +51,26 @@ const mockTask = {
 };
 
 const TaskDetail = () => {
+  const navigate = useNavigate();
+  
+  const handleClose = () => {
+    navigate('/task/list');
+  };
+  
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: 3, position: 'relative' }}>
+      <IconButton 
+        aria-label="close" 
+        onClick={handleClose}
+        sx={{ 
+          position: 'absolute', 
+          right: 8, 
+          top: 8,
+          color: (theme) => theme.palette.grey[500],
+        }}
+      >
+        <CloseIcon />
+      </IconButton>
       <Typography variant="h5" sx={{ mb: 3 }}>CHI TIẾT CÔNG VIỆC</Typography>
       
       <Grid container spacing={3}>

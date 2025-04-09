@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
   Paper,
@@ -13,12 +13,34 @@ import {
   TableRow,
   Chip,
   Button,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import { format } from 'date-fns';
 import vi from 'date-fns/locale/vi';
+import CloseIcon from '@mui/icons-material/Close';
 
 const ProjectDetail = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const [openTaskDialog, setOpenTaskDialog] = useState(false);
+  const [newTask, setNewTask] = useState({
+    name: '',
+    assignee: '',
+    startDate: '',
+    endDate: '',
+    priority: 'MEDIUM',
+    status: 'NEW',
+  });
+
   const [project, setProject] = useState({
     id: 1,
     code: 'PRJ001',
@@ -82,11 +104,45 @@ const ProjectDetail = () => {
     return format(date, 'dd/MM/yyyy', { locale: vi });
   };
 
+  const handleCloseTaskDialog = () => {
+    setOpenTaskDialog(false);
+    setNewTask({
+      name: '',
+      assignee: '',
+      startDate: '',
+      endDate: '',
+      priority: 'MEDIUM',
+      status: 'NEW',
+    });
+  };
+
+  const handleCreateTask = () => {
+    // Thêm task mới vào danh sách
+    const newTaskWithId = {
+      ...newTask,
+      id: project.tasks.length + 1,
+      startDate: new Date(newTask.startDate),
+      endDate: new Date(newTask.endDate),
+    };
+    setProject({
+      ...project,
+      tasks: [...project.tasks, newTaskWithId],
+    });
+    handleCloseTaskDialog();
+  };
+
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h5" sx={{ mb: 3 }}>
-        Chi tiết dự án
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h5">Chi tiết dự án</Typography>
+        <IconButton
+          color="primary"
+          onClick={() => navigate('/project/list')}
+          sx={{ p: 1 }}
+        >
+          <CloseIcon />
+        </IconButton>
+      </Box>
 
       <Paper sx={{ p: 3, mb: 3 }}>
         <Grid container spacing={3}>
@@ -151,7 +207,10 @@ const ProjectDetail = () => {
 
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
         <Typography variant="h6">Danh sách công việc</Typography>
-        <Button variant="contained" href={`/task/create?projectId=${project.id}`}>
+        <Button
+          variant="contained"
+          onClick={() => setOpenTaskDialog(true)}
+        >
           Thêm công việc
         </Button>
       </Box>
@@ -174,7 +233,7 @@ const ProjectDetail = () => {
                 <TableCell>
                   <Button
                     color="primary"
-                    href={`/task/detail/${task.id}`}
+                    onClick={() => navigate(`/task/detail/${task.id}`)}
                     sx={{ p: 0, textTransform: 'none' }}
                   >
                     {task.name}
@@ -208,6 +267,84 @@ const ProjectDetail = () => {
           </TableBody>
         </Table>
       </TableContainer>
+
+      <Dialog open={openTaskDialog} onClose={handleCloseTaskDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>Thêm công việc mới</DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Tên công việc"
+                value={newTask.name}
+                onChange={(e) => setNewTask({ ...newTask, name: e.target.value })}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Người thực hiện"
+                value={newTask.assignee}
+                onChange={(e) => setNewTask({ ...newTask, assignee: e.target.value })}
+              />
+            </Grid>
+            <Grid item xs={6}>
+              <TextField
+                fullWidth
+                type="date"
+                label="Ngày bắt đầu"
+                value={newTask.startDate}
+                onChange={(e) => setNewTask({ ...newTask, startDate: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+            <Grid item xs={6}>
+              <TextField
+                fullWidth
+                type="date"
+                label="Ngày kết thúc"
+                value={newTask.endDate}
+                onChange={(e) => setNewTask({ ...newTask, endDate: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+            <Grid item xs={6}>
+              <FormControl fullWidth>
+                <InputLabel>Độ ưu tiên</InputLabel>
+                <Select
+                  value={newTask.priority}
+                  label="Độ ưu tiên"
+                  onChange={(e) => setNewTask({ ...newTask, priority: e.target.value })}
+                >
+                  <MenuItem value="HIGH">Cao</MenuItem>
+                  <MenuItem value="MEDIUM">Trung bình</MenuItem>
+                  <MenuItem value="LOW">Thấp</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={6}>
+              <FormControl fullWidth>
+                <InputLabel>Trạng thái</InputLabel>
+                <Select
+                  value={newTask.status}
+                  label="Trạng thái"
+                  onChange={(e) => setNewTask({ ...newTask, status: e.target.value })}
+                >
+                  <MenuItem value="NEW">Mới</MenuItem>
+                  <MenuItem value="IN_PROGRESS">Đang thực hiện</MenuItem>
+                  <MenuItem value="COMPLETED">Hoàn thành</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseTaskDialog}>Hủy</Button>
+          <Button onClick={handleCreateTask} variant="contained" color="primary">
+            Tạo
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

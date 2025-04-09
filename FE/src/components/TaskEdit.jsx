@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -13,9 +13,10 @@ import {
   Grid,
   TextareaAutosize
 } from '@mui/material';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 
-const TaskCreate = () => {
+const TaskEdit = () => {
+  const { id } = useParams();
   const [formData, setFormData] = useState({
     code: '',
     name: '',
@@ -29,6 +30,23 @@ const TaskCreate = () => {
     description: ''
   });
 
+  useEffect(() => {
+    // TODO: Fetch task data by ID and set to formData
+    // Mock data for now
+    setFormData({
+      code: 'CV001',
+      name: 'Phát triển tính năng mới',
+      taskType: 'project',
+      project: 'project1',
+      department: 'dept1',
+      manager: 'manager1',
+      assignee: 'assignee1',
+      status: 'in_progress',
+      priority: 'high',
+      description: 'Chi tiết công việc...'
+    });
+  }, [id]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -39,15 +57,15 @@ const TaskCreate = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // TODO: Implement task creation logic
+    // TODO: Implement task update logic
     console.log(formData);
   };
 
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h5" sx={{ mb: 3 }}>TẠO CÔNG VIỆC MỚI</Typography>
+      <Typography variant="h5" sx={{ mb: 3 }}>CHỈNH SỬA CÔNG VIỆC</Typography>
       <Paper sx={{ p: 3 }}>
-          <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit}>
           <Grid container spacing={3}>
             <Grid item xs={12} md={6}>
               <TextField
@@ -195,15 +213,15 @@ const TaskCreate = () => {
             </Grid>
             <Grid item xs={12}>
               <Stack direction="row" spacing={2} justifyContent="flex-end">
-                <Button variant="outlined" component={Link} to="/task/list">Hủy</Button>
-                <Button type="submit" variant="contained">Tạo</Button>
+                <Button component={Link} to="/task/list" variant="outlined">Hủy</Button>
+                <Button type="submit" variant="contained">Lưu</Button>
               </Stack>
             </Grid>
           </Grid>
         </form>
-        </Paper>
+      </Paper>
     </Box>
   );
 };
 
-export default TaskCreate;
+export default TaskEdit;

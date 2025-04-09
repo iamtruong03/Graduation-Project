@@ -27,7 +27,9 @@ import {
   Groups,
   Person,
   Assessment,
-  Close
+  Close,
+  ManageAccounts,
+  AccountCircle
 } from '@mui/icons-material';
 
 const drawerWidth = 280;
@@ -59,20 +61,29 @@ const Layout = ({ children }) => {
       ],
     },
     {
+      id: 'project',
+      text: 'Quản lý dự án',
+      icon: <Assignment />,
+      subItems: [
+        { id: 'project-list', text: 'Danh sách dự án', path: '/project/list' },
+      ],
+    },
+    {
+      id: 'task',
+      text: 'Quản lý công việc',
+      icon: <Task />,
+      subItems: [
+        { id: 'task-list', text: 'Danh sách công việc', path: '/task/list' },
+        { id: 'task-type', text: 'Loại công việc', path: '/task/type' },
+      ],
+    },
+    {
       id: 'department',
       text: 'Quản lý phòng ban',
       icon: <Business />,
       subItems: [
         { id: 'department-list', text: 'Danh sách phòng ban', path: '/department/list' },
         { id: 'department-type', text: 'Loại phòng ban', path: '/department/type' },
-      ],
-    },
-    {
-      id: 'project',
-      text: 'Quản lý dự án',
-      icon: <Assignment />,
-      subItems: [
-        { id: 'project-list', text: 'Danh sách dự án', path: '/project/list' },
       ],
     },
     {
@@ -85,16 +96,6 @@ const Layout = ({ children }) => {
       ],
     },
     {
-      id: 'task',
-      text: 'Quản lý công việc',
-      icon: <Task />,
-      subItems: [
-        { id: 'task-list', text: 'Danh sách công việc', path: '/task/list' },
-        { id: 'task-type', text: 'Loại công việc', path: '/task/type' },
-        { id: 'task-status', text: 'Trạng thái công việc', path: '/task/status' },
-      ],
-    },
-    {
       id: 'statistics',
       text: 'Thống kê',
       icon: <BarChart />,
@@ -103,6 +104,15 @@ const Layout = ({ children }) => {
         { id: 'employee-stats', text: 'Thống kê nhân viên', icon: <Person />, path: '/dashboard/employee' },
         { id: 'project-stats', text: 'Thống kê dự án', icon: <Assessment />, path: '/dashboard/project' }
       ]
+    },
+    {
+      id: 'account',
+      text: 'Quản lý tài khoản',
+      icon: <ManageAccounts />,
+      subItems: [
+        { id: 'account-list', text: 'Danh sách tài khoản', path: '/account/list' },
+        { id: 'my-account', text: 'Tài khoản của tôi', path: '/account/my-account' },
+      ],
     }
   ];
 
@@ -160,9 +170,7 @@ const Layout = ({ children }) => {
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             THT
           </Typography>
-          <IconButton color="inherit" onClick={() => window.close()}>
-            <Close />
-          </IconButton>
+
         </Toolbar>
       </AppBar>
       <Box

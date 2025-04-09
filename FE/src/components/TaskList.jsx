@@ -18,11 +18,17 @@ import {
   MenuItem,
   InputLabel,
   Stack,
-  Pagination
+  Pagination,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import EditIcon from '@mui/icons-material/Edit';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import DeleteIcon from '@mui/icons-material/Delete';
 import { Link } from 'react-router-dom';
 
 const mockData = [
@@ -40,7 +46,27 @@ const TaskList = () => {
   const [taskPriority, setTaskPriority] = useState('all');
   const [status, setStatus] = useState('all');
   const [page, setPage] = useState(1);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [deleteId, setDeleteId] = useState(null);
   const rowsPerPage = 10;
+
+  const handleDelete = (id) => {
+    setDeleteId(id);
+    setOpenDialog(true);
+  };
+
+  const handleConfirmDelete = () => {
+    // Thực hiện xóa công việc
+    const newData = mockData.filter(task => task.id !== deleteId);
+    // Cập nhật state hoặc gọi API xóa
+    setOpenDialog(false);
+    setDeleteId(null);
+  };
+
+  const handleCloseDialog = () => {
+    setOpenDialog(false);
+    setDeleteId(null);
+  };
 
   const handlePageChange = (event, newPage) => {
     setPage(newPage);
@@ -122,7 +148,6 @@ const TaskList = () => {
               <TableCell>Mức độ ưu tiên</TableCell>
               <TableCell>Người phụ trách</TableCell>
               <TableCell>Người thực hiện</TableCell>
-              <TableCell>Hoạt động</TableCell>
               <TableCell>Ngày cập nhật</TableCell>
               <TableCell align="center">Thao tác</TableCell>
             </TableRow>
@@ -139,17 +164,21 @@ const TaskList = () => {
                 <TableCell>{row.priority}</TableCell>
                 <TableCell>{row.manager}</TableCell>
                 <TableCell>{row.assignee}</TableCell>
-                <TableCell>
-                  <Switch checked={row.active} />
-                </TableCell>
                 <TableCell>{row.updatedAt}</TableCell>
                 <TableCell align="center">
                   <Stack direction="row" spacing={1} justifyContent="center">
                     <IconButton size="small" component={Link} to={`/task/detail/${row.id}`}>
                       <VisibilityIcon />
                     </IconButton>
-                    <IconButton size="small">
+                    <IconButton size="small" component={Link} to={`/task/edit/${row.id}`}>
                       <EditIcon />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      color="error"
+                      onClick={() => handleDelete(row.id)}
+                    >
+                      <DeleteIcon />
                     </IconButton>
                   </Stack>
                 </TableCell>
@@ -158,6 +187,24 @@ const TaskList = () => {
           </TableBody>
         </Table>
       </TableContainer>
+
+      <Dialog
+        open={openDialog}
+        onClose={handleCloseDialog}
+      >
+        <DialogTitle>Xác nhận xóa</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Bạn có chắc chắn muốn xóa công việc này không?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog}>Hủy</Button>
+          <Button onClick={handleConfirmDelete} color="error" variant="contained">
+            Xóa
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
         <Pagination

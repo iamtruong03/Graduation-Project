@@ -18,10 +18,15 @@ import {
   MenuItem,
   InputLabel,
   Stack,
-  Pagination
+  Pagination,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
-import EditIcon from '@mui/icons-material/Edit';
+import { Edit as EditIcon, Delete as DeleteIcon, Visibility as VisibilityIcon } from '@mui/icons-material';
 import { Link } from 'react-router-dom';
 
 const mockData = [
@@ -34,7 +39,7 @@ const mockData = [
     startDate: '01/08/2023',
     endDate: '31/12/2023',
     status: 'Đang thực hiện',
-    active: true 
+    creator: 'Trần Văn X'
   },
   { 
     id: 2, 
@@ -45,7 +50,7 @@ const mockData = [
     startDate: '01/07/2023',
     endDate: '30/11/2023',
     status: 'Đang thực hiện',
-    active: true 
+    creator: 'Lê Thị Y'
   },
   { 
     id: 3, 
@@ -56,7 +61,7 @@ const mockData = [
     startDate: '01/06/2023',
     endDate: '31/08/2023',
     status: 'Hoàn thành',
-    active: false 
+    creator: 'Phạm Văn Z'
   },
 ];
 
@@ -65,7 +70,27 @@ const ProjectList = () => {
   const [searchName, setSearchName] = useState('');
   const [status, setStatus] = useState('all');
   const [page, setPage] = useState(1);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [deleteId, setDeleteId] = useState(null);
   const rowsPerPage = 10;
+
+  const handleDelete = (id) => {
+    setDeleteId(id);
+    setOpenDialog(true);
+  };
+
+  const handleConfirmDelete = () => {
+    // Thực hiện xóa dự án
+    const newData = mockData.filter(project => project.id !== deleteId);
+    // Cập nhật state hoặc gọi API xóa
+    setOpenDialog(false);
+    setDeleteId(null);
+  };
+
+  const handleCloseDialog = () => {
+    setOpenDialog(false);
+    setDeleteId(null);
+  };
 
   const handlePageChange = (event, newPage) => {
     setPage(newPage);
@@ -130,7 +155,7 @@ const ProjectList = () => {
               <TableCell>Ngày bắt đầu</TableCell>
               <TableCell>Ngày kết thúc</TableCell>
               <TableCell>Trạng thái</TableCell>
-              <TableCell>Hoạt động</TableCell>
+              <TableCell>Người tạo</TableCell>
               <TableCell align="center">Thao tác</TableCell>
             </TableRow>
           </TableHead>
@@ -145,12 +170,30 @@ const ProjectList = () => {
                 <TableCell>{row.startDate}</TableCell>
                 <TableCell>{row.endDate}</TableCell>
                 <TableCell>{row.status}</TableCell>
-                <TableCell>
-                  <Switch checked={row.active} />
-                </TableCell>
+                <TableCell>{row.creator}</TableCell>
                 <TableCell align="center">
-                  <IconButton size="small">
+                  <IconButton
+                    size="small"
+                    color="info"
+                    component={Link}
+                    to={`/project/detail/${row.id}`}
+                  >
+                    <VisibilityIcon />
+                  </IconButton>
+                  <IconButton
+                    size="small"
+                    color="primary"
+                    component={Link}
+                    to={`/project/edit/${row.id}`}
+                  >
                     <EditIcon />
+                  </IconButton>
+                  <IconButton
+                    size="small"
+                    color="error"
+                    onClick={() => handleDelete(row.id)}
+                  >
+                    <DeleteIcon />
                   </IconButton>
                 </TableCell>
               </TableRow>
@@ -167,6 +210,28 @@ const ProjectList = () => {
           color="primary"
         />
       </Box>
+
+      <Dialog
+        open={openDialog}
+        onClose={handleCloseDialog}
+        aria-labelledby="alert-dialog-title"
+        aria-describedby="alert-dialog-description"
+      >
+        <DialogTitle id="alert-dialog-title">
+          Xác nhận xóa dự án
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="alert-dialog-description">
+            Bạn có chắc chắn muốn xóa dự án này? Hành động này không thể hoàn tác.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog}>Hủy</Button>
+          <Button onClick={handleConfirmDelete} color="error" autoFocus>
+            Xóa
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

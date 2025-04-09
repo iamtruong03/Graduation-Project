@@ -32,9 +32,9 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 
 const mockData = [
-  { id: 1, username: 'user1', fullName: 'Nguyễn Văn A', email: 'nguyenvana@example.com', department: 'Phòng kế toán', role: 'Nhân viên', active: true, lastLogin: '20/07/2023' },
-  { id: 2, username: 'user2', fullName: 'Trần Thị B', email: 'tranthib@example.com', department: 'Phòng hành chính', role: 'Trưởng phòng', active: true, lastLogin: '19/07/2023' },
-  { id: 3, username: 'user3', fullName: 'Lê Văn C', email: 'levanc@example.com', department: 'Phòng kỹ thuật', role: 'Nhân viên', active: false, lastLogin: '18/07/2023' },
+  { id: 1, username: 'user1', fullName: 'Nguyễn Văn A', email: 'nguyenvana@example.com', department: 'Phòng kế toán', role: 'Nhân viên', active: true},
+  { id: 2, username: 'user2', fullName: 'Trần Thị B', email: 'tranthib@example.com', department: 'Phòng hành chính', role: 'Trưởng phòng', active: true},
+  { id: 3, username: 'user3', fullName: 'Lê Văn C', email: 'levanc@example.com', department: 'Phòng kỹ thuật', role: 'Nhân viên', active: false},
 ];
 
 const AccountList = () => {
@@ -121,7 +121,6 @@ const AccountList = () => {
               <TableCell>Phòng ban</TableCell>
               <TableCell>Vai trò</TableCell>
               <TableCell>Hoạt động</TableCell>
-              <TableCell>Đăng nhập cuối</TableCell>
               <TableCell align="center">Thao tác</TableCell>
             </TableRow>
           </TableHead>
@@ -137,7 +136,6 @@ const AccountList = () => {
                 <TableCell>
                   <Switch checked={row.active} />
                 </TableCell>
-                <TableCell>{row.lastLogin}</TableCell>
                 <TableCell align="center">
                   <IconButton 
                     size="small"

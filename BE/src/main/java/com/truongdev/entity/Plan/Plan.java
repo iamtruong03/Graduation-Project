@@ -28,6 +28,7 @@ public class Plan extends BaseEntity {
   // Don vi ghi nhan
   @Column(name = "org_id", nullable = false)
   Long orgId;
+
   @Column(name = "plan_type_id", length = 30)
   Long planTypeId;
 

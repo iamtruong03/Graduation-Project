@@ -74,7 +74,6 @@ const Layout = ({ children }) => {
       icon: <Task />,
       subItems: [
         { id: 'task-list', text: 'Danh sách công việc', path: '/task/list' },
-        { id: 'task-type', text: 'Loại công việc', path: '/task/type' },
       ],
     },
     {
@@ -83,7 +82,6 @@ const Layout = ({ children }) => {
       icon: <Business />,
       subItems: [
         { id: 'department-list', text: 'Danh sách phòng ban', path: '/department/list' },
-        { id: 'department-type', text: 'Loại phòng ban', path: '/department/type' },
       ],
     },
     {
@@ -91,7 +89,6 @@ const Layout = ({ children }) => {
       text: 'Quản lý nhân sự',
       icon: <People />,
       subItems: [
-        { id: 'department-staff', text: 'Nhân sự phòng ban', path: '/staff/department' },
         { id: 'staff-management', text: 'Quản lý nhân sự', path: '/staff/management' },
       ],
     },
@@ -102,8 +99,15 @@ const Layout = ({ children }) => {
       subItems: [
         { id: 'department-stats', text: 'Thống kê phòng ban', icon: <Groups />, path: '/dashboard/department' },
         { id: 'employee-stats', text: 'Thống kê nhân viên', icon: <Person />, path: '/dashboard/employee' },
-        { id: 'project-stats', text: 'Thống kê dự án', icon: <Assessment />, path: '/dashboard/project' }
       ]
+    },
+    {
+      id: 'category',
+      text: 'Quản lý danh mục',
+      icon: <Assessment />,
+      subItems: [
+        { id: 'category-management', text: 'Danh mục chung', path: '/category/management' },
+      ],
     },
     {
       id: 'account',

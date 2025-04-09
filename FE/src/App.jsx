@@ -23,6 +23,8 @@ import Login from './components/Login';
 import Home from './components/Home';
 import AccountList from './components/AccountList';
 import MyAccount from './components/MyAccount';
+import NotificationCenter from './components/NotificationCenter';
+import DocumentManagement from './components/DocumentManagement';
 
 function App() {
   return (
@@ -49,6 +51,8 @@ function App() {
           <Route path="/staff/edit/:id" element={<StaffEdit />} />
           <Route path="/account/list" element={<AccountList />} />
           <Route path="/account/my-account" element={<MyAccount />} />
+          <Route path="/notification" element={<NotificationCenter />} />
+          <Route path="/document/management" element={<DocumentManagement />} />
         </Route>
         <Route path="/login" element={<Login />} />
       </Routes>

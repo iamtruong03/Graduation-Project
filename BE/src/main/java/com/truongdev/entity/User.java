@@ -2,6 +2,9 @@ package com.truongdev.entity;
 
 import com.truongdev.xdevbase.entity.BaseEntity;
 import jakarta.persistence.Entity;
+import java.net.PasswordAuthentication;
+import java.time.LocalDate;
+import java.util.Date;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
@@ -21,5 +24,22 @@ import lombok.experimental.SuperBuilder;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class User extends BaseEntity {
   Long departmentId;
-  
+
+  Long positionId;
+
+  String  phoneNumber;
+
+  String email;
+
+  LocalDate startDate;
+
+  LocalDate birthday;
+
+  String password;
+
+  String role;
+
+  String address;
+
+  String gender;
 }

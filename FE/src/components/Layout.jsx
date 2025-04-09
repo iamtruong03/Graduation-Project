@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, Outlet } from 'react-router-dom';
+import { Link, Outlet, useNavigate } from 'react-router-dom';
 import {
   Box,
   Drawer,
@@ -13,6 +13,7 @@ import {
   Toolbar,
   Typography,
   IconButton,
+  Badge,
 } from '@mui/material';
 import {
   ExpandLess,
@@ -29,7 +30,11 @@ import {
   Assessment,
   Close,
   ManageAccounts,
-  AccountCircle
+  AccountCircle,
+  Notifications,
+  Description,
+  AccountTree,
+  Logout as LogoutIcon
 } from '@mui/icons-material';
 
 const drawerWidth = 280;
@@ -38,6 +43,21 @@ const Layout = ({ children }) => {
   const [open, setOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [selectedMenu, setSelectedMenu] = useState('risk');
+  const [unreadNotifications, setUnreadNotifications] = useState(3);
+
+  const handleNotificationClick = () => {
+    window.location.href = '/notification';
+  };
+
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    // Xóa thông tin đăng nhập từ localStorage
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    // Chuyển hướng về trang đăng nhập
+    navigate('/login');
+  };
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -102,6 +122,14 @@ const Layout = ({ children }) => {
       ]
     },
     {
+      id: 'document',
+      text: 'Quản lý tài liệu',
+      icon: <Description />,
+      subItems: [
+        { id: 'document-management', text: 'Danh sách tài liệu', path: '/document/management' },
+      ],
+    },
+    {
       id: 'category',
       text: 'Quản lý danh mục',
       icon: <Assessment />,
@@ -117,7 +145,8 @@ const Layout = ({ children }) => {
         { id: 'account-list', text: 'Danh sách tài khoản', path: '/account/list' },
         { id: 'my-account', text: 'Tài khoản của tôi', path: '/account/my-account' },
       ],
-    }
+    },
+
   ];
 
   const drawer = (
@@ -174,7 +203,14 @@ const Layout = ({ children }) => {
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             THT
           </Typography>
-
+          <IconButton color="inherit" onClick={handleNotificationClick}>
+            <Badge badgeContent={unreadNotifications} color="error">
+              <Notifications />
+            </Badge>
+          </IconButton>
+          <IconButton color="inherit" onClick={handleLogout} sx={{ ml: 1 }}>
+            <LogoutIcon />
+          </IconButton>
         </Toolbar>
       </AppBar>
       <Box

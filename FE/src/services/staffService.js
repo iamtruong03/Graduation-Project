@@ -3,7 +3,7 @@ import api from './api';
 const staffService = {
   // Lấy danh sách tất cả nhân viên
   getAllStaff: () => {
-    return api.get('/staff');
+    return api.get('/user/list');
   },
 
   // Lấy thông tin chi tiết nhân viên

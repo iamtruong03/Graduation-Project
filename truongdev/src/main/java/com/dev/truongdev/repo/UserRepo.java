@@ -1,5 +1,10 @@
 package com.dev.truongdev.repo;
 
-public interface UserRepo {
+import com.dev.truongdev.entity.User;
+import com.dev.truongdev.xdevbase.repo.XDevBaseRepo;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface UserRepo extends XDevBaseRepo<User> {
 
 }

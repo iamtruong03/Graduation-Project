@@ -5,7 +5,6 @@ import com.dev.truongdev.xdevbase.entity.XDevBaseEntity;
 import com.dev.truongdev.xdevbase.service.IXDevBaseService;
 import java.util.List;
 import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -17,7 +16,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 
 @FieldDefaults(level = AccessLevel.PROTECTED)
-public abstract  class XdevBaseAPI <E extends XDevBaseEntity> {
+public abstract  class XDevBaseAPI<E extends XDevBaseEntity> {
 
   public abstract <S extends IXDevBaseService<E>> S getService();
 

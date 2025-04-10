@@ -20,6 +20,8 @@ import { useNavigate } from 'react-router-dom';
 const StaffCreate = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
+    code: '',
+    name: '',
     departmentId: '',
     positionId: '',
     phoneNumber: '',
@@ -75,6 +77,22 @@ const StaffCreate = () => {
 
       <Paper sx={{ p: 3 }}>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <TextField
+            fullWidth
+            label="Mã nhân viên"
+            name="code"
+            value={formData.code}
+            onChange={handleFormChange}
+          />
+
+          <TextField
+            fullWidth
+            label="Họ tên"
+            name="name"
+            value={formData.name}
+            onChange={handleFormChange}
+          />
+
           <FormControl fullWidth>
             <InputLabel>Phòng ban</InputLabel>
             <Select

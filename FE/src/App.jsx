@@ -1,6 +1,7 @@
 import './styles/dashboard.css';
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import PrivateRoute from './components/PrivateRoute';
 import Layout from './components/Layout';
 import DepartmentStats from './components/DepartmentStats';
 import EmployeeStats from './components/EmployeeStats';
@@ -30,7 +31,7 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Layout />}>
+        <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
           <Route index element={<Home />} />
           <Route path="/dashboard/department" element={<DepartmentStats />} />
           <Route path="/dashboard/employee" element={<EmployeeStats />} />

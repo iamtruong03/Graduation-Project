@@ -52,10 +52,7 @@ const Layout = ({ children }) => {
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    // Xóa thông tin đăng nhập từ localStorage
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    // Chuyển hướng về trang đăng nhập
+    AuthService.logout();
     navigate('/login');
   };
 

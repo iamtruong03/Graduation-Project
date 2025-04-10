@@ -7,6 +7,9 @@ import java.util.List;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -16,7 +19,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 
 @FieldDefaults(level = AccessLevel.PROTECTED)
-public abstract  class XDevBaseAPI<E extends XDevBaseEntity> {
+@PreAuthorize("isAuthenticated()")
+public abstract class XDevBaseAPI<E extends XDevBaseEntity> {
 
   public abstract <S extends IXDevBaseService<E>> S getService();
 
@@ -94,7 +98,17 @@ public abstract  class XDevBaseAPI<E extends XDevBaseEntity> {
   ) {
     try {
       getService().changeStatus(cid,uid, id);
-      return ApiResponse.ok("Delete");
+      return ApiResponse.ok("Status changed successfully");
+    } catch (Exception e) {
+      return ApiResponse.error(e.getMessage());
+    }
+  }
+
+  @GetMapping("/current-user")
+  public ResponseEntity<ApiResponse<String>> getCurrentUser() {
+    try {
+      Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+      return ApiResponse.ok(authentication.getName());
     } catch (Exception e) {
       return ApiResponse.error(e.getMessage());
     }

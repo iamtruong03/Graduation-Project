@@ -36,28 +36,59 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 
-const mockData = [
-  { id: 1, username: 'user1', fullName: 'Nguyễn Văn A', email: 'nguyenvana@example.com', department: 'Phòng kế toán', role: 'Nhân viên', active: true},
-  { id: 2, username: 'user2', fullName: 'Trần Thị B', email: 'tranthib@example.com', department: 'Phòng hành chính', role: 'Trưởng phòng', active: true},
-  { id: 3, username: 'user3', fullName: 'Lê Văn C', email: 'levanc@example.com', department: 'Phòng kỹ thuật', role: 'Nhân viên', active: false},
-];
-
 const AccountList = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [status, setStatus] = useState('all');
-  const [role, setRole] = useState('all');
+  const [positionId, setPositionId] = useState('all');
   const [page, setPage] = useState(1);
   const [openDialog, setOpenDialog] = useState(false);
   const [dialogType, setDialogType] = useState('create');
   const [selectedAccount, setSelectedAccount] = useState(null);
-  const [accounts, setAccounts] = useState(mockData);
+  const [accounts, setAccounts] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [currentUserRole, setCurrentUserRole] = useState('');
+
+  useEffect(() => {
+    const fetchAccounts = async () => {
+      try {
+        setLoading(true);
+        const response = await staffService.getAllStaff();
+        setAccounts(response.data);
+        // Lấy role của người dùng hiện tại từ localStorage hoặc context
+        const userRole = localStorage.getItem('userRole') || '';
+        setCurrentUserRole(userRole);
+        setError(null);
+      } catch (err) {
+        setError('Không thể tải danh sách tài khoản');
+        console.error('Error fetching accounts:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAccounts();
+  }, []);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [departments, setDepartments] = useState([]);
-  const [positions] = useState([
-    { id: 1, name: 'Nhân viên' },
-    { id: 2, name: 'Trưởng phòng' },
-    { id: 3, name: 'Giám đốc' }
-  ]);
+
+  const positionMap = {
+    1: 'Nhân viên',
+    2: 'Trưởng phòng',
+    3: 'Phó phòng'
+  };
+
+  const roles = [
+    { value: 'user', label: 'Người dùng' },
+    { value: 'admin', label: 'Quản trị viên' }
+  ];
+
+  const departmentNames = {
+    1: 'Phòng Nhân sự',
+    2: 'Phòng Kỹ thuật',
+    3: 'Phòng Kế toán',
+    4: 'Phòng Marketing',
+  };
+
   const [formData, setFormData] = useState({
     departmentId: '',
     positionId: '',
@@ -83,9 +114,15 @@ const AccountList = () => {
     fetchDepartments();
   }, []);
 
-  const handleDelete = () => {
-    setAccounts(accounts.filter(acc => acc.id !== selectedAccount.id));
-    setOpenDeleteDialog(false);
+  const handleDelete = async () => {
+    try {
+      await staffService.deleteStaff(selectedAccount.id);
+      setAccounts(accounts.filter(acc => acc.id !== selectedAccount.id));
+      setOpenDeleteDialog(false);
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      setError('Không thể xóa tài khoản');
+    }
   };
 
   const handleFormChange = (event) => {
@@ -98,12 +135,13 @@ const AccountList = () => {
 
   const handleSubmit = async () => {
     try {
-      await staffService.createStaff(formData);
+      const response = await staffService.createStaff(formData);
+      setAccounts([...accounts, response.data]);
       setOpenDialog(false);
-      // Refresh account list
-      // TODO: Add logic to refresh the account list
+      setError(null);
     } catch (error) {
       console.error('Error creating staff:', error);
+      setError('Không thể tạo tài khoản');
     }
   };
 
@@ -126,16 +164,16 @@ const AccountList = () => {
           }}
         />
         <FormControl size="small" sx={{ minWidth: 200 }}>
-          <InputLabel>Vai trò</InputLabel>
+          <InputLabel>Chức vụ</InputLabel>
           <Select
-            value={role}
-            label="Vai trò"
-            onChange={(e) => setRole(e.target.value)}
+            value={positionId}
+            label="Chức vụ"
+            onChange={(e) => setPositionId(e.target.value)}
           >
             <MenuItem value="all">Tất cả</MenuItem>
-            <MenuItem value="staff">Nhân viên</MenuItem>
-            <MenuItem value="manager">Trưởng phòng</MenuItem>
-            <MenuItem value="admin">Quản trị viên</MenuItem>
+            <MenuItem value={1}>Nhân viên</MenuItem>
+            <MenuItem value={2}>Trưởng phòng</MenuItem>
+            <MenuItem value={3}>Giám đốc</MenuItem>
           </Select>
         </FormControl>
         <FormControl size="small" sx={{ minWidth: 200 }}>
@@ -181,11 +219,11 @@ const AccountList = () => {
             {accounts.map((row, index) => (
               <TableRow key={row.id}>
                 <TableCell>{index + 1}</TableCell>
-                <TableCell>{row.username}</TableCell>
-                <TableCell>{row.fullName}</TableCell>
+                <TableCell>{row.code}</TableCell>
+                <TableCell>{row.name}</TableCell>
                 <TableCell>{row.email}</TableCell>
-                <TableCell>{row.department}</TableCell>
-                <TableCell>{row.role}</TableCell>
+                <TableCell>{departmentNames[row.departmentId] || '---'}</TableCell>
+                <TableCell>{positionMap[row.positionId] || row.positionId}</TableCell>
                 <TableCell>
                   <Switch checked={row.active} />
                 </TableCell>
@@ -260,10 +298,8 @@ const AccountList = () => {
                     onChange={handleFormChange}
                     label="Chức vụ"
                   >
-                    {positions.map((pos) => (
-                      <MenuItem key={pos.id} value={pos.id}>
-                        {pos.name}
-                      </MenuItem>
+                    {Object.entries(positionMap).map(([id, name]) => (
+                      <MenuItem key={id} value={Number(id)}>{name}</MenuItem>
                     ))}
                   </Select>
                 </FormControl>
@@ -315,7 +351,7 @@ const AccountList = () => {
                 </LocalizationProvider>
               </Grid>
               <Grid item xs={12} md={6}>
-                <FormControl fullWidth size="small">
+                <FormControl fullWidth size="small" disabled={currentUserRole !== 'admin'}>
                   <InputLabel>Vai trò</InputLabel>
                   <Select
                     name="role"
@@ -323,9 +359,17 @@ const AccountList = () => {
                     onChange={handleFormChange}
                     label="Vai trò"
                   >
-                    <MenuItem value="nhan vien">Nhân viên</MenuItem>
-                    <MenuItem value="quan ly">Quản lý</MenuItem>
+                    {roles.map((role) => (
+                      <MenuItem key={role.value} value={role.value}>
+                        {role.label}
+                      </MenuItem>
+                    ))}
                   </Select>
+                  {currentUserRole !== 'admin' && (
+                    <Typography variant="caption" color="error" sx={{ mt: 1 }}>
+                      Chỉ admin mới có quyền thay đổi vai trò
+                    </Typography>
+                  )}
                 </FormControl>
               </Grid>
               <Grid item xs={12} md={6}>

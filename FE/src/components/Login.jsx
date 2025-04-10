@@ -1,15 +1,24 @@
 import React, { useState } from 'react';
-import { Form, Input, Button, Card, Typography } from 'antd';
+import { Form, Input, Button, Card, Typography, message } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
+import AuthService from '../services/AuthService';
 
 const Login = () => {
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
-  const onFinish = (values) => {
+  const onFinish = async (values) => {
     setLoading(true);
-    console.log('Received values of form: ', values);
-    // TODO: Call login API here
-    setLoading(false);
+    try {
+      await AuthService.login(values.code, values.password);
+      message.success('Đăng nhập thành công');
+      navigate('/');
+    } catch (error) {
+      message.error('Đăng nhập thất bại: ' + (error.response?.data?.message || 'Lỗi không xác định'));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -25,7 +34,7 @@ const Login = () => {
           onFinish={onFinish}
         >
           <Form.Item
-            name="username"
+            name="code"
             rules={[{ required: true, message: 'Vui lòng nhập tên đăng nhập!' }]}
           >
             <Input prefix={<UserOutlined />} placeholder="Tên đăng nhập" />

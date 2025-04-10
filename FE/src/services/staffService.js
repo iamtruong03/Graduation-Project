@@ -13,7 +13,7 @@ const staffService = {
 
   // Thêm nhân viên mới
   createStaff: (staffData) => {
-    return api.post('/staff', staffData);
+    return api.post('/user', staffData);
   },
 
   // Cập nhật thông tin nhân viên

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -26,6 +26,11 @@ import {
   Grid,
   Alert
 } from '@mui/material';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import staffService from '../services/staffService';
+import departmentService from '../services/departmentService';
 import SearchIcon from '@mui/icons-material/Search';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -47,11 +52,59 @@ const AccountList = () => {
   const [selectedAccount, setSelectedAccount] = useState(null);
   const [accounts, setAccounts] = useState(mockData);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [departments, setDepartments] = useState([]);
+  const [positions] = useState([
+    { id: 1, name: 'Nhân viên' },
+    { id: 2, name: 'Trưởng phòng' },
+    { id: 3, name: 'Giám đốc' }
+  ]);
+  const [formData, setFormData] = useState({
+    departmentId: '',
+    positionId: '',
+    phoneNumber: '',
+    email: '',
+    password: '',
+    startDate: null,
+    role: '',
+    address: '',
+    gender: ''
+  });
   const rowsPerPage = 10;
+
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      try {
+        const response = await departmentService.getAllDepartments();
+        setDepartments(response.data);
+      } catch (error) {
+        console.error('Error fetching departments:', error);
+      }
+    };
+    fetchDepartments();
+  }, []);
 
   const handleDelete = () => {
     setAccounts(accounts.filter(acc => acc.id !== selectedAccount.id));
     setOpenDeleteDialog(false);
+  };
+
+  const handleFormChange = (event) => {
+    const { name, value } = event.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleSubmit = async () => {
+    try {
+      await staffService.createStaff(formData);
+      setOpenDialog(false);
+      // Refresh account list
+      // TODO: Add logic to refresh the account list
+    } catch (error) {
+      console.error('Error creating staff:', error);
+    }
   };
 
   const handlePageChange = (event, newPage) => {
@@ -182,61 +235,123 @@ const AccountList = () => {
           <Box sx={{ pt: 2 }}>
             <Grid container spacing={2}>
               <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  size="small"
-                  label="Tên đăng nhập"
-                  required
-                />
+                <FormControl fullWidth size="small">
+                  <InputLabel>Phòng ban</InputLabel>
+                  <Select
+                    name="departmentId"
+                    value={formData.departmentId}
+                    onChange={handleFormChange}
+                    label="Phòng ban"
+                  >
+                    {departments.map((dept) => (
+                      <MenuItem key={dept.id} value={dept.id}>
+                        {dept.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
               </Grid>
               <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  size="small"
-                  label="Họ tên"
-                  required
-                />
+                <FormControl fullWidth size="small">
+                  <InputLabel>Chức vụ</InputLabel>
+                  <Select
+                    name="positionId"
+                    value={formData.positionId}
+                    onChange={handleFormChange}
+                    label="Chức vụ"
+                  >
+                    {positions.map((pos) => (
+                      <MenuItem key={pos.id} value={pos.id}>
+                        {pos.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
               </Grid>
               <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
                   size="small"
                   label="Email"
+                  name="email"
                   type="email"
+                  value={formData.email}
+                  onChange={handleFormChange}
                   required
                 />
               </Grid>
               <Grid item xs={12} md={6}>
-                <FormControl fullWidth size="small">
-                  <InputLabel>Phòng ban</InputLabel>
-                  <Select label="Phòng ban">
-                    <MenuItem value="accounting">Phòng kế toán</MenuItem>
-                    <MenuItem value="hr">Phòng hành chính</MenuItem>
-                    <MenuItem value="tech">Phòng kỹ thuật</MenuItem>
-                  </Select>
-                </FormControl>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Mật khẩu"
+                  name="password"
+                  type="password"
+                  value={formData.password}
+                  onChange={handleFormChange}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Số điện thoại"
+                  name="phoneNumber"
+                  value={formData.phoneNumber}
+                  onChange={handleFormChange}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <LocalizationProvider dateAdapter={AdapterDateFns}>
+                  <DatePicker
+                    label="Ngày bắt đầu"
+                    value={formData.startDate}
+                    onChange={(newValue) => {
+                      setFormData(prev => ({ ...prev, startDate: newValue }))
+                    }}
+                    renderInput={(params) => <TextField {...params} fullWidth size="small" />}
+                  />
+                </LocalizationProvider>
               </Grid>
               <Grid item xs={12} md={6}>
                 <FormControl fullWidth size="small">
                   <InputLabel>Vai trò</InputLabel>
-                  <Select label="Vai trò">
-                    <MenuItem value="staff">Nhân viên</MenuItem>
-                    <MenuItem value="manager">Trưởng phòng</MenuItem>
-                    <MenuItem value="admin">Quản trị viên</MenuItem>
+                  <Select
+                    name="role"
+                    value={formData.role}
+                    onChange={handleFormChange}
+                    label="Vai trò"
+                  >
+                    <MenuItem value="nhan vien">Nhân viên</MenuItem>
+                    <MenuItem value="quan ly">Quản lý</MenuItem>
                   </Select>
                 </FormControl>
               </Grid>
-              {dialogType === 'create' && (
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    size="small"
-                    label="Mật khẩu"
-                    type="password"
-                    required
-                  />
-                </Grid>
-              )}
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Địa chỉ"
+                  name="address"
+                  value={formData.address}
+                  onChange={handleFormChange}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Giới tính</InputLabel>
+                  <Select
+                    name="gender"
+                    value={formData.gender}
+                    onChange={handleFormChange}
+                    label="Giới tính"
+                  >
+                    <MenuItem value="male">Nam</MenuItem>
+                    <MenuItem value="female">Nữ</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
             </Grid>
           </Box>
         </DialogContent>

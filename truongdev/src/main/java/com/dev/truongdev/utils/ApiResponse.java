@@ -1,5 +1,6 @@
 package com.dev.truongdev.utils;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -7,16 +8,11 @@ import org.springframework.http.ResponseEntity;
 
 @Data
 @NoArgsConstructor
+@AllArgsConstructor
 public class ApiResponse<T> {
   private int status;
   private T data;
   private String message;
-
-  public ApiResponse(int status, T data, String message) {
-    this.status = status;
-    this.data = data;
-    this.message = message;
-  }
 
   public ApiResponse(int status, String message) {
     this(status, null, message);
@@ -38,3 +34,4 @@ public class ApiResponse<T> {
     return generateResponse(HttpStatus.BAD_REQUEST, null, message);
   }
 }
+

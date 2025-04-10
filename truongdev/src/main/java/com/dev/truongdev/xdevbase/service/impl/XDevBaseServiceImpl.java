@@ -62,6 +62,11 @@ public class XDevBaseServiceImpl <
   }
 
   @Override
+  public E getById(Long cid, String uid, Long id) {
+    return repo.findByCompanyIdAndId(cid, id).orElseThrow(() -> new RuntimeException("Data not found"));
+  }
+
+  @Override
   public List<E> getAll(Long cid, String uid) {
     return repo.findAllByCompanyIdAndStatus(cid, AppConstants.STATUS_ACTIVE);
   }

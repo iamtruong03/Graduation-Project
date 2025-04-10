@@ -12,6 +12,8 @@ public interface IXDevBaseService <E extends XDevBaseEntity>{
 
   void changeStatus(Long cid, String uid, Long id);
 
+  E getById(Long cid, String uid, Long id);
+
   List<E> getAll(Long cid, String uid);
 
 }

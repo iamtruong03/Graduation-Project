@@ -63,22 +63,25 @@ const StaffManagement = () => {
       const response = await staffService.getAllStaff();
       console.log('Dữ liệu từ API:', response.data);
 
-      const rawData = response.data?.data || [];
+      const rawData = response?.data || [];
 
       const formattedStaff = rawData.map((staff) => ({
         id: staff.id,
-        code: staff.code || `NV${staff.id.toString().padStart(3, '0')}`,
-        name: staff.name || 'Chưa cập nhật',
-        position: staff.role || 'Nhân viên',
-        department:
-          departmentNames[staff.departmentId] ||
-          `Phòng ${staff.departmentId || '---'}`,
-        email: staff.email || 'Không có email',
-        phoneNumber: staff.phoneNumber || '---',
+        code: staff.code,
+        name: staff.name,
+        position: staff.role,
+        department: staff.departmentId ? departmentNames[staff.departmentId] || `Phòng ${staff.departmentId}` : '---',
+        email: staff.email,
+        phoneNumber: staff.phoneNumber,
         joinDate: staff.startDate
           ? new Date(staff.startDate).toLocaleDateString()
           : '---',
-        status: staff.status, // giữ nguyên dạng số
+        status: staff.status,
+        birthday: staff.birthday
+          ? new Date(staff.birthday).toLocaleDateString()
+          : '---',
+        gender: staff.gender,
+        address: staff.address
       }));
 
       setStaffList(formattedStaff);

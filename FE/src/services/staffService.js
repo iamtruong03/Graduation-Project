@@ -8,7 +8,7 @@ const staffService = {
 
   // Lấy thông tin chi tiết nhân viên
   getStaffById: (id) => {
-    return api.get(`/staff/${id}`);
+    return api.get(`/user/${id}`);
   },
 
   // Thêm nhân viên mới

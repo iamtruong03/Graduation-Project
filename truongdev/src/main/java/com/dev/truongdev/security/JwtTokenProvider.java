@@ -1,5 +1,6 @@
 package com.dev.truongdev.security;
 
+import com.dev.truongdev.entity.User;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import java.util.HashSet;
@@ -36,10 +37,15 @@ public class JwtTokenProvider {
     public String generateToken(Authentication authentication) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + expirationTime);
+        
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        User user = userDetails.getUser();
 
         return Jwts.builder()
             .setSubject(authentication.getName())
             .claim("role", authentication.getAuthorities())
+            .claim("companyId", user.getCompanyId())
+            .claim("userId", user.getId())
             .setIssuedAt(now)
             .setExpiration(expiryDate)
             .signWith(SECRET_KEY)
@@ -105,6 +111,13 @@ public class JwtTokenProvider {
 
         String username = claims.getSubject();
         List<?> roles = claims.get("role", List.class);
+        Long companyId = claims.get("companyId", Long.class);
+        Long userId = claims.get("userId", Long.class);
+        
+        if (companyId == null || userId == null) {
+            throw new RuntimeException("Token không chứa đủ thông tin companyId hoặc userId");
+        }
+            
         List<String> authorities = roles.stream()
             .map(Object::toString)
             .collect(Collectors.toList());
@@ -113,6 +126,12 @@ public class JwtTokenProvider {
             .map(SimpleGrantedAuthority::new)
             .collect(Collectors.toList());
 
-        return new UsernamePasswordAuthenticationToken(username, null, grantedAuthorities);
+        User user = new User();
+        user.setCode(username);
+        user.setCompanyId(companyId);
+        user.setId(userId);
+        user.setRole(authorities.get(0).replace("ROLE_", ""));
+        CustomUserDetails userDetails = new CustomUserDetails(user);
+        return new UsernamePasswordAuthenticationToken(userDetails, null, grantedAuthorities);
     }
 }

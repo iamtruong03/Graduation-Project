@@ -7,11 +7,16 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true
 });
 
 // Interceptor để xử lý request
 api.interceptors.request.use(
   (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
     return config;
   },
   (error) => {
@@ -23,7 +28,7 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response.data,
   async (error) => {
-    if (error.response && error.response.status === 403) {
+    if (error.response && error.response.status === 401) {
       await AuthService.logout();
       window.location.href = '/login';
     }

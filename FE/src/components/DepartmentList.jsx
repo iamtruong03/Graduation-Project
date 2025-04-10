@@ -150,9 +150,16 @@ const DepartmentList = () => {
     setOpenDetailDialog(true);
   };
 
-  const handleDelete = () => {
-    setDepartments(departments.filter(dept => dept.id !== selectedDepartment.id));
-    setOpenDeleteDialog(false);
+  const handleDelete = async () => {
+    try {
+      await departmentService.deleteDepartment(selectedDepartment.id);
+      setDepartments(departments.filter(dept => dept.id !== selectedDepartment.id));
+      setOpenDeleteDialog(false);
+      setError(null);
+    } catch (err) {
+      setError('Có lỗi xảy ra khi xóa phòng ban');
+      console.error('Error deleting department:', err);
+    }
   };
 
   const handlePageChange = (event, newPage) => {

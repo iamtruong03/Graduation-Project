@@ -29,7 +29,7 @@ const departmentService = {
 
   // Xóa phòng ban
   deleteDepartment: (id) => {
-    return api.delete(`/department/${id}`, getAuthHeader());
+    return api.delete(`/department/delete/${id}`, getAuthHeader());
   },
 
   // Lấy danh sách nhân viên theo phòng ban

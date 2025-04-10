@@ -29,7 +29,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     FilterChain filterChain) throws ServletException, IOException {
         
         String requestURI = request.getRequestURI();
-        if (requestURI.startsWith("/api/auth") || requestURI.startsWith("/auth")) {
+        if (requestURI.startsWith("/auth") || requestURI.startsWith("/auth")) {
             filterChain.doFilter(request, response);
             return;
         }

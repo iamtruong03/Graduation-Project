@@ -22,10 +22,6 @@ public class CustomUserDetailsService implements UserDetailsService {
         User user = userRepo.findByCode(code)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with code: " + code));
 
-        return new org.springframework.security.core.userdetails.User(
-                user.getCode(),
-                user.getPassword(),
-                Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole().toUpperCase()))
-        );
+        return new CustomUserDetails(user);
     }
 }

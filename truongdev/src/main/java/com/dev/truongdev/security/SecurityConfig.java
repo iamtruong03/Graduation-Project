@@ -13,6 +13,9 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.filter.CorsFilter;
+import org.springframework.beans.factory.annotation.Autowired;
 
 @Configuration
 @EnableWebSecurity
@@ -20,7 +23,10 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @RequiredArgsConstructor
 public class SecurityConfig {
 
+    @Autowired
+    private JwtTokenProvider tokenProvider;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final CorsFilter corsFilter;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -35,14 +41,18 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
+            .cors(cors -> {})
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/auth/**").permitAll()
+                .requestMatchers("/auth/**", "/api/auth/**", "/api/auth/login").permitAll()
+                .requestMatchers("/department/**").authenticated()
+                .requestMatchers("/user/**").authenticated()
                 .requestMatchers("/admin/**").hasRole("ADMIN")
                 .anyRequest().authenticated()
             )
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(new JwtFilter(tokenProvider), UsernamePasswordAuthenticationFilter.class)
+            .cors(cors -> cors.configurationSource(request -> new CorsConfiguration().applyPermitDefaultValues()));
 
         return http.build();
     }

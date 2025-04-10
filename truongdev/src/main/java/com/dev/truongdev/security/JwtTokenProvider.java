@@ -1,63 +1,118 @@
 package com.dev.truongdev.security;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import java.util.HashSet;
+import java.util.Set;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.stereotype.Component;
+import jakarta.annotation.PostConstruct;
 
-import java.security.Key;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import javax.crypto.SecretKey;
 import java.util.Date;
+import java.util.List;
+import java.util.stream.Collectors;
+import org.springframework.stereotype.Component;
 
 @Component
 public class JwtTokenProvider {
 
-    @Value("${app.jwt.secret:defaultSecretKey12345678901234567890}")
+    @Value("${app.jwt.secret}")
     private String jwtSecret;
 
-    @Value("${app.jwt.expiration:86400000}")
-    private int jwtExpirationInMs;
+    private SecretKey SECRET_KEY;
 
-    private Key getSigningKey() {
-        return Keys.hmacShaKeyFor(jwtSecret.getBytes());
+    @Value("${app.jwt.expiration}")
+    private long expirationTime;
+
+    @PostConstruct
+    public void init() {
+        this.SECRET_KEY = Keys.hmacShaKeyFor(jwtSecret.getBytes());
     }
 
     public String generateToken(Authentication authentication) {
-        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         Date now = new Date();
-        Date expiryDate = new Date(now.getTime() + jwtExpirationInMs);
+        Date expiryDate = new Date(now.getTime() + expirationTime);
 
         return Jwts.builder()
-                .setSubject(userDetails.getUsername())
-                .claim("role", userDetails.getAuthorities().iterator().next().getAuthority())
-                .setIssuedAt(new Date())
-                .setExpiration(expiryDate)
-                .signWith(getSigningKey(), SignatureAlgorithm.HS512)
-                .compact();
+            .setSubject(authentication.getName())
+            .claim("role", authentication.getAuthorities())
+            .setIssuedAt(now)
+            .setExpiration(expiryDate)
+            .signWith(SECRET_KEY)
+            .compact();
     }
 
-    public String getUsernameFromToken(String token) {
-        Claims claims = Jwts.parserBuilder()
+    private SecretKey getSigningKey() {
+        return SECRET_KEY;
+    }
+
+    private static final Set<String> tokenBlacklist = new HashSet<>();
+
+    public void invalidateToken(String token) {
+        try {
+            Claims claims = Jwts.parserBuilder()
                 .setSigningKey(getSigningKey())
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
-
-        return claims.getSubject();
+            
+            // Thêm token vào danh sách đen
+            tokenBlacklist.add(token);
+            
+            // Đặt thời gian hết hạn ngay lập tức
+            claims.setExpiration(new Date());
+        } catch (Exception ex) {
+            // Token đã không hợp lệ
+        }
     }
 
     public boolean validateToken(String token) {
+        // Kiểm tra xem token có trong danh sách đen không
+        if (tokenBlacklist.contains(token)) {
+            return false;
+        }
+        
         try {
             Jwts.parserBuilder()
-                    .setSigningKey(getSigningKey())
-                    .build()
-                    .parseClaimsJws(token);
+                .setSigningKey(getSigningKey())
+                .build()
+                .parseClaimsJws(token);
             return true;
         } catch (Exception ex) {
             return false;
         }
+    }
+
+    public String getUsernameFromToken(String token) {
+        return Jwts.parserBuilder()
+            .setSigningKey(getSigningKey())
+            .build()
+            .parseClaimsJws(token)
+            .getBody()
+            .getSubject();
+    }
+
+    public Authentication getAuthentication(String token) {
+        Claims claims = Jwts.parserBuilder()
+            .setSigningKey(getSigningKey())
+            .build()
+            .parseClaimsJws(token)
+            .getBody();
+
+        String username = claims.getSubject();
+        List<?> roles = claims.get("role", List.class);
+        List<String> authorities = roles.stream()
+            .map(Object::toString)
+            .collect(Collectors.toList());
+            
+        List<GrantedAuthority> grantedAuthorities = authorities.stream()
+            .map(SimpleGrantedAuthority::new)
+            .collect(Collectors.toList());
+
+        return new UsernamePasswordAuthenticationToken(username, null, grantedAuthorities);
     }
 }

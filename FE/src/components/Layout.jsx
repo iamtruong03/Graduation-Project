@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, Outlet, useNavigate } from 'react-router-dom';
+import AuthService from '../services/AuthService';
 import {
   Box,
   Drawer,
@@ -51,8 +52,12 @@ const Layout = ({ children }) => {
 
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    AuthService.logout();
+  const handleLogout = async () => {
+    const result = await AuthService.logout();
+    if (result.success) {
+      // Hiển thị thông báo đăng xuất thành công nếu cần
+      console.log(result.message);
+    }
     navigate('/login');
   };
 

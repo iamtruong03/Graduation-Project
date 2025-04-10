@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 
 @FieldDefaults(level = AccessLevel.PROTECTED)
-@PreAuthorize("isAuthenticated()")
+@PreAuthorize("hasAnyRole('ADMIN','USER')")
 public abstract class XDevBaseAPI<E extends XDevBaseEntity> {
 
   public abstract <S extends IXDevBaseService<E>> S getService();

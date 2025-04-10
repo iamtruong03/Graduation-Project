@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.http.HttpStatus;
 
 @RestController
-@RequestMapping("user")
+@RequestMapping("/user")
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class UserAPI extends XDevBaseAPI<User> {
@@ -29,7 +29,7 @@ public class UserAPI extends XDevBaseAPI<User> {
     return userService;
   }
 
-  @PostMapping("/register")
+  @PostMapping("/create")
   @PreAuthorize("hasRole('ADMIN')")
   public ResponseEntity<User> register(@Valid @RequestBody User user) {
     if (user.getDepartmentId() == null || user.getPositionId() == null || 

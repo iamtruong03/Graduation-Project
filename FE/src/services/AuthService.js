@@ -5,7 +5,7 @@ const API_URL = 'http://localhost:8080';
 class AuthService {
     async login(code, password) {
         try {
-            const response = await axios.post(`${API_URL}/api/auth/login`, {
+            const response = await axios.post(`${API_URL}/auth/login`, {
                 code,
                 password
             });
@@ -15,17 +15,27 @@ class AuthService {
             }
             return response.data;
         } catch (error) {
-            throw error;
+            if (error.response && error.response.status === 403) {
+                throw new Error('Tài khoản hoặc mật khẩu không đúng');
+            }
+            throw new Error(error.response?.data?.message || 'Đăng nhập thất bại');
         }
     }
 
-    logout() {
+    async logout() {
         try {
-            axios.post(`${API_URL}/api/auth/logout`);
+            const token = this.getCurrentToken();
+            await axios.post(`${API_URL}/auth/logout`, {}, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
             localStorage.removeItem('token');
             delete axios.defaults.headers.common['Authorization'];
+            return { success: true, message: 'Đăng xuất thành công' };
         } catch (error) {
             console.error('Logout error:', error);
+            return { success: false, message: 'Đăng xuất thất bại' };
         }
     }
 

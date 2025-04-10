@@ -11,6 +11,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -35,8 +36,11 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<?> logout() {
+    public ResponseEntity<?> logout(@RequestHeader(name = "Authorization", required = false) String token) {
+        if (token != null && token.startsWith("Bearer ")) {
+            tokenProvider.invalidateToken(token.substring(7));
+        }
         SecurityContextHolder.clearContext();
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok().body("Logout thành công");
     }
 }

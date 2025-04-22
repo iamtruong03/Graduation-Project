@@ -1,5 +1,6 @@
 package com.dev.truongdev.entity;
 
+import com.dev.truongdev.dto.UserRegistrationDTO;
 import com.dev.truongdev.xdevbase.entity.XDevBaseEntity;
 import jakarta.persistence.Entity;
 import java.time.LocalDate;
@@ -40,4 +41,17 @@ public class User extends XDevBaseEntity {
   String address;
 
   String gender;
+
+  public UserRegistrationDTO toDTO() {
+      UserRegistrationDTO dto = new UserRegistrationDTO();
+      dto.setDepartmentId(departmentId);
+      dto.setPositionId(positionId);
+      dto.setPhoneNumber(phoneNumber);
+      dto.setEmail(email);
+      dto.setAddress(address);
+      dto.setGender(gender);
+      dto.setRole(role);
+      dto.setPassword(password);
+      return dto;
+  }
 }

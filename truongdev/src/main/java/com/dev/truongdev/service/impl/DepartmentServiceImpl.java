@@ -21,6 +21,19 @@ public class DepartmentServiceImpl extends
     this.departmentRepo = repo;
   }
 
+  public Department createRootDepartment() {
+    Department rootDepartment = new Department();
+    rootDepartment.setName("Root Department");
+    rootDepartment.setCode("ROOT");
+    rootDepartment.setParentId(null);
+    rootDepartment.setDescription("Phòng ban gốc của hệ thống");
+    return departmentRepo.save(rootDepartment);
+  }
+
+  public Department getRootDepartment() {
+    return departmentRepo.findByCode("ROOT").orElseGet(this::createRootDepartment);
+  }
+
   public boolean isParentOrAncestorOf(Long parentDepartmentId, Long childDepartmentId) {
     if (parentDepartmentId == null || childDepartmentId == null) {
       return false;

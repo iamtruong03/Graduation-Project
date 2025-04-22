@@ -9,5 +9,5 @@ import java.util.Optional;
 @Repository
 public interface UserRepo extends XDevBaseRepo<User> {
     Optional<User> findByCode(String code);
-
+    Optional<User> findByEmail(String email);
 }

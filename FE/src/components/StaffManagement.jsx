@@ -31,6 +31,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import staffService from '../services/staffService';
+import { Alert } from '@mui/material';
 
 const StaffManagement = () => {
   const navigate = useNavigate();
@@ -192,45 +193,51 @@ const StaffManagement = () => {
         </Box>
       </Box>
 
-      {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', my: 3 }}>
-          <CircularProgress />
-        </Box>
-      ) : error ? (
-        <Typography color="error" sx={{ my: 3 }}>
-          {error}
-        </Typography>
-      ) : (
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>STT</TableCell>
+              <TableCell>Mã nhân viên</TableCell>
+              <TableCell>Họ tên</TableCell>
+              <TableCell>Phòng ban</TableCell>
+              <TableCell>Chức vụ</TableCell>
+              <TableCell>Email</TableCell>
+              <TableCell>Số điện thoại</TableCell>
+              <TableCell>Ngày vào làm</TableCell>
+              <TableCell>Trạng thái</TableCell>
+              <TableCell align="center">Thao tác</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {error ? (
               <TableRow>
-                <TableCell>Mã NV</TableCell>
-                <TableCell>Họ tên</TableCell>
-                <TableCell>Chức vụ</TableCell>
-                <TableCell>Phòng ban</TableCell>
-                <TableCell>Email</TableCell>
-                <TableCell>SĐT</TableCell>
-                <TableCell>Ngày vào làm</TableCell>
-                <TableCell>Trạng thái</TableCell>
-                <TableCell align="center">Thao tác</TableCell>
+                <TableCell colSpan={10}>
+                  <Alert severity="error" sx={{ mb: 2 }}>
+                    {error}
+                  </Alert>
+                </TableCell>
               </TableRow>
-            </TableHead>
-            <TableBody>
-              {filteredStaff.map((staff) => (
+            ) : loading ? (
+              <TableRow>
+                <TableCell colSpan={10} align="center">
+                  <CircularProgress />
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredStaff.map((staff, index) => (
                 <TableRow key={staff.id}>
+                  <TableCell>{index + 1}</TableCell>
                   <TableCell>{staff.code}</TableCell>
                   <TableCell>{staff.name}</TableCell>
-                  <TableCell>{staff.position}</TableCell>
                   <TableCell>{staff.department}</TableCell>
+                  <TableCell>{staff.position}</TableCell>
                   <TableCell>{staff.email}</TableCell>
                   <TableCell>{staff.phoneNumber}</TableCell>
                   <TableCell>{staff.joinDate}</TableCell>
                   <TableCell>
                     <Chip
-                      label={
-                        staff.status === 1 ? 'Đang làm việc' : 'Tạm nghỉ'
-                      }
+                      label={staff.status === 1 ? 'Đang làm việc' : 'Tạm nghỉ'}
                       color={staff.status === 1 ? 'success' : 'warning'}
                       size="small"
                     />
@@ -252,11 +259,11 @@ const StaffManagement = () => {
                     </IconButton>
                   </TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
 
       <Dialog
         open={openDeleteDialog}

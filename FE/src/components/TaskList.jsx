@@ -48,6 +48,8 @@ const TaskList = () => {
   const [page, setPage] = useState(1);
   const [openDialog, setOpenDialog] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const rowsPerPage = 10;
 
   const handleDelete = (id) => {
@@ -153,37 +155,48 @@ const TaskList = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {mockData.map((row, index) => (
-              <TableRow key={row.id}>
-                <TableCell>{index + 1}</TableCell>
-                <TableCell>{row.code}</TableCell>
-                <TableCell>{row.name}</TableCell>
-                <TableCell>{row.taskType === 'project' ? 'Công việc dự án' : 'Công việc phòng ban'}</TableCell>
-                <TableCell>{row.taskType === 'project' ? row.project : row.department}</TableCell>
-                <TableCell>{row.status}</TableCell>
-                <TableCell>{row.priority}</TableCell>
-                <TableCell>{row.manager}</TableCell>
-                <TableCell>{row.assignee}</TableCell>
-                <TableCell>{row.updatedAt}</TableCell>
-                <TableCell align="center">
-                  <Stack direction="row" spacing={1} justifyContent="center">
-                    <IconButton size="small" component={Link} to={`/task/detail/${row.id}`}>
-                      <VisibilityIcon />
-                    </IconButton>
-                    <IconButton size="small" component={Link} to={`/task/edit/${row.id}`}>
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      color="error"
-                      onClick={() => handleDelete(row.id)}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </Stack>
+            {error && (
+              <TableRow>
+                <TableCell colSpan={11}>
+                  <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
                 </TableCell>
               </TableRow>
-            ))}
+            )}
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={11} align="center">
+                  <CircularProgress />
+                </TableCell>
+              </TableRow>
+            ) : (
+              mockData.map((row, index) => (
+                <TableRow key={row.id}>
+                  <TableCell>{(page - 1) * rowsPerPage + index + 1}</TableCell>
+                  <TableCell>{row.code}</TableCell>
+                  <TableCell>{row.name}</TableCell>
+                  <TableCell>{row.taskType === 'project' ? 'Công việc dự án' : 'Công việc phòng ban'}</TableCell>
+                  <TableCell>{row.taskType === 'project' ? row.project : row.department}</TableCell>
+                  <TableCell>
+                    <Switch checked={row.status === 'Đang thực hiện'} />
+                  </TableCell>
+                  <TableCell>{row.priority}</TableCell>
+                  <TableCell>{row.manager}</TableCell>
+                  <TableCell>{row.assignee}</TableCell>
+                  <TableCell>{row.updatedAt}</TableCell>
+                  <TableCell align="center">
+                    <IconButton size="small" component={Link} to={`/task/detail/${row.id}`} sx={{ mr: 1 }}>
+                      <VisibilityIcon />
+                    </IconButton>
+                    <IconButton size="small" component={Link} to={`/task/edit/${row.id}`} sx={{ mr: 1 }}>
+                      <EditIcon />
+                    </IconButton>
+                    <IconButton size="small" color="error" onClick={() => handleDelete(row.id)}>
+                      <DeleteIcon />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </TableContainer>

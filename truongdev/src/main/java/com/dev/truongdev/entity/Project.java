@@ -24,10 +24,10 @@ import lombok.experimental.SuperBuilder;
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = false)
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class Plan extends XDevBaseEntity{
+public class Project extends XDevBaseEntity{
 
-  @Column(name = "plan_type_id", length = 30)
-  Long planTypeId;
+  @Column(name = "project_type_id", length = 30)
+  Long projectTypeId;
 
   // Pham vi
   @Column(name = "scope_id", length = 30)
@@ -44,6 +44,11 @@ public class Plan extends XDevBaseEntity{
   @Column(name = "deadline")
   Date deadline;
 
+  // nguoi phe duyet
+  @Column(name = "approver_id")
+  String approverId;
+
+  // nguoi chiu trach nhiem
   @Column(name = "responsible_ids", columnDefinition = "TEXT")
   @Convert(converter = StringListConverter.class)
   List<String> responsibleIds;

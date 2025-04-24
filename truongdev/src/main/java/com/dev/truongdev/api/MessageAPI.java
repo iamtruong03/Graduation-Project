@@ -37,17 +37,33 @@ public class MessageAPI extends XDevBaseAPI<Message> {
     public void processMessage(
             @RequestHeader("uid") String uid,
             @Payload Map<String, Object> payload) {
-        Long receiverId = Long.parseLong(payload.get("receiverId").toString());
-        String content = payload.get("content").toString();
+        try {
+            Long receiverId = Long.parseLong(payload.get("receiverId").toString());
+            String content = payload.get("content").toString();
 
-        Long senderId = userService.getCurrentUserId();
-        Message message = messageService.sendMessage(uid, senderId, receiverId, content);
+            Long senderId = userService.getCurrentUserId();
+            Message message = messageService.sendMessage(uid, senderId, receiverId, content);
 
-        messagingTemplate.convertAndSendToUser(
-                receiverId.toString(),
-                "/queue/messages",
-                message
-        );
+            messagingTemplate.convertAndSendToUser(
+                    receiverId.toString(),
+                    "/queue/messages",
+                    message
+            );
+            
+            // Log successful message delivery
+            System.out.println("Message sent from " + senderId + " to " + receiverId);
+        } catch (Exception e) {
+            // Log error details
+            System.err.println("Error processing WebSocket message: " + e.getMessage());
+            e.printStackTrace();
+            
+            // Optionally send error notification to client
+            messagingTemplate.convertAndSendToUser(
+                    userService.getCurrentUserId().toString(),
+                    "/queue/errors",
+                    "Error processing message: " + e.getMessage()
+            );
+        }
     }
 
     @GetMapping("/history/{userId}")

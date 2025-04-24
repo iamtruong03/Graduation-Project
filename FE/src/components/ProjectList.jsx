@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -23,47 +23,16 @@ import {
   DialogTitle,
   DialogContent,
   DialogContentText,
-  DialogActions
+  DialogActions,
+  CircularProgress,
+  Alert
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import { Edit as EditIcon, Delete as DeleteIcon, Visibility as VisibilityIcon } from '@mui/icons-material';
 import { Link } from 'react-router-dom';
+import projectService from '../services/projectService';
 
-const mockData = [
-  { 
-    id: 1, 
-    code: 'PRJ001', 
-    name: 'Dự án A', 
-    manager: 'Nguyễn Văn A',
-    department: 'Phòng kế toán',
-    startDate: '01/08/2023',
-    endDate: '31/12/2023',
-    status: 'Đang thực hiện',
-    creator: 'Trần Văn X'
-  },
-  { 
-    id: 2, 
-    code: 'PRJ002', 
-    name: 'Dự án B', 
-    manager: 'Trần Thị B',
-    department: 'Phòng hành chính',
-    startDate: '01/07/2023',
-    endDate: '30/11/2023',
-    status: 'Đang thực hiện',
-    creator: 'Lê Thị Y'
-  },
-  { 
-    id: 3, 
-    code: 'PRJ003', 
-    name: 'Dự án C', 
-    manager: 'Lê Văn C',
-    department: 'Phòng kỹ thuật',
-    startDate: '01/06/2023',
-    endDate: '31/08/2023',
-    status: 'Hoàn thành',
-    creator: 'Phạm Văn Z'
-  },
-];
+
 
 const ProjectList = () => {
   const [searchCode, setSearchCode] = useState('');
@@ -72,19 +41,48 @@ const ProjectList = () => {
   const [page, setPage] = useState(1);
   const [openDialog, setOpenDialog] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [projects, setProjects] = useState([]);
   const rowsPerPage = 10;
+
+  useEffect(() => {
+    fetchProjects();
+  }, []);
+
+  const fetchProjects = async () => {
+    try {
+      setLoading(true);
+      const response = await projectService.getAllProjects();
+      setProjects(response.data);
+      setError(null);
+    } catch (err) {
+      setError('Không thể tải danh sách dự án');
+      console.error('Error fetching projects:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleDelete = (id) => {
     setDeleteId(id);
     setOpenDialog(true);
   };
 
-  const handleConfirmDelete = () => {
-    // Thực hiện xóa dự án
-    const newData = mockData.filter(project => project.id !== deleteId);
-    // Cập nhật state hoặc gọi API xóa
-    setOpenDialog(false);
-    setDeleteId(null);
+  const handleConfirmDelete = async () => {
+    try {
+      setLoading(true);
+      await projectService.deleteProject(deleteId);
+      await fetchProjects(); // Tải lại danh sách sau khi xóa
+      setError(null);
+    } catch (err) {
+      setError('Không thể xóa dự án');
+      console.error('Error deleting project:', err);
+    } finally {
+      setLoading(false);
+      setOpenDialog(false);
+      setDeleteId(null);
+    }
   };
 
   const handleCloseDialog = () => {
@@ -150,7 +148,7 @@ const ProjectList = () => {
               <TableCell>STT</TableCell>
               <TableCell>Mã dự án</TableCell>
               <TableCell>Tên dự án</TableCell>
-              <TableCell>Người quản lý</TableCell>
+              <TableCell>Người phụ trách</TableCell>
               <TableCell>Phòng ban thực hiện</TableCell>
               <TableCell>Ngày bắt đầu</TableCell>
               <TableCell>Ngày kết thúc</TableCell>
@@ -160,51 +158,54 @@ const ProjectList = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {mockData.map((row, index) => (
-              <TableRow key={row.id}>
-                <TableCell>{index + 1}</TableCell>
-                <TableCell>{row.code}</TableCell>
-                <TableCell>{row.name}</TableCell>
-                <TableCell>{row.manager}</TableCell>
-                <TableCell>{row.department}</TableCell>
-                <TableCell>{row.startDate}</TableCell>
-                <TableCell>{row.endDate}</TableCell>
-                <TableCell>{row.status}</TableCell>
-                <TableCell>{row.creator}</TableCell>
-                <TableCell align="center">
-                  <IconButton
-                    size="small"
-                    color="info"
-                    component={Link}
-                    to={`/project/detail/${row.id}`}
-                  >
-                    <VisibilityIcon />
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    color="primary"
-                    component={Link}
-                    to={`/project/edit/${row.id}`}
-                  >
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    color="error"
-                    onClick={() => handleDelete(row.id)}
-                  >
-                    <DeleteIcon />
-                  </IconButton>
+            {error && (
+              <TableRow>
+                <TableCell colSpan={10}>
+                  <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
                 </TableCell>
               </TableRow>
-            ))}
+            )}
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={10} align="center">
+                  <CircularProgress />
+                </TableCell>
+              </TableRow>
+            ) : (
+              projects.map((row, index) => (
+                <TableRow key={row.id}>
+                  <TableCell>{(page - 1) * rowsPerPage + index + 1}</TableCell>
+                  <TableCell>{row.code}</TableCell>
+                  <TableCell>{row.name}</TableCell>
+                  <TableCell>{row.manager}</TableCell>
+                  <TableCell>{row.department}</TableCell>
+                  <TableCell>{row.startDate}</TableCell>
+                  <TableCell>{row.endDate}</TableCell>
+                  <TableCell>
+                    <Switch checked={row.status === 'Đang thực hiện'} />
+                  </TableCell>
+                  <TableCell>{row.creator}</TableCell>
+                  <TableCell align="center">
+                    <IconButton size="small" component={Link} to={`/project/detail/${row.id}`} sx={{ mr: 1 }}>
+                      <VisibilityIcon />
+                    </IconButton>
+                    <IconButton size="small" component={Link} to={`/project/edit/${row.id}`} sx={{ mr: 1 }}>
+                      <EditIcon />
+                    </IconButton>
+                    <IconButton size="small" color="error" onClick={() => handleDelete(row.id)}>
+                      <DeleteIcon />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </TableContainer>
 
       <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
         <Pagination
-          count={Math.ceil(mockData.length / rowsPerPage)}
+          count={Math.ceil(projects.length / rowsPerPage)}
           page={page}
           onChange={handlePageChange}
           color="primary"

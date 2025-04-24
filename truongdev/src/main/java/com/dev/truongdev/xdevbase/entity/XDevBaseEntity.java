@@ -48,8 +48,8 @@ public class XDevBaseEntity {
   @Column(name = "responsible_id")
   String responsibleId;
 
-  @Column(name = "process_instance_id")
-  Long processInstanceId;
+//  @Column(name = "process_instance_id")
+//  Long processInstanceId;
 
   @Column(name = "state")
   Integer state;

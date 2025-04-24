@@ -26,12 +26,12 @@ public abstract class XDevBaseAPI<E extends XDevBaseEntity> {
 
   @PostMapping("")
   ResponseEntity<ApiResponse<E>> create(
-      @RequestHeader(name = "cid", defaultValue = "0") Long cid,
+      
       @RequestHeader(name = "uid", defaultValue = "") String uid,
       @RequestBody E request
   ) {
     try {
-      return ApiResponse.ok(getService().create(cid, uid, request));
+      return ApiResponse.ok(getService().create(uid, request));
     } catch (Exception e) {
       return ApiResponse.error(e.getMessage());
     }
@@ -39,12 +39,12 @@ public abstract class XDevBaseAPI<E extends XDevBaseEntity> {
 
   @GetMapping("/{id}")
   ResponseEntity<ApiResponse<E> > getId(
-      @RequestHeader(name = "cid", defaultValue = "0") Long cid,
+      
       @RequestHeader(name = "uid", defaultValue = "") String uid,
       @PathVariable Long id
   ) {
     try {
-      return ApiResponse.ok(getService().getById(cid, uid, id));
+      return ApiResponse.ok(getService().getById(uid, id));
     } catch (Exception e) {
       return ApiResponse.error(e.getMessage());
     }
@@ -52,11 +52,11 @@ public abstract class XDevBaseAPI<E extends XDevBaseEntity> {
 
   @GetMapping("/list")
   ResponseEntity<ApiResponse<List<E>> > getList(
-      @RequestHeader(name = "cid", defaultValue = "0") Long cid,
+      
       @RequestHeader(name = "uid", defaultValue = "") String uid
   ) {
     try {
-      return ApiResponse.ok(getService().getAll(cid, uid));
+      return ApiResponse.ok(getService().getAll(uid));
     } catch (Exception e) {
       return ApiResponse.error(e.getMessage());
     }
@@ -64,13 +64,13 @@ public abstract class XDevBaseAPI<E extends XDevBaseEntity> {
 
   @PutMapping("/update/{id}")
   ResponseEntity<ApiResponse<E>> update(
-      @RequestHeader(name = "cid", defaultValue = "0") Long cid,
+      
       @RequestHeader(name = "uid", defaultValue = "") String uid,
       @RequestBody E request,
       @PathVariable Long id
   ) {
     try {
-      return ApiResponse.ok(getService().update(cid, uid, request, id));
+      return ApiResponse.ok(getService().update(uid, request, id));
     } catch (Exception e) {
       return ApiResponse.error(e.getMessage());
     }
@@ -78,12 +78,12 @@ public abstract class XDevBaseAPI<E extends XDevBaseEntity> {
 
   @DeleteMapping("/delete/{id}")
   ResponseEntity<ApiResponse<String>> delete(
-      @RequestHeader(name = "cid", defaultValue = "0") Long cid,
+      
       @RequestHeader(name = "uid", defaultValue = "") String uid,
       @PathVariable Long id
   ) {
     try {
-      getService().delete(cid,uid, id);
+      getService().delete(uid, id);
       return ApiResponse.ok("Deleted");
     } catch (Exception e) {
       return ApiResponse.error(e.getMessage());
@@ -92,12 +92,12 @@ public abstract class XDevBaseAPI<E extends XDevBaseEntity> {
 
   @PostMapping("/change-status/{id}")
   public ResponseEntity<ApiResponse<String>> changeStatus(
-      @RequestHeader(name = "cid", defaultValue = "0") Long cid,
+      
       @RequestHeader(name = "uid", defaultValue = "") String uid,
       @PathVariable Long id
   ) {
     try {
-      getService().changeStatus(cid,uid, id);
+      getService().changeStatus(uid, id);
       return ApiResponse.ok("Status changed successfully");
     } catch (Exception e) {
       return ApiResponse.error(e.getMessage());

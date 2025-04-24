@@ -27,7 +27,7 @@ public class MessageServiceImpl
 
     @Override
     @Transactional
-    public Message sendMessage(Long cid, String uid, Long senderId, Long receiverId, String content) {
+    public Message sendMessage(String uid, Long senderId, Long receiverId, String content) {
         Message message = Message.builder()
                 .senderId(senderId)
                 .receiverId(receiverId)
@@ -35,29 +35,29 @@ public class MessageServiceImpl
                 .timestamp(LocalDateTime.now())
                 .isRead(false)
                 .build();
-        return create(cid, uid, message);
+        return create(uid, message);
     }
 
     @Override
-    public List<Message> getMessagesBetweenUsers(Long cid, String uid, Long currentUserId, Long userId) {
+    public List<Message> getMessagesBetweenUsers(String uid, Long currentUserId, Long userId) {
         return repo.findMessagesBetweenUsers(currentUserId, userId);
     }
 
     @Override
-    public List<Message> getUnreadMessages(Long cid, String uid, Long currentUserId) {
+    public List<Message> getUnreadMessages(String uid, Long currentUserId) {
         return repo.findByReceiverIdAndIsReadFalseOrderByTimestampDesc(currentUserId);
     }
 
     @Override
     @Transactional
-    public void markMessageAsRead(Long cid, String uid, Long messageId) {
-        Message message = getById(cid, uid, messageId);
+    public void markMessageAsRead(String uid, Long messageId) {
+        Message message = getById( uid, messageId);
         message.setRead(true);
-        update(cid, uid, message, messageId);
+        update( uid, message, messageId);
     }
 
     @Override
-    public List<Long> getRecentChatUsers(Long cid, String uid, Long userId) {
+    public List<Long> getRecentChatUsers(String uid, Long userId) {
         return repo.findRecentChatUsers(userId);
     }
 }

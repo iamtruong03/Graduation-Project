@@ -38,9 +38,6 @@ public class JwtFilter extends OncePerRequestFilter {
                 
                 // Wrap request with custom headers
                 request = new CustomHeaderRequestWrapper(request);
-                if (userDetails.getCompanyId() != null) {
-                    ((CustomHeaderRequestWrapper) request).addHeader("cid", userDetails.getCompanyId().toString());
-                }
                 if (userDetails.getId() != null) {
                     ((CustomHeaderRequestWrapper) request).addHeader("uid", userDetails.getId().toString());
                 }

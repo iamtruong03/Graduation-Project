@@ -65,8 +65,6 @@ public class XDevBaseEntity {
   @Version
   Long version;
 
-  
-
   @CreatedBy
   String createBy;
 

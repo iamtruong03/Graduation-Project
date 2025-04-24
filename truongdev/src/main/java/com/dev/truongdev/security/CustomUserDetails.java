@@ -53,10 +53,6 @@ public class CustomUserDetails implements UserDetails {
     return true;
   }
 
-  public Long getCompanyId() {
-    return user.getCompanyId();
-  }
-
   public Long getId() {
     return user.getId();
   }

@@ -44,7 +44,6 @@ public class JwtTokenProvider {
         return Jwts.builder()
             .setSubject(authentication.getName())
             .claim("role", authentication.getAuthorities())
-            .claim("companyId", user.getCompanyId())
             .claim("userId", user.getId())
             .setIssuedAt(now)
             .setExpiration(expiryDate)
@@ -111,11 +110,11 @@ public class JwtTokenProvider {
 
         String username = claims.getSubject();
         List<?> roles = claims.get("role", List.class);
-        Long companyId = claims.get("companyId", Long.class);
+        
         Long userId = claims.get("userId", Long.class);
         
-        if (companyId == null || userId == null) {
-            throw new RuntimeException("Token không chứa đủ thông tin companyId hoặc userId");
+        if (userId == null) {
+            throw new RuntimeException("Token không chứa đủ thông tin userId");
         }
             
         List<String> authorities = roles.stream()
@@ -128,7 +127,6 @@ public class JwtTokenProvider {
 
         User user = new User();
         user.setCode(username);
-        user.setCompanyId(companyId);
         user.setId(userId);
         user.setRole(authorities.get(0).replace("ROLE_", ""));
         CustomUserDetails userDetails = new CustomUserDetails(user);

@@ -20,8 +20,7 @@ public class XDevBaseServiceImpl <
     implements IXDevBaseService<E> {
   final R repo;
 
-  public void setBaseEntity (E e, Long cid, String uid){
-    e.setCompanyId(cid);
+  public void setBaseEntity (E e, String uid){
     e.setCreateBy(Optional.ofNullable(e.getCreateBy()).orElse(uid));
     e.setUpdateBy(uid);
     e.setStatus(AppConstants.STATUS_ACTIVE);
@@ -29,30 +28,29 @@ public class XDevBaseServiceImpl <
 
   @Override
   @Transactional
-  public E create(Long cid, String uid, E e){
-    setBaseEntity(e, cid, uid);
+  public E create(String uid, E e){
+    setBaseEntity(e, uid);
     return repo.save(e);
   }
 
   @Override
   @Transactional
-  public E update(Long cid, String uid, E e , Long id){
+  public E update(String uid, E e , Long id){
     E data = repo.findById(id)
         .orElseThrow(() -> new RuntimeException("data_not_found"));
-    BeanUtils.copyProperties(e, data, "id", "companyId" ,"createBy", "version", "createDate", "modifiedDate");
+    BeanUtils.copyProperties(e, data, "id", "createBy", "version", "createDate", "modifiedDate");
     data.setUpdateBy(uid);
     return repo.save(data);
   }
 
   @Override
-  public void delete(Long cid, String uid, Long id) {
+  public void delete(String uid, Long id) {
     repo.deleteById(id);
   }
 
   @Override
-  public void changeStatus(Long cid, String uid, Long id) {
-    E entity = repo
-        .findByCompanyIdAndId(cid, id)
+  public void changeStatus(String uid, Long id) {
+    E entity = repo.findById(id)
         .orElseThrow(() -> new RuntimeException("Entity not found"));
     if (!Objects.equals(entity.getStatus(), AppConstants.STATUS_ACTIVE)) {
       throw new RuntimeException("delete_allow_status_new");
@@ -62,12 +60,12 @@ public class XDevBaseServiceImpl <
   }
 
   @Override
-  public E getById(Long cid, String uid, Long id) {
-    return repo.findByCompanyIdAndId(cid, id).orElseThrow(() -> new RuntimeException("Data not found"));
+  public E getById(String uid, Long id) {
+    return repo.findById(id).orElseThrow(() -> new RuntimeException("Data not found"));
   }
 
   @Override
-  public List<E> getAll(Long cid, String uid) {
-    return repo.findAllByCompanyIdAndStatus(cid, AppConstants.STATUS_ACTIVE);
+  public List<E> getAll(String uid) {
+    return repo.findAllByStatus(AppConstants.STATUS_ACTIVE);
   }
 }

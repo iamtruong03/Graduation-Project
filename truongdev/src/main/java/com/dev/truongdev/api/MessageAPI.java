@@ -35,14 +35,13 @@ public class MessageAPI extends XDevBaseAPI<Message> {
 
     @MessageMapping("/chat")
     public void processMessage(
-            @RequestHeader("cid") Long cid,
             @RequestHeader("uid") String uid,
             @Payload Map<String, Object> payload) {
         Long receiverId = Long.parseLong(payload.get("receiverId").toString());
         String content = payload.get("content").toString();
 
         Long senderId = userService.getCurrentUserId();
-        Message message = messageService.sendMessage(cid, uid, senderId, receiverId, content);
+        Message message = messageService.sendMessage(uid, senderId, receiverId, content);
 
         messagingTemplate.convertAndSendToUser(
                 receiverId.toString(),
@@ -53,38 +52,34 @@ public class MessageAPI extends XDevBaseAPI<Message> {
 
     @GetMapping("/history/{userId}")
     public ResponseEntity<List<Message>> getMessageHistory(
-            @RequestHeader("cid") Long cid,
             @RequestHeader("uid") String uid,
             @PathVariable Long userId) {
         Long currentUserId = userService.getCurrentUserId();
-        List<Message> messages = messageService.getMessagesBetweenUsers(cid, uid, currentUserId, userId);
+        List<Message> messages = messageService.getMessagesBetweenUsers(uid, currentUserId, userId);
         return ResponseEntity.ok(messages);
     }
 
     @GetMapping("/unread")
     public ResponseEntity<List<Message>> getUnreadMessages(
-            @RequestHeader("cid") Long cid,
             @RequestHeader("uid") String uid) {
         Long currentUserId = userService.getCurrentUserId();
-        List<Message> unreadMessages = messageService.getUnreadMessages(cid, uid, currentUserId);
+        List<Message> unreadMessages = messageService.getUnreadMessages(uid, currentUserId);
         return ResponseEntity.ok(unreadMessages);
     }
 
     @PutMapping("/{messageId}/read")
     public ResponseEntity<Void> markMessageAsRead(
-            @RequestHeader("cid") Long cid,
             @RequestHeader("uid") String uid,
             @PathVariable Long messageId) {
-        messageService.markMessageAsRead(cid, uid, messageId);
+        messageService.markMessageAsRead(uid, messageId);
         return ResponseEntity.ok().build();
     }
 
     @GetMapping("/recent-users")
     public ResponseEntity<List<Long>> getRecentChatUsers(
-            @RequestHeader("cid") Long cid,
             @RequestHeader("uid") String uid) {
         Long currentUserId = userService.getCurrentUserId();
-        List<Long> recentUserIds = messageService.getRecentChatUsers(cid, uid, currentUserId);
+        List<Long> recentUserIds = messageService.getRecentChatUsers(uid, currentUserId);
         return ResponseEntity.ok(recentUserIds);
     }
 }

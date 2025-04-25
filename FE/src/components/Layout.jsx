@@ -35,7 +35,8 @@ import {
   Notifications,
   Description,
   AccountTree,
-  Logout as LogoutIcon
+  Logout as LogoutIcon,
+  Chat as ChatIcon
 } from '@mui/icons-material';
 
 const drawerWidth = 280;
@@ -45,6 +46,7 @@ const Layout = ({ children }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [selectedMenu, setSelectedMenu] = useState('risk');
   const [unreadNotifications, setUnreadNotifications] = useState(3);
+  const [userName, setUserName] = useState(localStorage.getItem('userName'));
 
   const handleNotificationClick = () => {
     window.location.href = '/notification';
@@ -148,7 +150,6 @@ const Layout = ({ children }) => {
         { id: 'my-account', text: 'Tài khoản của tôi', path: '/account/my-account' },
       ],
     },
-
   ];
 
   const drawer = (
@@ -205,6 +206,17 @@ const Layout = ({ children }) => {
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             THT
           </Typography>
+          <Typography variant="subtitle1" sx={{ mr: 2, display: 'flex', alignItems: 'center' }}>
+            <AccountCircle sx={{ mr: 1 }} />
+            Xin chào, {userName}!
+          </Typography>
+          <IconButton
+            color="inherit"
+            onClick={() => navigate('/chat')}
+            sx={{ ml: 1 }}
+          >
+            <ChatIcon />
+          </IconButton>
           <IconButton color="inherit" onClick={handleNotificationClick}>
             <Badge badgeContent={unreadNotifications} color="error">
               <Notifications />

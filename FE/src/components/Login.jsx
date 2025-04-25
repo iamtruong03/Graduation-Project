@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Form, Input, Button, message } from 'antd';
+import { Form, Input, Button, message, Modal } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import AuthService from '../services/AuthService';
 import { useNavigate } from 'react-router-dom';
 
 const Login = () => {
   const [loading, setLoading] = useState(false);
+  const [showRegister, setShowRegister] = useState(false);
   const navigate = useNavigate();
 
   const onFinish = async (values) => {

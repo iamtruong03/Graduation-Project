@@ -1,5 +1,5 @@
 {
-  "name": "todo-list-app",
+  "name": "tht-app",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -17,18 +17,21 @@
     "@mui/icons-material": "^5.14.0",
     "@mui/material": "^5.14.0",
     "@mui/x-date-pickers": "^7.28.3",
+    "@stomp/stompjs": "^7.1.1",
     "antd": "^5.24.6",
     "axios": "^1.8.4",
     "date-fns": "^2.29.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-router": "^6.22.3",
     "react-router-dom": "^6.22.3",
-    "recharts": "^2.15.2"
+    "recharts": "^2.15.2",
+    "sockjs-client": "^1.6.1"
   },
   "devDependencies": {
     "@types/react": "^18.2.14",
     "@types/react-dom": "^18.2.6",
-    "@vitejs/plugin-react": "^4.0.1",
-    "vite": "^4.4.0"
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^4.5.13"
   }
 }

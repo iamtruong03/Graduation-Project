@@ -2,18 +2,20 @@ package com.dev.truongdev.xdevbase.service;
 
 import com.dev.truongdev.xdevbase.entity.XDevBaseEntity;
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 public interface IXDevBaseService <E extends XDevBaseEntity>{
-  E create(Long cid, String uid, E e);
+  E create(String uid, E e);
 
-  E update(Long cid, String uid, E e , Long id);
+  E update(String uid, E e , Long id);
 
-  void delete(Long cid, String uid, Long id);
+  void delete(String uid, Long id);
 
-  void changeStatus(Long cid, String uid, Long id);
+  void changeStatus(String uid, Long id);
 
-  E getById(Long cid, String uid, Long id);
+  E getById(String uid, Long id);
 
-  List<E> getAll(Long cid, String uid);
+  Page<E> searchAll(Long did, String uid, String search, Pageable pageable);
 
 }

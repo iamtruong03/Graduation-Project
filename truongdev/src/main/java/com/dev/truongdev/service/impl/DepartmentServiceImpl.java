@@ -1,11 +1,20 @@
 package com.dev.truongdev.service.impl;
 
 import com.dev.truongdev.entity.Department;
+import com.dev.truongdev.entity.User;
 import com.dev.truongdev.repo.DepartmentRepo;
+import com.dev.truongdev.repo.UserRepo;
 import com.dev.truongdev.service.IDepartmentService;
+import com.dev.truongdev.utils.AppConstants;
 import com.dev.truongdev.xdevbase.service.impl.XDevBaseServiceImpl;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Queue;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -15,34 +24,55 @@ public class DepartmentServiceImpl extends
     IDepartmentService {
 
   final DepartmentRepo departmentRepo;
+  final UserRepo userRepo;
 
-  public DepartmentServiceImpl(DepartmentRepo repo) {
+  public DepartmentServiceImpl(DepartmentRepo repo, UserRepo userRepo) {
     super(repo);
     this.departmentRepo = repo;
+    this.userRepo = userRepo;
   }
 
-  public boolean isParentOrAncestorOf(Long parentDepartmentId, Long childDepartmentId) {
-    if (parentDepartmentId == null || childDepartmentId == null) {
-      return false;
+  // lấy phòng ban con, cháu, chắt
+  @Override
+  public List<Department> getAllSubDepartments(Long id) {
+    List<Department> list = new ArrayList<>();
+    Queue<Long> queue = new LinkedList<>();
+    queue.add(id);
+
+    while (!queue.isEmpty()) {
+      Long currentId = queue.poll();
+      List<Department> children = departmentRepo.findByParentIdAndStatus(currentId, AppConstants.STATUS_ACTIVE);
+      list.addAll(children);
+
+      for (Department dept : children) {
+        queue.add(dept.getId());
+      }
     }
-    
-    Department childDepartment = departmentRepo.findById(childDepartmentId).orElse(null);
-    if (childDepartment == null) {
-      return false;
+    return list;
+  }
+
+  // lấy phòng ban hiện tại + con cháu...
+  @Override
+  public Page<Department> searchAll(Long did, String uid, String search, Pageable pageable) {
+    User user = userRepo.findById(Long.valueOf(uid))
+        .orElseThrow(() -> new RuntimeException("User not found"));
+
+    // Kiểm tra điều kiện xem toàn hệ thống (admin hoặc phòng ban root)
+    if (user.getRole().equals("ROLE_ADMIN") ||
+        (departmentRepo.findById(did).get().getParentId() == null)) {
+        List<Department> allDepartments = departmentRepo.findAllByStatus(AppConstants.STATUS_ACTIVE);
+
+        return departmentRepo.searchByCodeOrName(AppConstants.STATUS_ACTIVE, search, allDepartments, pageable);
     }
 
-    Long currentParentId = childDepartment.getParentId();
-    while (currentParentId != null) {
-      if (currentParentId.equals(parentDepartmentId)) {
-        return true;
-      }
-      Department currentParent = departmentRepo.findById(currentParentId).orElse(null);
-      if (currentParent == null) {
-        break;
-      }
-      currentParentId = currentParent.getParentId();
-    }
-    
-    return false;
+    Department department = departmentRepo.findById(did)
+        .orElseThrow(() -> new RuntimeException("Department not found"));
+
+    List<Department> list = new ArrayList<>();
+    list.add(department);
+    list.addAll(getAllSubDepartments(did));
+
+    return departmentRepo.searchByCodeOrName(AppConstants.STATUS_ACTIVE, search, list, pageable);
   }
+
 }

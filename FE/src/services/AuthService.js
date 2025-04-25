@@ -46,6 +46,42 @@ class AuthService {
     isAuthenticated() {
         return !!this.getCurrentToken();
     }
+
+    async register(userData) {
+        try {
+            const endpoint = `${API_URL}/user/register/first-admin`;
+            userData = { ...userData, role: 'ADMIN' };
+            
+            const response = await axios.post(endpoint, userData);
+            return {
+                success: true,
+                message: 'Đăng ký tài khoản admin đầu tiên thành công',
+                data: response.data
+            };
+        } catch (error) {
+            let errorMessage = 'Đăng ký thất bại';
+            
+            if (error.response) {
+                switch (error.response.status) {
+                    case 400:
+                        errorMessage = 'Tài khoản đã tồn tại trong hệ thống';
+                        break;
+                    case 403:
+                        errorMessage = 'Bạn không có quyền thực hiện thao tác này';
+                        break;
+                    case 422:
+                        errorMessage = 'Dữ liệu không hợp lệ, vui lòng kiểm tra lại';
+                        break;
+                    default:
+                        errorMessage = error.response.data?.message || 'Có lỗi xảy ra trong quá trình đăng ký';
+                }
+            }
+            
+            throw new Error(errorMessage);
+        }
+    }
+
+    
 }
 
 export default new AuthService();

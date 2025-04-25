@@ -26,6 +26,7 @@ import AccountList from './components/AccountList';
 import MyAccount from './components/MyAccount';
 import NotificationCenter from './components/NotificationCenter';
 import DocumentManagement from './components/DocumentManagement';
+import Chat from './components/Chat';
 
 function App() {
   return (
@@ -54,6 +55,7 @@ function App() {
           <Route path="/account/my-account" element={<MyAccount />} />
           <Route path="/notification" element={<NotificationCenter />} />
           <Route path="/document/management" element={<DocumentManagement />} />
+          <Route path="/chat" element={<Chat />} />
         </Route>
         <Route path="/login" element={<Login />} />
       </Routes>

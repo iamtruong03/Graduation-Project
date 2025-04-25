@@ -103,12 +103,12 @@ const ProjectCreate = () => {
 
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth required>
-                <InputLabel>Người quản lý</InputLabel>
+                <InputLabel>Người phụ trách</InputLabel>
                 <Select
                   name="manager"
                   value={formData.manager}
                   onChange={handleChange}
-                  label="Người quản lý"
+                  label="Người phụ trách"
                 >
                   {managers.map((manager) => (
                     <MenuItem key={manager.id} value={manager.id}>

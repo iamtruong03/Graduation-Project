@@ -174,7 +174,6 @@ const DepartmentList = () => {
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h5" sx={{ mb: 3 }}>DANH SÁCH BỘ PHẬN</Typography>
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
       <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
         <TextField
@@ -182,13 +181,6 @@ const DepartmentList = () => {
           placeholder="Tên, mã bộ phận"
           value={searchName}
           onChange={(e) => setSearchName(e.target.value)}
-          InputProps={{ endAdornment: <SearchIcon color="action" /> }}
-        />
-        <TextField
-          size="small"
-          placeholder="Tên bộ phận cha"
-          value={searchCode}
-          onChange={(e) => setSearchCode(e.target.value)}
           InputProps={{ endAdornment: <SearchIcon color="action" /> }}
         />
         <FormControl size="small" sx={{ minWidth: 200 }}>
@@ -225,6 +217,13 @@ const DepartmentList = () => {
             </TableRow>
           </TableHead>
           <TableBody>
+            {error && (
+              <TableRow>
+                <TableCell colSpan={7}>
+                  <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
+                </TableCell>
+              </TableRow>
+            )}
             {paginatedDepartments.map((row, index) => (
               <TableRow key={row.id}>
                 <TableCell>{(page - 1) * rowsPerPage + index + 1}</TableCell>

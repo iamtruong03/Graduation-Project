@@ -2,19 +2,20 @@ package com.dev.truongdev.api;
 
 import com.dev.truongdev.entity.User;
 import com.dev.truongdev.service.IUserService;
+import com.dev.truongdev.service.impl.UserServiceImpl;
+import com.dev.truongdev.utils.ApiResponse;
 import com.dev.truongdev.xdevbase.api.XDevBaseAPI;
 import com.dev.truongdev.xdevbase.service.IXDevBaseService;
-import jakarta.validation.Valid;
+import java.util.List;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.http.HttpStatus;
 
 @RestController
 @RequestMapping("/user")
@@ -29,15 +30,47 @@ public class UserAPI extends XDevBaseAPI<User> {
     return userService;
   }
 
-  @PostMapping("/create")
-  @PreAuthorize("hasRole('ADMIN')")
-  public ResponseEntity<User> register(@Valid @RequestBody User user) {
-    if (user.getDepartmentId() == null || user.getPositionId() == null || 
-        user.getPhoneNumber() == null || user.getEmail() == null) {
-      return ResponseEntity.badRequest().build();
+  @GetMapping("/list-user-dep")
+  ResponseEntity<ApiResponse<List<User>>> listUserDep(
+      @RequestAttribute String uid
+  ) {
+    try {
+      return ApiResponse.ok(userService.listUserDep(uid));
+    } catch (Exception e) {
+      return ApiResponse.error(e.getMessage());
     }
-    
-    User savedUser = userService.save(user);
-    return ResponseEntity.status(HttpStatus.CREATED).body(savedUser);
+  }
+
+  @GetMapping("/list-user-child-dep")
+  ResponseEntity<ApiResponse<List<User>>> listUserChildDep(
+      @RequestAttribute String uid
+  ) {
+    try {
+      return ApiResponse.ok(userService.listUserChildDep(uid));
+    } catch (Exception e) {
+      return ApiResponse.error(e.getMessage());
+    }
+  }
+
+  @GetMapping("/list-user-parent-dep")
+  ResponseEntity<ApiResponse<List<User>>> listUserParentDep(
+      @RequestAttribute String uid
+  ) {
+    try {
+      return ApiResponse.ok(userService.listUserParentDep(uid));
+    } catch (Exception e) {
+      return ApiResponse.error(e.getMessage());
+    }
+  }
+
+  @GetMapping("/list-head-child-dep")
+  ResponseEntity<ApiResponse<List<User>>> listHeadChildDep(
+      @RequestAttribute String uid
+  ) {
+    try {
+      return ApiResponse.ok(userService.listHeadChildDep(uid));
+    } catch (Exception e) {
+      return ApiResponse.error(e.getMessage());
+    }
   }
 }

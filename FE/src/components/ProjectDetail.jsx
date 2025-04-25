@@ -162,7 +162,7 @@ const ProjectDetail = () => {
 
           <Grid item xs={12} sm={6}>
             <Typography variant="subtitle2" color="text.secondary">
-              Người quản lý
+            Người phụ trách
             </Typography>
             <Typography variant="body1">{project.manager}</Typography>
           </Grid>
@@ -319,20 +319,6 @@ const ProjectDetail = () => {
                   <MenuItem value="HIGH">Cao</MenuItem>
                   <MenuItem value="MEDIUM">Trung bình</MenuItem>
                   <MenuItem value="LOW">Thấp</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={6}>
-              <FormControl fullWidth>
-                <InputLabel>Trạng thái</InputLabel>
-                <Select
-                  value={newTask.status}
-                  label="Trạng thái"
-                  onChange={(e) => setNewTask({ ...newTask, status: e.target.value })}
-                >
-                  <MenuItem value="NEW">Mới</MenuItem>
-                  <MenuItem value="IN_PROGRESS">Đang thực hiện</MenuItem>
-                  <MenuItem value="COMPLETED">Hoàn thành</MenuItem>
                 </Select>
               </FormControl>
             </Grid>

@@ -9,6 +9,4 @@ public interface IDepartmentService extends IXDevBaseService<Department> {
   // lấy phòng ban con, cháu, chắt
   List<Department> getAllSubDepartments(Long id);
 
-  // lấy phòng ban hiện tại + con cháu...
-  List<Department> getDepartmentList(Long id);
 }

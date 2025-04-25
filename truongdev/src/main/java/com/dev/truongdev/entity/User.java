@@ -24,6 +24,7 @@ import lombok.experimental.SuperBuilder;
 public class User extends XDevBaseEntity {
   Long departmentId;
 
+  // vi tri
   Long positionId;
 
   String  phoneNumber;
@@ -36,6 +37,7 @@ public class User extends XDevBaseEntity {
 
   String password;
 
+  // phan quyen
   String role;
 
   String address;

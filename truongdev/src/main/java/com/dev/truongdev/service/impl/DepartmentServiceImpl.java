@@ -1,7 +1,9 @@
 package com.dev.truongdev.service.impl;
 
 import com.dev.truongdev.entity.Department;
+import com.dev.truongdev.entity.User;
 import com.dev.truongdev.repo.DepartmentRepo;
+import com.dev.truongdev.repo.UserRepo;
 import com.dev.truongdev.service.IDepartmentService;
 import com.dev.truongdev.utils.AppConstants;
 import com.dev.truongdev.xdevbase.service.impl.XDevBaseServiceImpl;
@@ -20,51 +22,16 @@ public class DepartmentServiceImpl extends
     IDepartmentService {
 
   final DepartmentRepo departmentRepo;
+  final UserRepo userRepo;
 
-  public DepartmentServiceImpl(DepartmentRepo repo) {
+  public DepartmentServiceImpl(DepartmentRepo repo, UserRepo userRepo) {
     super(repo);
     this.departmentRepo = repo;
-  }
-
-  public Department createRootDepartment() {
-    Department rootDepartment = new Department();
-    rootDepartment.setName("Root Department");
-    rootDepartment.setCode("ROOT");
-    rootDepartment.setParentId(null);
-    rootDepartment.setDescription("Phòng ban gốc của hệ thống");
-    return departmentRepo.save(rootDepartment);
-  }
-
-  public Department getRootDepartment() {
-    return departmentRepo.findByCode("ROOT").orElseGet(this::createRootDepartment);
-  }
-
-  public boolean isParentOrAncestorOf(Long parentDepartmentId, Long childDepartmentId) {
-    if (parentDepartmentId == null || childDepartmentId == null) {
-      return false;
-    }
-
-    Department childDepartment = departmentRepo.findById(childDepartmentId).orElse(null);
-    if (childDepartment == null) {
-      return false;
-    }
-
-    Long currentParentId = childDepartment.getParentId();
-    while (currentParentId != null) {
-      if (currentParentId.equals(parentDepartmentId)) {
-        return true;
-      }
-      Department currentParent = departmentRepo.findById(currentParentId).orElse(null);
-      if (currentParent == null) {
-        break;
-      }
-      currentParentId = currentParent.getParentId();
-    }
-
-    return false;
+    this.userRepo = userRepo;
   }
 
   // lấy phòng ban con, cháu, chắt
+  @Override
   public List<Department> getAllSubDepartments(Long id) {
     List<Department> list = new ArrayList<>();
     Queue<Long> queue = new LinkedList<>();
@@ -83,22 +50,27 @@ public class DepartmentServiceImpl extends
   }
 
   // lấy phòng ban hiện tại + con cháu...
-  public List<Department> getDepartmentList(Long id) {
-    List<Department> list = new ArrayList<>();
+  @Override
+  public List<Department> getAll(Long id, String uid) {
+    User user = userRepo.findById(Long.valueOf(uid))
+        .orElseThrow(() -> new RuntimeException("User not found"));
 
-    if (id == null) {
+    // Kiểm tra điều kiện xem toàn hệ thống (admin hoặc phòng ban root)
+    if (user.getRole().equals("ROLE_ADMIN") ||
+        (departmentRepo.findById(id).get().getParentId() == null)) {
       return departmentRepo.findAllByStatus(AppConstants.STATUS_ACTIVE);
     }
-    
-    Department department = departmentRepo.findById(id).orElse(null);
-    if (department != null && department.getParentId() != null) {
-      departmentRepo.findById(id).ifPresent(list::add);
-      list.addAll(getAllSubDepartments(id));
-    } else {
-      list.addAll(departmentRepo.findAllByStatus(AppConstants.STATUS_ACTIVE));
-    }
+
+    Department department = departmentRepo.findById(id)
+        .orElseThrow(() -> new RuntimeException("Department not found"));
+
+    List<Department> list = new ArrayList<>();
+    list.add(department);
+    list.addAll(getAllSubDepartments(id));
+
     return list;
   }
+
 
 
 }

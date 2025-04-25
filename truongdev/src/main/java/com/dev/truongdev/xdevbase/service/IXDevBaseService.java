@@ -14,6 +14,6 @@ public interface IXDevBaseService <E extends XDevBaseEntity>{
 
   E getById(String uid, Long id);
 
-  List<E> getAll(String uid);
+  List<E> getAll(Long id, String uid);
 
 }

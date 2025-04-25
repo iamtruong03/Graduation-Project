@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 
@@ -25,7 +26,7 @@ public abstract class XDevBaseAPI<E extends XDevBaseEntity> {
 
   @PostMapping("")
   ResponseEntity<ApiResponse<E>> create(
-      @RequestHeader(name = "uid", defaultValue = "") String uid,
+      @RequestAttribute String uid,
       @RequestBody E request
   ) {
     try {
@@ -37,7 +38,7 @@ public abstract class XDevBaseAPI<E extends XDevBaseEntity> {
 
   @GetMapping("/{id}")
   ResponseEntity<ApiResponse<E> > getId(
-      @RequestHeader(name = "uid", defaultValue = "") String uid,
+      @RequestAttribute String uid,
       @PathVariable Long id
   ) {
     try {
@@ -49,10 +50,11 @@ public abstract class XDevBaseAPI<E extends XDevBaseEntity> {
 
   @GetMapping("/list")
   ResponseEntity<ApiResponse<List<E>> > getList(
-      @RequestHeader(name = "uid", defaultValue = "") String uid
+      @RequestAttribute Long did,
+      @RequestAttribute String uid
   ) {
     try {
-      return ApiResponse.ok(getService().getAll(uid));
+      return ApiResponse.ok(getService().getAll(did, uid));
     } catch (Exception e) {
       return ApiResponse.error(e.getMessage());
     }
@@ -60,7 +62,7 @@ public abstract class XDevBaseAPI<E extends XDevBaseEntity> {
 
   @PutMapping("/update/{id}")
   ResponseEntity<ApiResponse<E>> update(
-      @RequestHeader(name = "uid", defaultValue = "") String uid,
+      @RequestAttribute String uid,
       @RequestBody E request,
       @PathVariable Long id
   ) {
@@ -73,7 +75,7 @@ public abstract class XDevBaseAPI<E extends XDevBaseEntity> {
 
   @DeleteMapping("/delete/{id}")
   ResponseEntity<ApiResponse<String>> delete(
-      @RequestHeader(name = "uid", defaultValue = "") String uid,
+      @RequestAttribute String uid,
       @PathVariable Long id
   ) {
     try {
@@ -86,22 +88,12 @@ public abstract class XDevBaseAPI<E extends XDevBaseEntity> {
 
   @PostMapping("/change-status/{id}")
   public ResponseEntity<ApiResponse<String>> changeStatus(
-      @RequestHeader(name = "uid", defaultValue = "") String uid,
+      @RequestAttribute String uid,
       @PathVariable Long id
   ) {
     try {
       getService().changeStatus(uid, id);
       return ApiResponse.ok("Status changed successfully");
-    } catch (Exception e) {
-      return ApiResponse.error(e.getMessage());
-    }
-  }
-
-  @GetMapping("/current-user")
-  public ResponseEntity<ApiResponse<String>> getCurrentUser() {
-    try {
-      Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-      return ApiResponse.ok(authentication.getName());
     } catch (Exception e) {
       return ApiResponse.error(e.getMessage());
     }

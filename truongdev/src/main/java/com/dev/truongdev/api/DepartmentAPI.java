@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -23,22 +24,10 @@ public class DepartmentAPI extends XDevBaseAPI<Department> {
 
   final IXDevBaseService<Department> service;
 
-  final IDepartmentService iDepartmentService;
-
   @SuppressWarnings("unchecked")
   public IXDevBaseService<Department> getService(){
     return service;
   }
 
-  @GetMapping("/getall")
-  ResponseEntity<ApiResponse<List<Department>>> getList(
-      @RequestHeader(name = "did") Long did
-  ) {
-    try {
-      return ApiResponse.ok(iDepartmentService.getDepartmentList(did));
-    } catch (Exception e) {
-      return ApiResponse.error(e.getMessage());
-    }
-  }
 
   }

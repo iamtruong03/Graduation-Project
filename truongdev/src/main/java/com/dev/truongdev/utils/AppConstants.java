@@ -22,6 +22,10 @@ public class AppConstants {
   public static final Integer STATUS_ACTIVE = 1;
   public static final Integer STATUS_INACTIVE = 0;
 
+  // Position Business
+  public static final Integer POSITION_HEAD = 1;
+  public static final Integer POSITION_STAFF = 2;
+
   @Getter
   public enum State {
     INIT, PENDING, IN_PROGRESS, DEFERRED, REVIEWING, REPROCESS, COMPLETED, CANCELED, ALL
@@ -32,6 +36,13 @@ public class AppConstants {
     if (status.equals(STATUS_ACTIVE)) return "ACTIVE";
     if (status.equals(STATUS_INACTIVE)) return "INACTIVE";
     return "UNKNOWN_STATUS";
+  }
+
+  public static String getPositionName(Integer position) {
+    if (position == null) return "NULL";
+    if (position.equals(POSITION_HEAD)) return "HEAD";
+    if (position.equals(POSITION_STAFF)) return "STAFF";
+    return "UNKNOWN_POSITION";
   }
 
 }

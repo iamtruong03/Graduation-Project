@@ -55,63 +55,6 @@ const Login = () => {
           </Button>
         </Form.Item>
       </Form>
-      
-      <div style={{ textAlign: 'center', marginTop: 16 }}>
-        <Button type="link" onClick={() => setShowRegister(true)}>
-          Đăng ký tài khoản admin
-        </Button>
-      </div>
-      
-      {showRegister && (
-        <Modal
-          title="Đăng ký admin"
-          open={showRegister}
-          onCancel={() => setShowRegister(false)}
-          footer={null}
-          centered
-        >
-          <Form
-            name="register"
-            onFinish={async (values) => {
-              try {
-                setLoading(true);
-                const response = await AuthService.register(values);
-                message.success('Đăng ký thành công');
-                setShowRegister(false);
-              } catch (error) {
-                message.error(error.message);
-              } finally {
-                setLoading(false);
-              }
-            }}
-          >
-            <Form.Item
-              name="code"
-              rules={[{ required: true, message: 'Vui lòng nhập username!' }]}
-            >
-              <Input prefix={<UserOutlined />} placeholder="username" />
-            </Form.Item>
-
-            <Form.Item
-              name="password"
-              rules={[{ required: true, message: 'Vui lòng nhập mật khẩu!' }]}
-            >
-              <Input.Password prefix={<LockOutlined />} placeholder="Mật khẩu" />
-            </Form.Item>
-
-            <Form.Item>
-              <Button 
-                type="primary" 
-                htmlType="submit" 
-                loading={loading}
-                block
-              >
-                Đăng ký
-              </Button>
-            </Form.Item>
-          </Form>
-        </Modal>
-      )}
     </div>
   );
 };

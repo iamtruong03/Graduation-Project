@@ -4,6 +4,7 @@ import com.dev.truongdev.entity.User;
 import com.dev.truongdev.repo.UserRepo;
 import com.dev.truongdev.entity.Department;
 import com.dev.truongdev.service.IUserService;
+import com.dev.truongdev.utils.AppConstants;
 import com.dev.truongdev.xdevbase.service.impl.XDevBaseServiceImpl;
 import com.dev.truongdev.dto.UserRegistrationDTO;
 import lombok.AccessLevel;
@@ -11,7 +12,7 @@ import lombok.experimental.FieldDefaults;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -21,9 +22,14 @@ public class UserServiceImpl extends
     IUserService {
 
   final UserRepo userRepo;
-  final PasswordEncoder passwordEncoder;
   final DepartmentServiceImpl departmentService;
 
+  public UserServiceImpl(UserRepo repo, DepartmentServiceImpl departmentService) {
+    super(repo);
+    this.userRepo = repo;
+    this.departmentService = departmentService;
+
+  }
   @Override
   public Long getCurrentUserId() {
     Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -79,13 +85,6 @@ public class UserServiceImpl extends
         .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy người dùng với ID: " + id));
   }
 
-  public UserServiceImpl(UserRepo repo, PasswordEncoder passwordEncoder, DepartmentServiceImpl departmentService) {
-    super(repo);
-    this.userRepo = repo;
-    this.passwordEncoder = passwordEncoder;
-    this.departmentService = departmentService;
-  }
-
   @Override
   public Long save(UserRegistrationDTO userDTO) {
     validateUserData(userDTO.getDepartmentId(), userDTO.getPositionId(), userDTO.getPhoneNumber(), userDTO.getEmail());
@@ -102,7 +101,7 @@ public class UserServiceImpl extends
     user.setGender(userDTO.getGender());
 
     if (userDTO.getPassword() != null && !userDTO.getPassword().isEmpty()) {
-      user.setPassword(passwordEncoder.encode(userDTO.getPassword()));
+      user.setPassword(new BCryptPasswordEncoder().encode(userDTO.getPassword()));
     }
     if (userDTO.getRole() == null || userDTO.getRole().isEmpty()) {
       user.setRole("ROLE_USER");
@@ -129,7 +128,7 @@ public class UserServiceImpl extends
 
     User user = new User();
     user.setCode(userDTO.getCode());
-    user.setPassword(passwordEncoder.encode(userDTO.getPassword()));
+    user.setPassword(new BCryptPasswordEncoder().encode(userDTO.getPassword()));
     user.setRole(userDTO.getRole());
 
     return userRepo.save(user).getId();
@@ -183,4 +182,22 @@ public class UserServiceImpl extends
       throw new AccessDeniedException("Bạn chỉ có thể tạo tài khoản cho nhân viên thuộc phòng ban con của mình");
     }
   }
+
+  @Override
+  public User confirmLogin(String code, String password) {
+    User user = userRepo.findByCode(code)
+        .orElseThrow(() -> new RuntimeException("User not found"));
+
+
+    if (user == null || !new BCryptPasswordEncoder().matches(password, user.getPassword())) {
+      throw new RuntimeException("Lỗi: Tên Tài khoản hoặc mật khẩu không chính xác");
+    }
+
+    if (user.getStatus().equals(AppConstants.STATUS_INACTIVE)) {
+      throw new RuntimeException("Tài khoản đã bị khóa");
+    }
+
+    return user;
+  }
+
 }

@@ -9,7 +9,7 @@ const getAuthHeader = () => ({
 const departmentService = {
   // Lấy danh sách phòng ban
   getAllDepartments: () => {
-    return api.get('/department/list', getAuthHeader());
+    return api.get('/department/getall', getAuthHeader());
   },
 
   // Lấy chi tiết một phòng ban

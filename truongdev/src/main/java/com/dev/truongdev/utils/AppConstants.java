@@ -26,4 +26,12 @@ public class AppConstants {
   public enum State {
     INIT, PENDING, IN_PROGRESS, DEFERRED, REVIEWING, REPROCESS, COMPLETED, CANCELED, ALL
   }
+
+  public static String getStatusName(Integer status) {
+    if (status == null) return "NULL";
+    if (status.equals(STATUS_ACTIVE)) return "ACTIVE";
+    if (status.equals(STATUS_INACTIVE)) return "INACTIVE";
+    return "UNKNOWN_STATUS";
+  }
+
 }

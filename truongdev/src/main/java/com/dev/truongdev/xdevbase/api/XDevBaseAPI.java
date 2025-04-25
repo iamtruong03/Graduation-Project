@@ -19,14 +19,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 
 @FieldDefaults(level = AccessLevel.PROTECTED)
-@PreAuthorize("hasAnyRole('ADMIN','USER')")
 public abstract class XDevBaseAPI<E extends XDevBaseEntity> {
 
   public abstract <S extends IXDevBaseService<E>> S getService();
 
   @PostMapping("")
   ResponseEntity<ApiResponse<E>> create(
-      
       @RequestHeader(name = "uid", defaultValue = "") String uid,
       @RequestBody E request
   ) {
@@ -39,7 +37,6 @@ public abstract class XDevBaseAPI<E extends XDevBaseEntity> {
 
   @GetMapping("/{id}")
   ResponseEntity<ApiResponse<E> > getId(
-      
       @RequestHeader(name = "uid", defaultValue = "") String uid,
       @PathVariable Long id
   ) {
@@ -52,7 +49,6 @@ public abstract class XDevBaseAPI<E extends XDevBaseEntity> {
 
   @GetMapping("/list")
   ResponseEntity<ApiResponse<List<E>> > getList(
-      
       @RequestHeader(name = "uid", defaultValue = "") String uid
   ) {
     try {
@@ -64,7 +60,6 @@ public abstract class XDevBaseAPI<E extends XDevBaseEntity> {
 
   @PutMapping("/update/{id}")
   ResponseEntity<ApiResponse<E>> update(
-      
       @RequestHeader(name = "uid", defaultValue = "") String uid,
       @RequestBody E request,
       @PathVariable Long id
@@ -78,7 +73,6 @@ public abstract class XDevBaseAPI<E extends XDevBaseEntity> {
 
   @DeleteMapping("/delete/{id}")
   ResponseEntity<ApiResponse<String>> delete(
-      
       @RequestHeader(name = "uid", defaultValue = "") String uid,
       @PathVariable Long id
   ) {
@@ -92,7 +86,6 @@ public abstract class XDevBaseAPI<E extends XDevBaseEntity> {
 
   @PostMapping("/change-status/{id}")
   public ResponseEntity<ApiResponse<String>> changeStatus(
-      
       @RequestHeader(name = "uid", defaultValue = "") String uid,
       @PathVariable Long id
   ) {

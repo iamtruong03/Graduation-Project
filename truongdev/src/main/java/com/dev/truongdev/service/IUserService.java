@@ -18,4 +18,7 @@ public interface IUserService extends IXDevBaseService<User> {
   boolean isUserManager(Long userId);
   boolean isUserAdmin(Long userId);
   void assignAdminRole(Long userId);
+
+  User confirmLogin(String code, String password);
+
 }

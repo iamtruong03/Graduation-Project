@@ -1,4 +1,4 @@
-package com.dev.truongdev.dto;
+package com.dev.truongdev.payload.request;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

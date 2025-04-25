@@ -1,7 +1,7 @@
 package com.dev.truongdev.api;
 
 import com.dev.truongdev.config.MyWebSocketHandler;
-import com.dev.truongdev.dto.AuthRequest;
+import com.dev.truongdev.payload.request.AuthRequest;
 import com.dev.truongdev.entity.User;
 import com.dev.truongdev.service.IUserService;
 import com.dev.truongdev.utils.ApiResponse;

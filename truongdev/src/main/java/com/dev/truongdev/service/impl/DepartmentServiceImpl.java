@@ -13,6 +13,8 @@ import java.util.List;
 import java.util.Queue;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -51,26 +53,26 @@ public class DepartmentServiceImpl extends
 
   // lấy phòng ban hiện tại + con cháu...
   @Override
-  public List<Department> getAll(Long id, String uid) {
+  public Page<Department> searchAll(Long did, String uid, String search, Pageable pageable) {
     User user = userRepo.findById(Long.valueOf(uid))
         .orElseThrow(() -> new RuntimeException("User not found"));
 
-    // Kiểm tra điều kiện xem toàn hệ thống (admin hoặc phòng ban root)
-    if (user.getRole().equals("ROLE_ADMIN") ||
-        (departmentRepo.findById(id).get().getParentId() == null)) {
-      return departmentRepo.findAllByStatus(AppConstants.STATUS_ACTIVE);
+    boolean isAdminOrRoot = user.getRole().equals("ROLE_ADMIN") ||
+        departmentRepo.findById(did).map(d -> d.getParentId() == null).orElse(false);
+
+    if (isAdminOrRoot) {
+        List<Department> allDepartments = departmentRepo.findAllByStatus(AppConstants.STATUS_ACTIVE);
+        return departmentRepo.searchByCodeOrName(AppConstants.STATUS_ACTIVE, search, allDepartments, pageable);
     }
 
-    Department department = departmentRepo.findById(id)
+    Department department = departmentRepo.findById(did)
         .orElseThrow(() -> new RuntimeException("Department not found"));
 
     List<Department> list = new ArrayList<>();
     list.add(department);
-    list.addAll(getAllSubDepartments(id));
+    list.addAll(getAllSubDepartments(did));
 
-    return list;
+    return departmentRepo.searchByCodeOrName(AppConstants.STATUS_ACTIVE, search, list, pageable);
   }
-
-
 
 }

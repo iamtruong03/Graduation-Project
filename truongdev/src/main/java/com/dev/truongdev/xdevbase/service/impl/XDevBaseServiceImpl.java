@@ -12,6 +12,8 @@ import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.beans.BeanUtils;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @AllArgsConstructor
@@ -66,7 +68,7 @@ public class XDevBaseServiceImpl <
   }
 
   @Override
-  public List<E> getAll(Long id, String uid) {
-    return repo.findAllByStatus(AppConstants.STATUS_ACTIVE);
+  public Page<E> searchAll(Long did, String uid, String search, Pageable pageable) {
+    return null;
   }
 }

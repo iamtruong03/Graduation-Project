@@ -183,13 +183,6 @@ const DepartmentList = () => {
           onChange={(e) => setSearchName(e.target.value)}
           InputProps={{ endAdornment: <SearchIcon color="action" /> }}
         />
-        <TextField
-          size="small"
-          placeholder="Tên bộ phận cha"
-          value={searchCode}
-          onChange={(e) => setSearchCode(e.target.value)}
-          InputProps={{ endAdornment: <SearchIcon color="action" /> }}
-        />
         <FormControl size="small" sx={{ minWidth: 200 }}>
           <InputLabel>Trạng thái hoạt động</InputLabel>
           <Select

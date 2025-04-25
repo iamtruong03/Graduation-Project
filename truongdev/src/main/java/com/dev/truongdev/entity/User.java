@@ -25,9 +25,9 @@ public class User extends XDevBaseEntity {
   Long departmentId;
 
   // vi tri
-  Long positionId;
+  Integer positionId;
 
-  String  phoneNumber;
+  String phoneNumber;
 
   String email;
 

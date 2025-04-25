@@ -1,12 +1,13 @@
 package com.dev.truongdev.service;
 
 import com.dev.truongdev.entity.User;
+import com.dev.truongdev.payload.request.UpdatePasswordRequest;
 import com.dev.truongdev.xdevbase.service.IXDevBaseService;
 import com.dev.truongdev.dto.UserRegistrationDTO;
+import java.util.List;
 
 public interface IUserService extends IXDevBaseService<User> {
 //  Long save(UserRegistrationDTO userDTO);
-  Long getCurrentUserId();
 //  Long getCurrentUserCode();
 //  Long findById(Long id);
 //  Long registerNewUser(UserRegistrationDTO userDTO);
@@ -21,4 +22,15 @@ public interface IUserService extends IXDevBaseService<User> {
 
   User confirmLogin(String code, String password);
 
+  Long getCurrentUserId();
+
+  void updatePassword(UpdatePasswordRequest updatePasswordRequest);
+
+  List<User> listUserDep(String uid);
+
+  List<User> listUserChildDep(String uid);
+
+  List<User> listUserParentDep(String uid);
+
+  List<User> listHeadChildDep(String uid);
 }

@@ -21,7 +21,8 @@ public class UserRegistrationDTO {
     String name;
 
     Long departmentId;
-    Long positionId;
+
+    Integer positionId;
 
     String phoneNumber;
 

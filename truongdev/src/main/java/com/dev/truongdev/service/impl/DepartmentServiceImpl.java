@@ -57,11 +57,11 @@ public class DepartmentServiceImpl extends
     User user = userRepo.findById(Long.valueOf(uid))
         .orElseThrow(() -> new RuntimeException("User not found"));
 
-    boolean isAdminOrRoot = user.getRole().equals("ROLE_ADMIN") ||
-        departmentRepo.findById(did).map(d -> d.getParentId() == null).orElse(false);
-
-    if (isAdminOrRoot) {
+    // Kiểm tra điều kiện xem toàn hệ thống (admin hoặc phòng ban root)
+    if (user.getRole().equals("ROLE_ADMIN") ||
+        (departmentRepo.findById(did).get().getParentId() == null)) {
         List<Department> allDepartments = departmentRepo.findAllByStatus(AppConstants.STATUS_ACTIVE);
+
         return departmentRepo.searchByCodeOrName(AppConstants.STATUS_ACTIVE, search, allDepartments, pageable);
     }
 

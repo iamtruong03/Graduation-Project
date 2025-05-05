@@ -35,32 +35,92 @@ import projectService from '../services/projectService';
 
 
 const ProjectList = () => {
+  const mockData = [
+    {
+      id: 1,
+      code: 'PRJ001',
+      name: 'Hệ thống quản lý nhân sự',
+      type: 'Phát triển phần mềm',
+      status: 'Tạo mới',
+      startDate: '2024-01-19',
+      endDate: '2024-11-22',
+      manager: 'Bùi Hoài Hương',
+      creator: 'Admin'
+    },
+    {
+      id: 2,
+      code: 'PRJ002',
+      name: 'Ứng dụng di động bán hàng',
+      type: 'Mobile',
+      status: 'Chờ phê duyệt',
+      startDate: '2024-03-15',
+      endDate: '2024-04-20',
+      manager: 'Ngô Duy Anh',
+      creator: 'Admin'
+    },
+    {
+      id: 3,
+      code: 'PRJ003',
+      name: 'Website thương mại điện tử',
+      type: 'Web',
+      status: 'Đã duyệt',
+      startDate: '2024-02-04',
+      endDate: '2024-09-19',
+      manager: 'Ngô Duy Anh',
+      creator: 'Admin'
+    }
+  ];
+
+  // Thay đổi useState projects để sử dụng mockData
+  const [projects, setProjects] = useState(mockData);
   const [searchCode, setSearchCode] = useState('');
   const [searchName, setSearchName] = useState('');
   const [status, setStatus] = useState('all');
   const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
   const [openDialog, setOpenDialog] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [projects, setProjects] = useState([]);
   const rowsPerPage = 10;
 
   useEffect(() => {
     fetchProjects();
-  }, []);
+  }, [page, searchCode, searchName, status]);
 
   const fetchProjects = async () => {
     try {
       setLoading(true);
-      const response = await projectService.getAllProjects();
-      setProjects(response.data);
+      const searchQuery = [searchCode, searchName]
+        .filter(Boolean)
+        .join(' ');
+      
+      // Vì đang dùng mockData, không cần gọi API
+      const filteredProjects = mockData.filter(project => {
+        const matchesSearch = project.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            project.name.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesStatus = status === 'all' || project.status.toLowerCase() === status.toLowerCase();
+        return matchesSearch && matchesStatus;
+      });
+      
+      setProjects(filteredProjects);
+      setTotalPages(Math.ceil(filteredProjects.length / rowsPerPage));
       setError(null);
     } catch (err) {
-      setError('Không thể tải danh sách dự án');
+      // Không hiển thị lỗi, chỉ log ra console để debug
       console.error('Error fetching projects:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleStatusChange = async (id) => {
+    try {
+      await projectService.changeProjectStatus(id);
+      await fetchProjects();
+    } catch (err) {
+      setError('Không thể thay đổi trạng thái dự án');
+      console.error('Error changing project status:', err);
     }
   };
 
@@ -101,22 +161,29 @@ const ProjectList = () => {
       <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
         <TextField
           size="small"
-          placeholder="Mã dự án"
+          placeholder="Tên, mã dự án"
           value={searchCode}
           onChange={(e) => setSearchCode(e.target.value)}
           InputProps={{
             endAdornment: <SearchIcon color="action" />
           }}
+          sx={{ minWidth: 200 }}
         />
-        <TextField
-          size="small"
-          placeholder="Tên dự án"
-          value={searchName}
-          onChange={(e) => setSearchName(e.target.value)}
-          InputProps={{
-            endAdornment: <SearchIcon color="action" />
-          }}
-        />
+        
+        <FormControl size="small" sx={{ minWidth: 200 }}>
+          <InputLabel>Loại dự án</InputLabel>
+          <Select
+            value={status}
+            label="Loại dự án"
+            onChange={(e) => setStatus(e.target.value)}
+          >
+            <MenuItem value="all">Tất cả</MenuItem>
+            <MenuItem value="software">Phát triển phần mềm</MenuItem>
+            <MenuItem value="mobile">Mobile</MenuItem>
+            <MenuItem value="web">Web</MenuItem>
+          </Select>
+        </FormControl>
+
         <FormControl size="small" sx={{ minWidth: 200 }}>
           <InputLabel>Trạng thái</InputLabel>
           <Select
@@ -125,19 +192,21 @@ const ProjectList = () => {
             onChange={(e) => setStatus(e.target.value)}
           >
             <MenuItem value="all">Tất cả</MenuItem>
-            <MenuItem value="active">Đang thực hiện</MenuItem>
-            <MenuItem value="completed">Hoàn thành</MenuItem>
-            <MenuItem value="pending">Chưa bắt đầu</MenuItem>
+            <MenuItem value="new">Tạo mới</MenuItem>
+            <MenuItem value="pending">Chờ phê duyệt</MenuItem>
+            <MenuItem value="approved">Đã duyệt</MenuItem>
+            <MenuItem value="inProgress">Đang thực hiện</MenuItem>
+            <MenuItem value="cancelled">Hủy bỏ</MenuItem>
           </Select>
         </FormControl>
+
         <Button
+          variant="contained"
           component={Link}
           to="/project/create"
-          variant="contained"
-          color="primary"
           sx={{ ml: 'auto' }}
         >
-          Tạo dự án
+          TẠO DỰ ÁN
         </Button>
       </Stack>
 
@@ -145,50 +214,47 @@ const ProjectList = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>STT</TableCell>
               <TableCell>Mã dự án</TableCell>
               <TableCell>Tên dự án</TableCell>
-              <TableCell>Người phụ trách</TableCell>
-              <TableCell>Phòng ban thực hiện</TableCell>
+              <TableCell>Loại dự án</TableCell>
+              <TableCell>Trạng thái</TableCell>
               <TableCell>Ngày bắt đầu</TableCell>
               <TableCell>Ngày kết thúc</TableCell>
-              <TableCell>Trạng thái</TableCell>
               <TableCell>Người tạo</TableCell>
               <TableCell align="center">Thao tác</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {error && (
-              <TableRow>
-                <TableCell colSpan={10}>
-                  <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
-                </TableCell>
-              </TableRow>
-            )}
             {loading ? (
               <TableRow>
-                <TableCell colSpan={10} align="center">
+                <TableCell colSpan={8} align="center">
                   <CircularProgress />
                 </TableCell>
               </TableRow>
             ) : (
-              projects.map((row, index) => (
+              projects.map((row) => (
                 <TableRow key={row.id}>
-                  <TableCell>{(page - 1) * rowsPerPage + index + 1}</TableCell>
                   <TableCell>{row.code}</TableCell>
                   <TableCell>{row.name}</TableCell>
-                  <TableCell>{row.manager}</TableCell>
-                  <TableCell>{row.department}</TableCell>
-                  <TableCell>{row.startDate}</TableCell>
-                  <TableCell>{row.endDate}</TableCell>
+                  <TableCell>{row.type}</TableCell>
                   <TableCell>
-                    <Switch checked={row.status === 'Đang thực hiện'} />
+                    <Box
+                      sx={{
+                        display: 'inline-block',
+                        px: 1,
+                        py: 0.5,
+                        borderRadius: 1,
+                        backgroundColor: getStatusColor(row.status),
+                        color: '#fff'
+                      }}
+                    >
+                      {row.status}
+                    </Box>
                   </TableCell>
-                  <TableCell>{row.creator}</TableCell>
+                  <TableCell>{new Date(row.startDate).toLocaleDateString('vi-VN')}</TableCell>
+                  <TableCell>{new Date(row.endDate).toLocaleDateString('vi-VN')}</TableCell>
+                  <TableCell>{row.manager}</TableCell>
                   <TableCell align="center">
-                    <IconButton size="small" component={Link} to={`/project/detail/${row.id}`} sx={{ mr: 1 }}>
-                      <VisibilityIcon />
-                    </IconButton>
                     <IconButton size="small" component={Link} to={`/project/edit/${row.id}`} sx={{ mr: 1 }}>
                       <EditIcon />
                     </IconButton>
@@ -203,38 +269,35 @@ const ProjectList = () => {
         </Table>
       </TableContainer>
 
-      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
+        <Typography>Tổng {projects.length} bản ghi</Typography>
         <Pagination
-          count={Math.ceil(projects.length / rowsPerPage)}
+          count={totalPages}
           page={page}
           onChange={handlePageChange}
           color="primary"
         />
       </Box>
-
-      <Dialog
-        open={openDialog}
-        onClose={handleCloseDialog}
-        aria-labelledby="alert-dialog-title"
-        aria-describedby="alert-dialog-description"
-      >
-        <DialogTitle id="alert-dialog-title">
-          Xác nhận xóa dự án
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText id="alert-dialog-description">
-            Bạn có chắc chắn muốn xóa dự án này? Hành động này không thể hoàn tác.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog}>Hủy</Button>
-          <Button onClick={handleConfirmDelete} color="error" autoFocus>
-            Xóa
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
+};
+
+// Thêm hàm helper để xác định màu sắc trạng thái
+const getStatusColor = (status) => {
+  switch (status) {
+    case 'Tạo mới':
+      return '#1976d2'; // Blue
+    case 'Chờ phê duyệt':
+      return '#ed6c02'; // Orange
+    case 'Đã duyệt':
+      return '#2e7d32'; // Green
+    case 'Đang thực hiện':
+      return '#9c27b0'; // Purple
+    case 'Hủy bỏ':
+      return '#d32f2f'; // Red
+    default:
+      return '#757575'; // Grey
+  }
 };
 
 export default ProjectList;

@@ -44,6 +44,9 @@ public class XDevBaseEntity {
   @Column(name = "status", nullable = false)
   Integer status;
 
+  // nguoi quan ly
+  String managerId;
+
   // Nguoi phu trach
   @Column(name = "responsible_id")
   String responsibleId;

@@ -163,23 +163,6 @@ const ProjectCreate = () => {
               </LocalizationProvider>
             </Grid>
 
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth required>
-                <InputLabel>Trạng thái</InputLabel>
-                <Select
-                  name="status"
-                  value={formData.status}
-                  onChange={handleChange}
-                  label="Trạng thái"
-                >
-                  {statuses.map((status) => (
-                    <MenuItem key={status.code} value={status.code}>
-                      {status.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
 
             <Grid item xs={12}>
               <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>

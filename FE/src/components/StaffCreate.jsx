@@ -44,9 +44,12 @@ const StaffCreate = () => {
     const fetchDepartments = async () => {
       try {
         const response = await departmentService.getAllDepartments();
-        setDepartments(response.data);
+        // Đảm bảo response.data.content là array
+        const departmentData = response.data?.content || [];
+        setDepartments(departmentData);
       } catch (error) {
         console.error('Error fetching departments:', error);
+        setDepartments([]); // Set mảng rỗng nếu có lỗi
       }
     };
     fetchDepartments();
@@ -158,7 +161,7 @@ const StaffCreate = () => {
               onChange={(newValue) => {
                 setFormData(prev => ({ ...prev, startDate: newValue }))
               }}
-              renderInput={(params) => <TextField {...params} fullWidth />}
+              slotProps={{ textField: { fullWidth: true } }}
             />
           </LocalizationProvider>
 

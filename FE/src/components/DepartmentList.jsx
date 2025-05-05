@@ -53,6 +53,7 @@ const DepartmentList = () => {
   const [openDetailDialog, setOpenDetailDialog] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const rowsPerPage = 10;
+  const [totalPages, setTotalPages] = useState(1);
 
   const validateForm = () => {
     const errors = {};
@@ -81,16 +82,12 @@ const DepartmentList = () => {
 
     try {
       setLoading(true);
-      const response = await departmentService.createDepartment(formData);
-      const newDepartment = {
-        id: response.data.id,
-        code: formData.code,
-        name: formData.name,
-        parentName: formData.parentId ? departments.find(d => d.id === formData.parentId)?.name : null,
-        active: true,
-        updatedAt: new Date().toLocaleDateString('vi-VN')
-      };
-      setDepartments(prev => [newDepartment, ...prev]);
+      const response = await departmentService.createDepartment({
+        ...formData,
+        status: 1
+      });
+      
+      await fetchDepartments(); // Tải lại danh sách sau khi tạo mới
       setOpenDialog(false);
       setFormData({ code: '', name: '', parentId: '' });
       setError(null);
@@ -102,36 +99,61 @@ const DepartmentList = () => {
     }
   };
 
-  useEffect(() => {
-    const fetchDepartments = async () => {
-      try {
-        setLoading(true);
-        const response = await departmentService.getAllDepartments();
-        const departmentMap = {};
-        response.data?.forEach(dept => {
-          departmentMap[dept.id] = dept.name;
-        });
-        const mappedDepartments = response.data?.map(dept => ({
-          id: dept.id,
-          code: dept.code,
-          name: dept.name,
-          description: dept.description,
-          active: dept.status === 1,
-          parentName: dept.parentId ? departmentMap[dept.parentId] : null,
-          updatedAt: new Date(dept.modifiedDate).toLocaleDateString('vi-VN')
-        }));
-        setDepartments(mappedDepartments);
-        setError(null);
-      } catch (err) {
-        setError('Có lỗi xảy ra khi tải danh sách phòng ban');
-        console.error('Error fetching departments:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const handleUpdateDepartment = async () => {
+    if (!validateForm()) return;
 
+    try {
+      setLoading(true);
+      await departmentService.updateDepartment(selectedDepartment.id, {
+        ...formData,
+        status: selectedDepartment.active ? 1 : 0
+      });
+      
+      await fetchDepartments(); // Tải lại danh sách sau khi cập nhật
+      setOpenDialog(false);
+      setFormData({ code: '', name: '', parentId: '' });
+      setError(null);
+    } catch (err) {
+      setError('Có lỗi xảy ra khi cập nhật phòng ban');
+      console.error('Error updating department:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchDepartments();
-  }, []);
+  }, [page, searchName, status]);
+
+  const fetchDepartments = async () => {
+    try {
+      setLoading(true);
+      const response = await departmentService.searchDepartments(
+        searchName,
+        page - 1,
+        rowsPerPage
+      );
+      
+      const mappedDepartments = response.data.content.map(dept => ({
+        id: dept.id,
+        code: dept.code,
+        name: dept.name,
+        description: dept.description,
+        active: dept.status === 1,
+        parentName: dept.parentDepartment?.name || null,
+        updatedAt: new Date(dept.modifiedDate).toLocaleDateString('vi-VN')
+      }));
+      
+      setDepartments(mappedDepartments);
+      setTotalPages(response.data.totalPages);
+      setError(null);
+    } catch (err) {
+      setError('Có lỗi xảy ra khi tải danh sách phòng ban');
+      console.error('Error fetching departments:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleOpenEditDialog = (department) => {
     setDialogType('edit');
@@ -303,10 +325,10 @@ const DepartmentList = () => {
           <Button 
             variant="contained" 
             color="primary"
-            onClick={dialogType === 'create' ? handleCreateDepartment : null}
+            onClick={dialogType === 'create' ? handleCreateDepartment : handleUpdateDepartment}
             disabled={loading}
           >
-            {dialogType === 'create' ? (loading ? 'Đang tạo...' : 'Tạo') : 'Lưu'}
+            {loading ? 'Đang xử lý...' : (dialogType === 'create' ? 'Tạo' : 'Lưu')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -381,14 +403,3 @@ const DepartmentList = () => {
 };
 
 export default DepartmentList;
-
-const handleOpenEditDialog = (department) => {
-  setDialogType('edit');
-  setSelectedDepartment(department);
-  setFormData({
-    code: department.code,
-    name: department.name,
-    parentId: departments.find(d => d.name === department.parentName)?.id || ''
-  });
-  setOpenDialog(true);
-};

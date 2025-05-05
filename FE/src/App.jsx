@@ -1,6 +1,13 @@
 import './styles/dashboard.css';
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+
+const routerConfig = {
+  future: {
+    v7_startTransition: true,
+    v7_relativeSplatPath: true
+  }
+};
 import PrivateRoute from './components/PrivateRoute';
 import Layout from './components/Layout';
 import DepartmentStats from './components/DepartmentStats';
@@ -30,7 +37,7 @@ import Chat from './components/Chat';
 
 function App() {
   return (
-    <Router>
+    <Router {...routerConfig}>
       <Routes>
         <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
           <Route index element={<Home />} />

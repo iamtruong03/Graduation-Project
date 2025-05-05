@@ -6,6 +6,7 @@ const api = axios.create({
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
+    'Accept': 'application/json'
   },
   withCredentials: true
 });
@@ -29,8 +30,18 @@ api.interceptors.response.use(
   (response) => response.data,
   async (error) => {
     if (error.response && error.response.status === 401) {
-      await AuthService.logout();
-      window.location.href = '/login';
+      try {
+        // Thử refresh token trước khi logout
+        await AuthService.refreshToken();
+        // Nếu refresh thành công, thử lại request ban đầu
+        const token = localStorage.getItem('token');
+        error.config.headers.Authorization = `Bearer ${token}`;
+        return api.request(error.config);
+      } catch (refreshError) {
+        // Nếu refresh thất bại, logout
+        await AuthService.logout();
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

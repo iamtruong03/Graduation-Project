@@ -1,44 +1,45 @@
 import api from './api';
 
 const projectService = {
-  // Lấy danh sách dự án
+  // Lấy tất cả dự án
   getAllProjects: () => {
-    return api.get('/project/list');
+    return api.get('/projects');
   },
 
-  // Lấy chi tiết dự án
-  getProjectById: (id) => {
-    return api.get(`/project/${id}`);
-  },
-
-  // Thêm dự án mới
+  // Tạo dự án mới
   createProject: (projectData) => {
     return api.post('/project', projectData);
   },
 
+  // Lấy chi tiết dự án theo ID
+  getProjectById: (id) => {
+    return api.get(`/project/${id}`);
+  },
+
+  // Tìm kiếm dự án với phân trang
+  searchProjects: ({ page = 0, size = 10, search = '' }) => {
+    return api.post('/project/search', null, {
+      params: {
+        search,
+        page,
+        size
+      }
+    });
+  },
+
   // Cập nhật thông tin dự án
   updateProject: (id, projectData) => {
-    return api.put(`/project/${id}`, projectData);
+    return api.put(`/project/update/${id}`, projectData);
   },
 
   // Xóa dự án
   deleteProject: (id) => {
-    return api.delete(`/project/${id}`);
+    return api.delete(`/project/delete/${id}`);
   },
 
-  // Lấy danh sách nhân viên trong dự án
-  getProjectStaff: (projectId) => {
-    return api.get(`/project/${projectId}/staff`);
-  },
-
-  // Thêm nhân viên vào dự án
-  addStaffToProject: (projectId, staffId) => {
-    return api.post(`/project/${projectId}/staff/${staffId}`);
-  },
-
-  // Xóa nhân viên khỏi dự án
-  removeStaffFromProject: (projectId, staffId) => {
-    return api.delete(`/project/${projectId}/staff/${staffId}`);
+  // Thay đổi trạng thái dự án
+  changeProjectStatus: (id) => {
+    return api.post(`/project/change-status/${id}`);
   }
 };
 

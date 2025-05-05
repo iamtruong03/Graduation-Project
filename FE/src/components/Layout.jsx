@@ -78,10 +78,10 @@ const Layout = ({ children }) => {
   const items = [
     {
       id: 'risk',
-      text: 'Quản lý',
+      text: 'Quản lý rủi ro',
       icon: <Warning />,
       subItems: [
-        { id: 'risk-list', text: 'Danh sách', path: '/risk/list' },
+        { id: 'risk-list', text: 'Danh sách rủi ro', path: '/risk/list' },
       ],
     },
     {

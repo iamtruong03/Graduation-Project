@@ -26,6 +26,7 @@ import lombok.experimental.SuperBuilder;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class Project extends XDevBaseEntity{
 
+  // loai du an
   @Column(name = "project_type_id", length = 30)
   Long projectTypeId;
 
@@ -33,14 +34,14 @@ public class Project extends XDevBaseEntity{
   @Column(name = "scope_id", length = 30)
   Long scopeId;
 
-  @Column(name = "department_id", length = 30)
-  Long departmentId;
+//  @Column(name = "department_id", length = 30)
+//  Long departmentId;
 
-  // Ngay phat sinh
+  // Ngay bat dau
   @Column(name = "occurrence_date", nullable = false)
   Date occurrenceDate;
 
-  // Han hoan thanh
+  // Ngay ket thuc
   @Column(name = "deadline")
   Date deadline;
 

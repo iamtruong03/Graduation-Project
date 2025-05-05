@@ -146,7 +146,6 @@ const TaskList = () => {
               <TableCell>Tên công việc</TableCell>
               <TableCell>Loại công việc</TableCell>
               <TableCell>Dự án/Phòng ban</TableCell>
-              <TableCell>Trạng thái</TableCell>
               <TableCell>Mức độ ưu tiên</TableCell>
               <TableCell>Người phụ trách</TableCell>
               <TableCell>Người thực hiện</TableCell>
@@ -176,9 +175,6 @@ const TaskList = () => {
                   <TableCell>{row.name}</TableCell>
                   <TableCell>{row.taskType === 'project' ? 'Công việc dự án' : 'Công việc phòng ban'}</TableCell>
                   <TableCell>{row.taskType === 'project' ? row.project : row.department}</TableCell>
-                  <TableCell>
-                    <Switch checked={row.status === 'Đang thực hiện'} />
-                  </TableCell>
                   <TableCell>{row.priority}</TableCell>
                   <TableCell>{row.manager}</TableCell>
                   <TableCell>{row.assignee}</TableCell>

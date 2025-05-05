@@ -19,8 +19,6 @@ public interface IXDevBaseService <
 
   E getById(String uid, Long id);
 
-  List<E> getNameById()
-
   Page<E> searchAll(Long did, String uid, F filter, Pageable pageable);
 
 }

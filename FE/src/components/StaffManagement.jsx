@@ -38,6 +38,7 @@ const StaffManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
+  const [positionId, setPositionId] = useState(''); // Thêm state positionId
   const [openDialog, setOpenDialog] = useState(false);
   const [dialogType, setDialogType] = useState('create');
   const [selectedStaff, setSelectedStaff] = useState(null);
@@ -54,23 +55,42 @@ const StaffManagement = () => {
     4: 'Phòng Marketing',
   };
 
+  const position = {
+    1: 'Quản lý',
+    2: 'Nhân viên',
+  };
+
+  const [page, setPage] = useState(0);
+  const [size, setSize] = useState(10);
+
   useEffect(() => {
     fetchStaffList();
-  }, []);
+  }, [page, size, searchTerm, selectedDepartment, selectedStatus, positionId]); // Thêm positionId vào đây
 
   const fetchStaffList = async () => {
     try {
       setLoading(true);
-      const response = await staffService.getAllStaff();
+      const filter = {
+        search: searchTerm || '',
+        departmentId: selectedDepartment === '' ? null : Number(selectedDepartment),
+        positionId: positionId === '' ? null : Number(positionId)
+      };
+
+      const pageable = {
+        page: page,
+        size: size
+      };
+
+      const response = await staffService.searchStaff(filter, pageable);
       console.log('Dữ liệu từ API:', response.data);
 
-      const rawData = response?.data || [];
+      const rawData = response?.data?.content || [];
 
       const formattedStaff = rawData.map((staff) => ({
         id: staff.id,
         code: staff.code,
         name: staff.name,
-        position: staff.role,
+        position: staff.positionId ? position[staff.positionId] || `Chức vụ ${staff.positionId}` : '---',
         department: staff.departmentId ? departmentNames[staff.departmentId] || `Phòng ${staff.departmentId}` : '---',
         email: staff.email,
         phoneNumber: staff.phoneNumber,
@@ -86,6 +106,7 @@ const StaffManagement = () => {
       }));
 
       setStaffList(formattedStaff);
+      // Sử dụng departmentNames trực tiếp
       setDepartments(
         [...new Set(formattedStaff.map((s) => s.department))].map(
           (dept, idx) => ({ id: idx + 1, name: dept })
@@ -100,8 +121,31 @@ const StaffManagement = () => {
     }
   };
 
-  const handleSearch = (e) => setSearchTerm(e.target.value);
-  const handleDepartmentChange = (e) => setSelectedDepartment(e.target.value);
+  const handleSearch = (e) => {
+    setSearchTerm(e.target.value);
+    const filter = {
+      search: e.target.value,
+      departmentId: selectedDepartment,
+      positionId: positionId,
+      page: 0,
+      size: 10,
+      sort: ['id,desc']
+    };
+    // Thiếu gọi fetchStaffList() ở đây
+  };
+
+  const handleDepartmentChange = (e) => {
+    setSelectedDepartment(e.target.value);
+    const filter = {
+      search: searchTerm,
+      departmentId: e.target.value,
+      positionId: positionId,
+      page: 0,
+      size: 10,
+      sort: ['id,desc']
+    };
+    // Thiếu gọi fetchStaffList() ở đây
+  };
   const handleStatusChange = (e) => setSelectedStatus(e.target.value);
 
   const handleDeleteClick = (staff) => {
@@ -122,19 +166,21 @@ const StaffManagement = () => {
     }
   };
 
-  const filteredStaff = staffList.filter((staff) => {
-    const matchesSearch =
-      staff.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      staff.code.toLowerCase().includes(searchTerm.toLowerCase());
+  // Thay đổi cách xử lý filter trực tiếp bằng cách gọi API search
+  const filteredStaff = staffList;
 
-    const matchesDepartment =
-      !selectedDepartment || staff.department === selectedDepartment;
-
-    const matchesStatus =
-      selectedStatus === '' || staff.status === selectedStatus;
-
-    return matchesSearch && matchesDepartment && matchesStatus;
-  });
+  const handlePositionChange = (e) => {
+    setPositionId(e.target.value);
+    const filter = {
+      search: searchTerm,
+      departmentId: selectedDepartment,
+      positionId: e.target.value,
+      page: 0,
+      size: 10,
+      sort: ['id,desc']
+    };
+    fetchStaffList();
+  };
 
   return (
     <Box sx={{ p: 3 }}>
@@ -162,23 +208,23 @@ const StaffManagement = () => {
           >
             <MenuItem value="">Tất cả</MenuItem>
             {departments.map((dept) => (
-              <MenuItem key={dept.id} value={dept.name}>
+              <MenuItem key={dept.id} value={dept.id}>
                 {dept.name}
               </MenuItem>
             ))}
           </Select>
         </FormControl>
 
-        <FormControl size="small" sx={{ width: 200 }}>
-          <InputLabel>Trạng thái</InputLabel>
+        <FormControl size="small" sx={{ minWidth: 200 }}>
+          <InputLabel>Chức vụ</InputLabel>
           <Select
-            value={selectedStatus}
-            label="Trạng thái"
-            onChange={(e) => setSelectedStatus(e.target.value === '' ? '' : Number(e.target.value))}
+            value={positionId}
+            label="Chức vụ"
+            onChange={handlePositionChange}
           >
             <MenuItem value="">Tất cả</MenuItem>
-            <MenuItem value={1}>Đang làm việc</MenuItem>
-            <MenuItem value={0}>Tạm nghỉ</MenuItem>
+            <MenuItem value={1}>Quản lý</MenuItem>
+            <MenuItem value={2}>Nhân viên</MenuItem>
           </Select>
         </FormControl>
 
@@ -205,7 +251,6 @@ const StaffManagement = () => {
               <TableCell>Email</TableCell>
               <TableCell>Số điện thoại</TableCell>
               <TableCell>Ngày vào làm</TableCell>
-              <TableCell>Trạng thái</TableCell>
               <TableCell align="center">Thao tác</TableCell>
             </TableRow>
           </TableHead>
@@ -235,13 +280,6 @@ const StaffManagement = () => {
                   <TableCell>{staff.email}</TableCell>
                   <TableCell>{staff.phoneNumber}</TableCell>
                   <TableCell>{staff.joinDate}</TableCell>
-                  <TableCell>
-                    <Chip
-                      label={staff.status === 1 ? 'Đang làm việc' : 'Tạm nghỉ'}
-                      color={staff.status === 1 ? 'success' : 'warning'}
-                      size="small"
-                    />
-                  </TableCell>
                   <TableCell align="center">
                     <IconButton
                       size="small"

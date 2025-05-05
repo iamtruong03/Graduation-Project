@@ -1,6 +1,8 @@
 package com.dev.truongdev.api;
 
 import com.dev.truongdev.entity.User;
+import com.dev.truongdev.payload.filter.UserFilter;
+import com.dev.truongdev.payload.request.UpdatePasswordRequest;
 import com.dev.truongdev.service.IUserService;
 import com.dev.truongdev.service.impl.UserServiceImpl;
 import com.dev.truongdev.utils.ApiResponse;
@@ -14,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestAttribute;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -21,13 +24,26 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/user")
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class UserAPI extends XDevBaseAPI<User> {
+public class UserAPI extends XDevBaseAPI<User, UserFilter> {
 
   final IUserService userService;
 
   @SuppressWarnings("unchecked")
-  public IXDevBaseService<User> getService(){
+  public IXDevBaseService<User, UserFilter> getService(){
     return userService;
+  }
+
+  @GetMapping("/update-password")
+  ResponseEntity<ApiResponse<String>> updatePassword(
+      @RequestAttribute String uid,
+      @RequestBody UpdatePasswordRequest updatePasswordRequest
+  ) {
+    try {
+      userService.updatePassword(uid, updatePasswordRequest);
+      return ApiResponse.ok("Update password success");
+    } catch (Exception e) {
+      return ApiResponse.error(e.getMessage());
+    }
   }
 
   @GetMapping("/list-user-dep")

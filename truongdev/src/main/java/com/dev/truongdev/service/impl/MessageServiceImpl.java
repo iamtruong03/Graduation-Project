@@ -1,6 +1,7 @@
 package com.dev.truongdev.service.impl;
 
 import com.dev.truongdev.entity.Message;
+import com.dev.truongdev.payload.filter.MessageFilter;
 import com.dev.truongdev.repo.MessageRepo;
 import com.dev.truongdev.service.IMessageService;
 import com.dev.truongdev.xdevbase.service.impl.XDevBaseServiceImpl;
@@ -15,8 +16,8 @@ import java.util.List;
 @Service
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class MessageServiceImpl
-    extends XDevBaseServiceImpl<Message, MessageRepo>
-    implements IMessageService {
+    extends XDevBaseServiceImpl<Message, MessageFilter, MessageRepo>
+    implements IMessageService<Message, MessageFilter> {
 
     final MessageRepo repo;
 

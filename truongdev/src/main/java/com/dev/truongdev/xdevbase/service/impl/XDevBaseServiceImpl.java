@@ -1,6 +1,7 @@
 package com.dev.truongdev.xdevbase.service.impl;
 
 import com.dev.truongdev.utils.AppConstants;
+import com.dev.truongdev.xdevbase.dto.XDevBaseFilter;
 import com.dev.truongdev.xdevbase.entity.XDevBaseEntity;
 import com.dev.truongdev.xdevbase.repo.XDevBaseRepo;
 import com.dev.truongdev.xdevbase.service.IXDevBaseService;
@@ -18,8 +19,10 @@ import org.springframework.data.domain.Pageable;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @AllArgsConstructor
 public class XDevBaseServiceImpl <
-    E extends XDevBaseEntity, R extends XDevBaseRepo<E>>
-    implements IXDevBaseService<E> {
+    E extends XDevBaseEntity,
+    F extends XDevBaseFilter,
+    R extends XDevBaseRepo<E>>
+    implements IXDevBaseService<E, F> {
   final R repo;
 
   public void setBaseEntity (E e, String uid){
@@ -68,7 +71,7 @@ public class XDevBaseServiceImpl <
   }
 
   @Override
-  public Page<E> searchAll(Long did, String uid, String search, Pageable pageable) {
+  public Page<E> searchAll(Long did, String uid, F filter, Pageable pageable) {
     return null;
   }
 }

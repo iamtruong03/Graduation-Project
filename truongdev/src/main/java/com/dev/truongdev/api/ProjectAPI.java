@@ -1,6 +1,7 @@
 package com.dev.truongdev.api;
 
 import com.dev.truongdev.entity.Project;
+import com.dev.truongdev.payload.filter.ProjectFilter;
 import com.dev.truongdev.xdevbase.api.XDevBaseAPI;
 import com.dev.truongdev.xdevbase.service.IXDevBaseService;
 import lombok.AccessLevel;
@@ -13,12 +14,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("project")
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class ProjectAPI extends XDevBaseAPI<Project> {
+public class ProjectAPI extends XDevBaseAPI<Project, ProjectFilter> {
 
-  final IXDevBaseService<Project> service;
+  final IXDevBaseService<Project, ProjectFilter> service;
 
   @SuppressWarnings("unchecked")
-  public IXDevBaseService<Project> getService(){
+  public IXDevBaseService<Project, ProjectFilter> getService(){
     return service;
   }
 }

@@ -2,6 +2,7 @@ package com.dev.truongdev.api;
 
 import com.dev.truongdev.entity.Message;
 import com.dev.truongdev.entity.User;
+import com.dev.truongdev.payload.filter.MessageFilter;
 import com.dev.truongdev.service.IMessageService;
 import com.dev.truongdev.service.IUserService;
 import com.dev.truongdev.xdevbase.api.XDevBaseAPI;
@@ -22,14 +23,14 @@ import java.util.Map;
 @RequestMapping("/api/messages")
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class MessageAPI extends XDevBaseAPI<Message> {
+public class MessageAPI extends XDevBaseAPI<Message, MessageFilter> {
 
     final IMessageService messageService;
     final IUserService userService;
     final SimpMessagingTemplate messagingTemplate;
 
     @Override
-    public IXDevBaseService<Message> getService() {
+    public IXDevBaseService<Message, MessageFilter> getService() {
         return messageService;
     }
 

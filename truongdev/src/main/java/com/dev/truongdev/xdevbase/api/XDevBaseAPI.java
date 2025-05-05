@@ -1,6 +1,7 @@
 package com.dev.truongdev.xdevbase.api;
 
 import com.dev.truongdev.utils.ApiResponse;
+import com.dev.truongdev.xdevbase.dto.XDevBaseFilter;
 import com.dev.truongdev.xdevbase.entity.XDevBaseEntity;
 import com.dev.truongdev.xdevbase.service.IXDevBaseService;
 import lombok.AccessLevel;
@@ -19,9 +20,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 
 @FieldDefaults(level = AccessLevel.PROTECTED)
-public abstract class XDevBaseAPI<E extends XDevBaseEntity> {
+public abstract class XDevBaseAPI<E extends XDevBaseEntity, F extends XDevBaseFilter> {
 
-  public abstract <S extends IXDevBaseService<E>> S getService();
+  public abstract <S extends IXDevBaseService<E, F>> S getService();
 
   @PostMapping("")
   ResponseEntity<ApiResponse<E>> create(
@@ -51,11 +52,11 @@ public abstract class XDevBaseAPI<E extends XDevBaseEntity> {
   ResponseEntity<ApiResponse<Page<E>>> searchEmissionFactor(
       @RequestAttribute Long did,
       @RequestAttribute String uid,
-      @RequestParam(name = "search") String search,
+      @RequestBody F filter,
       @PageableDefault(size = 10) Pageable pageable
   ) {
     try {
-      return ApiResponse.ok(getService().searchAll(did, uid, search, pageable));
+      return ApiResponse.ok(getService().searchAll(did, uid, filter, pageable));
     } catch (Exception e) {
       return ApiResponse.error(e.getMessage());
     }

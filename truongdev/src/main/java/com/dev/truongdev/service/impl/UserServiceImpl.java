@@ -1,18 +1,22 @@
 package com.dev.truongdev.service.impl;
 
 import com.dev.truongdev.entity.User;
+import com.dev.truongdev.payload.filter.UserFilter;
 import com.dev.truongdev.payload.request.UpdatePasswordRequest;
 import com.dev.truongdev.repo.UserRepo;
 import com.dev.truongdev.entity.Department;
 import com.dev.truongdev.service.IUserService;
 import com.dev.truongdev.utils.AppConstants;
 import com.dev.truongdev.xdevbase.service.impl.XDevBaseServiceImpl;
-import com.dev.truongdev.dto.UserRegistrationDTO;
+import jakarta.transaction.Transactional;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -22,8 +26,8 @@ import org.springframework.stereotype.Service;
 @Service
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class UserServiceImpl extends
-    XDevBaseServiceImpl<User, UserRepo> implements
-    IUserService {
+    XDevBaseServiceImpl<User, UserFilter,UserRepo> implements
+    IUserService<User, UserFilter> {
 
   final UserRepo userRepo;
   final DepartmentServiceImpl departmentService;
@@ -34,6 +38,27 @@ public class UserServiceImpl extends
     this.departmentService = departmentService;
 
   }
+
+  public void setBaseEntity (User e, String uid){
+    e.setCreateBy(Optional.ofNullable(e.getCreateBy()).orElse(uid));
+    e.setUpdateBy(uid);
+    e.setStatus(AppConstants.STATUS_ACTIVE);
+    e.setState(AppConstants.STATUS_NEW);
+    e.setRole("ROLE_USER");
+    e.setDepartmentId(2L);
+  }
+
+  @Override
+  @Transactional
+  public User create(String uid, User e){
+    if (userRepo.existsByCodeIgnoreCase(e.getCode().trim())) {
+      throw new RuntimeException("Người dùng đã tồn tại: " + e.getCode());
+    }
+    setBaseEntity(e, uid);
+    e.setPassword(new BCryptPasswordEncoder().encode(e.getPassword()));
+    return userRepo.save(e);
+  }
+
   @Override
   public Long getCurrentUserId() {
     Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -47,8 +72,8 @@ public class UserServiceImpl extends
   }
 
   @Override
-  public void updatePassword(UpdatePasswordRequest updatePasswordRequest) {
-    User result = userRepo.findByCode(updatePasswordRequest.getCode())
+  public void updatePassword(String uid, UpdatePasswordRequest updatePasswordRequest) {
+    User result = userRepo.findById(Long.valueOf(uid))
         .orElseThrow(() -> new RuntimeException("User not found"));
 
     BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
@@ -77,6 +102,7 @@ public class UserServiceImpl extends
     return user;
   }
 
+  // user trong phòng ban
   @Override
   public List<User> listUserDep(String uid){
     User user = userRepo.findById(Long.valueOf(uid))
@@ -89,6 +115,7 @@ public class UserServiceImpl extends
     return userRepo.findByDepartmentIdAndStatus(user.getDepartmentId(), AppConstants.STATUS_ACTIVE);
   }
 
+  // user con và user phòng ban chính nó
   @Override
   public List<User> listUserChildDep(String uid){
     User user = userRepo.findById(Long.valueOf(uid))
@@ -109,6 +136,45 @@ public class UserServiceImpl extends
   }
 
   @Override
+  public Page<User> searchAll(Long did, String uid, UserFilter filter, Pageable pageable){
+    User user = userRepo.findById(Long.valueOf(uid))
+        .orElseThrow(() -> new RuntimeException("User not found"));
+
+    if (user.getRole().equals("ROLE_ADMIN")) {
+      return userRepo.searchUser(
+          AppConstants.STATUS_ACTIVE,
+          filter.getSearch(),
+          filter.getDepartmentId(),
+          filter.getPositionId(),
+          userRepo.findAllByStatus(AppConstants.STATUS_ACTIVE),
+          pageable
+      );
+    } else {
+      List<Department> departments = new ArrayList<>();
+      Department currentDepartment = departmentService.getById(uid, did);
+      departments.add(currentDepartment);
+      departments.addAll(departmentService.getAllSubDepartments(did));
+
+      List<Long> departmentIds = departments.stream()
+          .map(Department::getId)
+          .collect(Collectors.toList());
+
+      List<User> users = userRepo.findByDepartmentIdInAndStatus(
+          departmentIds, AppConstants.STATUS_ACTIVE);
+
+      return userRepo.searchUser(
+          AppConstants.STATUS_ACTIVE,
+          filter.getSearch(),
+          filter.getDepartmentId(),
+          filter.getPositionId(),
+          users,
+          pageable
+      );
+    }
+  }
+
+  // user phòng ban cha
+  @Override
   public List<User> listUserParentDep(String uid){
     User user = userRepo.findById(Long.valueOf(uid))
         .orElseThrow(() -> new RuntimeException("User not found"));
@@ -121,6 +187,7 @@ public class UserServiceImpl extends
     return userRepo.findByDepartmentIdAndStatus(department.getParentId(), AppConstants.STATUS_ACTIVE);
   }
 
+  // list truong phong ban con
   @Override
   public List<User> listHeadChildDep(String uid){
     User user = userRepo.findById(Long.valueOf(uid))

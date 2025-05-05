@@ -1,7 +1,6 @@
 package com.dev.truongdev.payload.filter;
 
 import com.dev.truongdev.xdevbase.dto.XDevBaseFilter;
-import java.util.List;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -14,7 +13,10 @@ import lombok.experimental.SuperBuilder;
 @Getter
 @SuperBuilder
 @NoArgsConstructor
+@AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class DepartmentFilter extends XDevBaseFilter {
+public class UserFilter extends XDevBaseFilter {
+  Long departmentId;
 
+  Long positionId;
 }

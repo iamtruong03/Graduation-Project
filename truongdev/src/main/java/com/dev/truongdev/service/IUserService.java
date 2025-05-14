@@ -23,8 +23,6 @@ public interface IUserService<E, F> extends IXDevBaseService<User, UserFilter> {
 
   User confirmLogin(String code, String password);
 
-  Long getCurrentUserId();
-
   void updatePassword(String uid, UpdatePasswordRequest updatePasswordRequest);
 
   List<User> listUserDep(String uid);

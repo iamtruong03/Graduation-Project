@@ -30,7 +30,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import VisibilityIcon from '@mui/icons-material/Visibility';
-import departmentService from '../services/departmentService';
+import departmentService from '../../services/departmentService';
 
 const DepartmentList = () => {
   const [searchCode, setSearchCode] = useState('');
@@ -195,12 +195,12 @@ const DepartmentList = () => {
 
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h5" sx={{ mb: 3 }}>DANH SÁCH BỘ PHẬN</Typography>
+      <Typography variant="h5" sx={{ mb: 3 }}>DANH SÁCH PHÒNG BAN</Typography>
 
       <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
         <TextField
           size="small"
-          placeholder="Tên, mã bộ phận"
+          placeholder="Tên, mã phòng ban"
           value={searchName}
           onChange={(e) => setSearchName(e.target.value)}
           InputProps={{ endAdornment: <SearchIcon color="action" /> }}
@@ -221,7 +221,7 @@ const DepartmentList = () => {
           setDialogType('create');
           setOpenDialog(true);
         }}>
-          Tạo bộ phận
+          Tạo phòng ban
         </Button>
       </Stack>
 
@@ -230,9 +230,9 @@ const DepartmentList = () => {
           <TableHead>
             <TableRow>
               <TableCell>STT</TableCell>
-              <TableCell>Mã bộ phận</TableCell>
-              <TableCell>Tên bộ phận</TableCell>
-              <TableCell>Tên bộ phận cha</TableCell>
+              <TableCell>Mã phòng ban</TableCell>
+              <TableCell>Tên phòng ban</TableCell>
+              <TableCell>Tên phòng ban cha</TableCell>
               <TableCell>Hoạt động</TableCell>
               <TableCell>Ngày cập nhật</TableCell>
               <TableCell align="center">Thao tác</TableCell>
@@ -270,7 +270,7 @@ const DepartmentList = () => {
 
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
         <DialogTitle>
-          {dialogType === 'create' ? 'Tạo bộ phận mới' : 'Chỉnh sửa bộ phận'}
+          {dialogType === 'create' ? 'Tạo phòng ban mới' : 'Chỉnh sửa phòng ban'}
         </DialogTitle>
         <DialogContent>
           <Paper sx={{ p: 3 }}>
@@ -279,7 +279,7 @@ const DepartmentList = () => {
                 <TextField
                   fullWidth
                   size="small"
-                  label="Mã bộ phận"
+                  label="Mã phòng ban"
                   required
                   name="code"
                   value={formData.code}
@@ -292,7 +292,7 @@ const DepartmentList = () => {
                 <TextField
                   fullWidth
                   size="small"
-                  label="Tên bộ phận"
+                  label="Tên phòng ban"
                   required
                   name="name"
                   value={formData.name}
@@ -303,9 +303,9 @@ const DepartmentList = () => {
               </Grid>
               <Grid item xs={12}>
                 <FormControl fullWidth size="small">
-                  <InputLabel>Bộ phận cha</InputLabel>
+                  <InputLabel>Phòng ban cha</InputLabel>
                   <Select
-                    label="Bộ phận cha"
+                    label="Phòng ban cha"
                     name="parentId"
                     value={formData.parentId}
                     onChange={handleInputChange}

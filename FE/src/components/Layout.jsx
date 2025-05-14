@@ -122,7 +122,7 @@ const Layout = ({ children }) => {
       icon: <BarChart />,
       subItems: [
         { id: 'department-stats', text: 'Thống kê phòng ban', icon: <Groups />, path: '/dashboard/department' },
-        { id: 'employee-stats', text: 'Thống kê nhân viên', icon: <Person />, path: '/dashboard/employee' },
+        { id: 'employee-stats', text: 'Thống kê hiệu suất nhân viên', icon: <Person />, path: '/dashboard/employee' },
       ]
     },
     {
@@ -140,16 +140,7 @@ const Layout = ({ children }) => {
       subItems: [
         { id: 'category-management', text: 'Danh mục chung', path: '/category/management' },
       ],
-    },
-    {
-      id: 'account',
-      text: 'Quản lý tài khoản',
-      icon: <ManageAccounts />,
-      subItems: [
-        { id: 'account-list', text: 'Danh sách tài khoản', path: '/account/list' },
-        { id: 'my-account', text: 'Tài khoản của tôi', path: '/account/my-account' },
-      ],
-    },
+    }
   ];
 
   const drawer = (
@@ -206,7 +197,16 @@ const Layout = ({ children }) => {
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             THT
           </Typography>
-          <Typography variant="subtitle1" sx={{ mr: 2, display: 'flex', alignItems: 'center' }}>
+          <Typography 
+            variant="subtitle1" 
+            sx={{ 
+              mr: 2, 
+              display: 'flex', 
+              alignItems: 'center',
+              cursor: 'pointer' 
+            }}
+            onClick={() => navigate('/account/my-account')}
+          >
             <AccountCircle sx={{ mr: 1 }} />
             Xin chào, {userName}!
           </Typography>

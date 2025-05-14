@@ -11,14 +11,30 @@ class AuthService {
             });
             if (response.data.data) {
                 const { accessToken, refreshToken } = response.data.data;
+                const decodedToken = this.decodeToken(accessToken);
                 localStorage.setItem('token', accessToken);
                 localStorage.setItem('refreshToken', refreshToken);
+                localStorage.setItem('userName', decodedToken.name); // Lưu tên người dùng
                 axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
             }
             return response.data;
         } catch (error) {
             const errorMessage = error.response?.data?.message || 'Đăng nhập thất bại';
             throw new Error(errorMessage);
+        }
+    }
+
+    decodeToken(token) {
+        try {
+            const base64Url = token.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+            return JSON.parse(jsonPayload);
+        } catch (error) {
+            console.error('Error decoding token:', error);
+            return {};
         }
     }
 

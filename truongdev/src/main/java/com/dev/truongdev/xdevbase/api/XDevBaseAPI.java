@@ -4,6 +4,7 @@ import com.dev.truongdev.utils.ApiResponse;
 import com.dev.truongdev.xdevbase.dto.XDevBaseFilter;
 import com.dev.truongdev.xdevbase.entity.XDevBaseEntity;
 import com.dev.truongdev.xdevbase.service.IXDevBaseService;
+import java.util.List;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 import org.springframework.data.domain.Page;
@@ -43,6 +44,18 @@ public abstract class XDevBaseAPI<E extends XDevBaseEntity, F extends XDevBaseFi
   ) {
     try {
       return ApiResponse.ok(getService().getById(uid, id));
+    } catch (Exception e) {
+      return ApiResponse.error(e.getMessage());
+    }
+  }
+
+  @GetMapping("/list")
+  ResponseEntity<ApiResponse<List<E>>> getList(
+      @RequestAttribute Long did,
+      @RequestAttribute String uid
+  ) {
+    try {
+      return ApiResponse.ok(getService().getAll(did, uid));
     } catch (Exception e) {
       return ApiResponse.error(e.getMessage());
     }

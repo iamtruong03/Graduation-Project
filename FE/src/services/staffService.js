@@ -56,7 +56,17 @@ const staffService = {
         'Content-Type': 'application/json'
       }
     });
-  }
+  },
+  // Lấy danh sách phòng ban
+  getDepartments: () => {
+    return api.get('/department/list', {
+      ...getAuthHeader(),
+      headers: {
+        ...getAuthHeader().headers,
+        'Content-Type': 'application/json'
+      }
+    });
+  },
 };
 
 export default staffService;

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -23,14 +23,20 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  CircularProgress,
+  Alert,
 } from '@mui/material';
 import { format } from 'date-fns';
 import vi from 'date-fns/locale/vi';
 import CloseIcon from '@mui/icons-material/Close';
+import projectService from '../../services/projectService';
 
 const ProjectDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [project, setProject] = useState(null);
   const [openTaskDialog, setOpenTaskDialog] = useState(false);
   const [newTask, setNewTask] = useState({
     name: '',
@@ -41,37 +47,51 @@ const ProjectDetail = () => {
     status: 'NEW',
   });
 
-  const [project, setProject] = useState({
-    id: 1,
-    code: 'PRJ001',
-    name: 'Dự án A',
-    manager: 'Nguyễn Văn A',
-    department: 'Phòng Kỹ thuật',
-    startDate: new Date('2024-01-01'),
-    endDate: new Date('2024-12-31'),
-    status: 'IN_PROGRESS',
-    tasks: [
-      {
-        id: 1,
-        name: 'Phân tích yêu cầu',
-        assignee: 'Trần Thị B',
-        startDate: new Date('2024-01-01'),
-        endDate: new Date('2024-01-15'),
-        status: 'COMPLETED',
-        priority: 'HIGH',
-      },
-      {
-        id: 2,
-        name: 'Thiết kế hệ thống',
-        assignee: 'Lê Văn C',
-        startDate: new Date('2024-01-16'),
-        endDate: new Date('2024-02-15'),
-        status: 'IN_PROGRESS',
-        priority: 'MEDIUM',
-      },
-    ],
-  });
+  useEffect(() => {
+    const fetchProjectDetail = async () => {
+      try {
+        setLoading(true);
+        const response = await projectService.getProjectById(id);
+        if (response && response.data) {
+          setProject(response.data);
+          setError(null);
+        } else {
+          setError('Không thể tải thông tin dự án: Dữ liệu không hợp lệ');
+        }
+      } catch (err) {
+        setError('Không thể tải thông tin dự án: ' + (err.response?.data?.message || err.message));
+        console.error('Error fetching project details:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
+    fetchProjectDetail();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Alert severity="error">{error}</Alert>
+      </Box>
+    );
+  }
+
+  if (!project) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Alert severity="info">Không tìm thấy thông tin dự án</Alert>
+      </Box>
+    );
+  }
   const getStatusColor = (status) => {
     switch (status) {
       case 'NEW':

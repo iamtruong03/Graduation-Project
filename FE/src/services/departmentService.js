@@ -9,9 +9,15 @@ const getAuthHeader = () => ({
 const departmentService = {
   // Lấy danh sách phòng ban
   getAllDepartments: () => {
-    return api.post('/department/search', null, {
+    return api.post('/department/search', {
+      search: ''
+    }, {
+      ...getAuthHeader(),
+      headers: {
+        ...getAuthHeader().headers,
+        'Content-Type': 'application/json'
+      },
       params: {
-        search: '',
         page: 0,
         size: 100
       }
@@ -40,9 +46,15 @@ const departmentService = {
 
   // Tìm kiếm phòng ban với phân trang
   searchDepartments: (search = '', page = 0, size = 10) => {
-    return api.post('/department/search', null, {
+    return api.post('/department/search', {
+      search
+    }, {
+      ...getAuthHeader(),
+      headers: {
+        ...getAuthHeader().headers,
+        'Content-Type': 'application/json'
+      },
       params: {
-        search,
         page,
         size
       }

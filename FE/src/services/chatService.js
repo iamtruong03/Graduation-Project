@@ -13,7 +13,7 @@ class ChatService {
 
   connect() {
     const socket = new SockJS('http://localhost:8080/ws');
-    this.stompClient = Stomp.over(socket);
+    this.stompClient = Stomp.over(() => socket);
     this.stompClient.reconnect_delay = 5000;
 
     return new Promise((resolve, reject) => {
@@ -26,21 +26,19 @@ class ChatService {
       const headers = {
         'Authorization': `Bearer ${token}`
       };
-
-      const onConnect = () => {
-        console.log('WebSocket kết nối thành công');
-        this.subscribeToTopics();
-        resolve();
-      };
-
-      const onError = (error) => {
-        console.error('Lỗi kết nối WebSocket:', error);
-        reject(error);
-        // Thử kết nối lại sau 5 giây
-        setTimeout(() => this.connect(), 5000);
-      };
-
-      this.stompClient.connect(headers, onConnect, onError);
+  
+      this.stompClient.connect(headers, 
+        () => {
+          console.log('WebSocket kết nối thành công');
+          this.subscribeToTopics();
+          resolve();
+        },
+        (error) => {
+          console.error('Lỗi kết nối WebSocket:', error);
+          reject(error);
+          setTimeout(() => this.connect(), 5000);
+        }
+      );
     });
   }
 
@@ -49,6 +47,12 @@ class ChatService {
     this.stompClient.subscribe('/user/queue/messages', (message) => {
       const messageData = JSON.parse(message.body);
       this.messageHandlers.forEach(handler => handler(messageData));
+    });
+
+    // Đăng ký nhận cập nhật danh sách người dùng trực tuyến
+    this.stompClient.subscribe('/topic/online-users', (message) => {
+      const users = JSON.parse(message.body);
+      this.onlineUsersHandlers.forEach(handler => handler(users));
     });
 
     // Đăng ký nhận tin nhắn phòng ban
@@ -68,12 +72,6 @@ class ChatService {
         this.companyMessageHandlers.forEach(handler => handler(messageData));
       });
     }
-
-    // Đăng ký nhận cập nhật danh sách người dùng trực tuyến
-    this.stompClient.subscribe('/topic/online-users', (message) => {
-      const users = JSON.parse(message.body);
-      this.onlineUsersHandlers.forEach(handler => handler(users));
-    });
   }
 
   disconnect() {
@@ -83,10 +81,15 @@ class ChatService {
   }
 
   sendMessage(receiverId, content, type = 'PERSONAL', groupId = null) {
-    if (!this.stompClient) {
-      throw new Error('WebSocket chưa được kết nối');
+    if (!this.stompClient || !this.stompClient.connected) {
+      return this.connect().then(() => {
+        this._sendMessage(receiverId, content, type, groupId);
+      });
     }
+    this._sendMessage(receiverId, content, type, groupId);
+  }
 
+  _sendMessage(receiverId, content, type = 'PERSONAL', groupId = null) {
     const message = {
       receiverId,
       content,

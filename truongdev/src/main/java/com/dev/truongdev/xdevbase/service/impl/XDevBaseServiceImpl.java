@@ -71,6 +71,11 @@ public class XDevBaseServiceImpl <
   }
 
   @Override
+  public List<E> getAll(Long id, String uid) {
+    return repo.findAllByStatus(AppConstants.STATUS_ACTIVE);
+  }
+
+  @Override
   public Page<E> searchAll(Long did, String uid, F filter, Pageable pageable) {
     return null;
   }

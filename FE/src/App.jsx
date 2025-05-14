@@ -10,30 +10,30 @@ const routerConfig = {
 };
 import PrivateRoute from './components/PrivateRoute';
 import Layout from './components/Layout';
-import DepartmentStats from './components/DepartmentStats';
-import EmployeeStats from './components/EmployeeStats';
-import RiskList from './components/RiskList';
-import DepartmentList from './components/DepartmentList';
-import ProjectList from './components/ProjectList';
-import ProjectCreate from './components/ProjectCreate';
-import ProjectDetail from './components/ProjectDetail';
-import ProjectEdit from './components/ProjectEdit';
-import StaffManagement from './components/StaffManagement';
-import TaskList from './components/TaskList';
-import TaskCreate from './components/TaskCreate';
-import TaskDetail from './components/TaskDetail';
-import TaskEdit from './components/TaskEdit';
+import DepartmentStats from './components/dashboard/DepartmentStats';
+import RiskList from './components/risk/RiskList';
+import DepartmentList from './components/department/DepartmentList';
+import ProjectList from './components/project/ProjectList';
+import ProjectCreate from './components/project/ProjectCreate';
+import ProjectDetail from './components/project/ProjectDetail';
+import ProjectEdit from './components/project/ProjectEdit';
+import StaffManagement from './components/department/StaffManagement';
+import TaskList from './components/task/TaskList';
+import TaskCreate from './components/task/TaskCreate';
+import TaskDetail from './components/task/TaskDetail';
+import TaskEdit from './components/task/TaskEdit';
 import CategoryManagement from './components/CategoryManagement';
-import StaffCreate from './components/StaffCreate';
-import StaffDetail from './components/StaffDetail';
-import StaffEdit from './components/StaffEdit';
+import StaffCreate from './components/user/StaffCreate';
+import StaffDetail from './components/user/StaffDetail';
+import StaffEdit from './components/user/StaffEdit';
 import Login from './components/Login';
 import Home from './components/Home';
-import AccountList from './components/AccountList';
-import MyAccount from './components/MyAccount';
+import MyAccount from './components/user/MyAccount';
 import NotificationCenter from './components/NotificationCenter';
 import DocumentManagement from './components/DocumentManagement';
-import Chat from './components/Chat';
+import Chat from './components/chat/Chat';
+import RiskCreate from './components/risk/RiskCreate';
+import EmployeePerformanceStats from './components/dashboard/EmployeePerformanceStats';
 
 function App() {
   return (
@@ -42,8 +42,9 @@ function App() {
         <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
           <Route index element={<Home />} />
           <Route path="/dashboard/department" element={<DepartmentStats />} />
-          <Route path="/dashboard/employee" element={<EmployeeStats />} />
+          <Route path="/dashboard/employee" element={<EmployeePerformanceStats />} />
           <Route path="/risk/list" element={<RiskList />} />
+          <Route path="/risk/create" element={<RiskCreate />} />
           <Route path="/department/list" element={<DepartmentList />} />
           <Route path="/project/list" element={<ProjectList />} />
           <Route path="/project/create" element={<ProjectCreate />} />
@@ -58,7 +59,6 @@ function App() {
           <Route path="/staff/create" element={<StaffCreate />} />
           <Route path="/staff/detail/:id" element={<StaffDetail />} />
           <Route path="/staff/edit/:id" element={<StaffEdit />} />
-          <Route path="/account/list" element={<AccountList />} />
           <Route path="/account/my-account" element={<MyAccount />} />
           <Route path="/notification" element={<NotificationCenter />} />
           <Route path="/document/management" element={<DocumentManagement />} />

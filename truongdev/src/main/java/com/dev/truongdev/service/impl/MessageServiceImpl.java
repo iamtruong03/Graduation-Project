@@ -28,20 +28,22 @@ public class MessageServiceImpl
 
     @Override
     @Transactional
-    public Message sendMessage(String uid, Long senderId, Long receiverId, String content) {
+    public Message sendMessage(String uid, Long receiverId, String content) {
+        Long senderId = Long.parseLong(uid);
         Message message = Message.builder()
-                .senderId(senderId)
-                .receiverId(receiverId)
-                .content(content)
-                .timestamp(LocalDateTime.now())
-                .isRead(false)
-                .build();
+            .senderId(senderId)
+            .receiverId(receiverId)
+            .content(content)
+            .timestamp(LocalDateTime.now())
+            .isRead(false)
+            .build();
+
         return create(uid, message);
     }
 
     @Override
-    public List<Message> getMessagesBetweenUsers(String uid, Long currentUserId, Long userId) {
-        return repo.findMessagesBetweenUsers(currentUserId, userId);
+    public List<Message> getMessagesBetweenUsers(String uid, Long userId) {
+        return repo.findMessagesBetweenUsers(Long.parseLong(uid), userId);
     }
 
     @Override

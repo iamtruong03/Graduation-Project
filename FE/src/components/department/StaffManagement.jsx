@@ -30,7 +30,7 @@ import {
   PersonAdd as PersonAddIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import staffService from '../services/staffService';
+import staffService from '../../services/staffService';
 import { Alert } from '@mui/material';
 
 const StaffManagement = () => {
@@ -48,13 +48,6 @@ const StaffManagement = () => {
   const [error, setError] = useState(null);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
 
-  const departmentNames = {
-    1: 'Phòng Nhân sự',
-    2: 'Phòng Kỹ thuật',
-    3: 'Phòng Kế toán',
-    4: 'Phòng Marketing',
-  };
-
   const position = {
     1: 'Quản lý',
     2: 'Nhân viên',
@@ -62,6 +55,7 @@ const StaffManagement = () => {
 
   const [page, setPage] = useState(0);
   const [size, setSize] = useState(10);
+  const [departmentList, setDepartmentList] = useState([]);
 
   useEffect(() => {
     fetchStaffList();
@@ -91,7 +85,7 @@ const StaffManagement = () => {
         code: staff.code,
         name: staff.name,
         position: staff.positionId ? position[staff.positionId] || `Chức vụ ${staff.positionId}` : '---',
-        department: staff.departmentId ? departmentNames[staff.departmentId] || `Phòng ${staff.departmentId}` : '---',
+        department: departmentList.find(d => d.id === staff.departmentId)?.name || '---',
         email: staff.email,
         phoneNumber: staff.phoneNumber,
         joinDate: staff.startDate
@@ -131,7 +125,6 @@ const StaffManagement = () => {
       size: 10,
       sort: ['id,desc']
     };
-    // Thiếu gọi fetchStaffList() ở đây
   };
 
   const handleDepartmentChange = (e) => {
@@ -179,8 +172,24 @@ const StaffManagement = () => {
       size: 10,
       sort: ['id,desc']
     };
-    fetchStaffList();
   };
+
+  const fetchDepartments = async () => {
+    try {
+      const response = await staffService.getDepartments();
+      const departments = response.data.map(dept => ({
+        id: dept.id,
+        name: dept.name
+      }));
+      setDepartmentList(departments);
+    } catch (error) {
+      console.error('Lỗi khi lấy danh sách phòng ban:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchDepartments();
+  }, []);
 
   return (
     <Box sx={{ p: 3 }}>
@@ -207,7 +216,7 @@ const StaffManagement = () => {
             onChange={handleDepartmentChange}
           >
             <MenuItem value="">Tất cả</MenuItem>
-            {departments.map((dept) => (
+            {departmentList.map((dept) => (
               <MenuItem key={dept.id} value={dept.id}>
                 {dept.name}
               </MenuItem>

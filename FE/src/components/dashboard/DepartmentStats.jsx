@@ -1,8 +1,8 @@
 import React from 'react';
 import { Card, Row, Col, Statistic } from 'antd';
-import { TeamOutlined, ProjectOutlined, DollarOutlined } from '@ant-design/icons';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
-import './../styles/dashboard.css';
+import { TeamOutlined, ProjectOutlined, DollarOutlined } from "@ant-design/icons";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
+import './../../styles/dashboard.css';  // Sửa đường dẫn import
 
 const DepartmentStats = () => {
   // Sample data - replace with real data from API

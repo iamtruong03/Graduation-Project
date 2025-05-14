@@ -33,6 +33,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import { Link } from 'react-router-dom';
 
 const mockData = [
   {
@@ -267,11 +268,11 @@ const RiskList = () => {
 
         <Button
           variant="contained"
-          color="primary"
-          onClick={handleAddRisk}
+          component={Link}
+          to="/risk/create"
           sx={{ ml: 'auto' }}
         >
-          Thêm rủi ro
+          Tạo rủi ro
         </Button>
       </Stack>
 

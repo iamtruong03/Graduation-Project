@@ -54,6 +54,28 @@ public class DepartmentServiceImpl extends
 
   // lấy phòng ban hiện tại + con cháu...
   @Override
+  public List<Department> getAll(Long id, String uid) {
+    User user = userRepo.findById(Long.valueOf(uid))
+        .orElseThrow(() -> new RuntimeException("User not found"));
+
+    // Kiểm tra điều kiện xem toàn hệ thống (admin hoặc phòng ban root)
+    if (user.getRole().equals("ROLE_ADMIN") ||
+        (departmentRepo.findById(id).get().getParentId() == null)) {
+      return departmentRepo.findAllByStatus(AppConstants.STATUS_ACTIVE);
+    }
+
+    Department department = departmentRepo.findById(id)
+        .orElseThrow(() -> new RuntimeException("Department not found"));
+
+    List<Department> list = new ArrayList<>();
+    list.add(department);
+    list.addAll(getAllSubDepartments(id));
+
+    return list;
+  }
+
+  // lấy phòng ban hiện tại + con cháu...
+  @Override
   public Page<Department> searchAll(Long did, String uid, DepartmentFilter filter, Pageable pageable) {
     User user = userRepo.findById(Long.valueOf(uid))
         .orElseThrow(() -> new RuntimeException("User not found"));

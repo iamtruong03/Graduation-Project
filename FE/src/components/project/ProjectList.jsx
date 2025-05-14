@@ -30,7 +30,7 @@ import {
 import SearchIcon from '@mui/icons-material/Search';
 import { Edit as EditIcon, Delete as DeleteIcon, Visibility as VisibilityIcon } from '@mui/icons-material';
 import { Link } from 'react-router-dom';
-import projectService from '../services/projectService';
+import projectService from '../../services/projectService';
 
 
 
@@ -255,6 +255,9 @@ const ProjectList = () => {
                   <TableCell>{new Date(row.endDate).toLocaleDateString('vi-VN')}</TableCell>
                   <TableCell>{row.manager}</TableCell>
                   <TableCell align="center">
+                    <IconButton size="small" component={Link} to={`/project/detail/${row.id}`} sx={{ mr: 1 }}>
+                      <VisibilityIcon />
+                    </IconButton>
                     <IconButton size="small" component={Link} to={`/project/edit/${row.id}`} sx={{ mr: 1 }}>
                       <EditIcon />
                     </IconButton>

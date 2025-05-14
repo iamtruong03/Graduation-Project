@@ -23,7 +23,7 @@ import {
   Contacts as ContactsIcon,
 } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
-import staffService from '../services/staffService';
+import staffService from '../../services/staffService';
 
 const StaffEdit = () => {
   const navigate = useNavigate();

@@ -89,4 +89,14 @@ public class UserAPI extends XDevBaseAPI<User, UserFilter> {
       return ApiResponse.error(e.getMessage());
     }
   }
+
+  @GetMapping("/current-user")
+  ResponseEntity<ApiResponse<User>> getCurrentUser(@RequestAttribute String uid) {
+    try {
+      User currentUser = getService().getById(uid, Long.parseLong(uid));
+      return ApiResponse.ok(currentUser);
+    } catch (Exception e) {
+      return ApiResponse.error(e.getMessage());
+    }
+  }
 }

@@ -45,7 +45,6 @@ public class UserServiceImpl extends
     e.setStatus(AppConstants.STATUS_ACTIVE);
     e.setState(AppConstants.STATUS_NEW);
     e.setRole("ROLE_USER");
-    e.setDepartmentId(2L);
   }
 
   @Override
@@ -57,18 +56,6 @@ public class UserServiceImpl extends
     setBaseEntity(e, uid);
     e.setPassword(new BCryptPasswordEncoder().encode(e.getPassword()));
     return userRepo.save(e);
-  }
-
-  @Override
-  public Long getCurrentUserId() {
-    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-    if (authentication == null || !authentication.isAuthenticated()) {
-      throw new AccessDeniedException("Không có quyền truy cập");
-    }
-    String currentUsername = authentication.getName();
-    return userRepo.findByCode(currentUsername)
-        .map(User::getId)
-        .orElseThrow(() -> new AccessDeniedException("Không tìm thấy thông tin người dùng"));
   }
 
   @Override

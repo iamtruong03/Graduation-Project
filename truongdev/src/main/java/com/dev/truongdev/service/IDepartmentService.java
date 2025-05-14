@@ -7,7 +7,7 @@ import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
-public interface IDepartmentService extends IXDevBaseService<Department> {
+public interface IDepartmentService<E, F> extends IXDevBaseService<Department, DepartmentFilter> {
   // lấy phòng ban con, cháu, chắt
   List<Department> getAllSubDepartments(Long id);
 }

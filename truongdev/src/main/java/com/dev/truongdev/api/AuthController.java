@@ -45,6 +45,7 @@ public class AuthController {
             User user = userService.confirmLogin(authRequest.getCode(), authRequest.getPassword());
             Map<String, Object> claims = new HashMap<>();
             claims.put("did", user.getDepartmentId());
+            claims.put("name", user.getName());
             Map<String, String> tokens = new HashMap<>();
             tokens.put("accessToken",
                 jwtTokenUtil.generateToken(user.getId().toString(), claims, 1000 * 60 * 60)); // 1h

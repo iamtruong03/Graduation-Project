@@ -9,16 +9,32 @@ class AuthService {
                 code,
                 password
             });
-            if (response.data.token) {
-                localStorage.setItem('token', response.data.token);
-                axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
+            if (response.data.data) {
+                const { accessToken, refreshToken } = response.data.data;
+                const decodedToken = this.decodeToken(accessToken);
+                localStorage.setItem('token', accessToken);
+                localStorage.setItem('refreshToken', refreshToken);
+                localStorage.setItem('userName', decodedToken.name); // Lưu tên người dùng
+                axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
             }
             return response.data;
         } catch (error) {
-            if (error.response && error.response.status === 403) {
-                throw new Error('Tài khoản hoặc mật khẩu không đúng');
-            }
-            throw new Error(error.response?.data?.message || 'Đăng nhập thất bại');
+            const errorMessage = error.response?.data?.message || 'Đăng nhập thất bại';
+            throw new Error(errorMessage);
+        }
+    }
+
+    decodeToken(token) {
+        try {
+            const base64Url = token.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+            return JSON.parse(jsonPayload);
+        } catch (error) {
+            console.error('Error decoding token:', error);
+            return {};
         }
     }
 
@@ -31,10 +47,14 @@ class AuthService {
                 }
             });
             localStorage.removeItem('token');
+            localStorage.removeItem('refreshToken');
             delete axios.defaults.headers.common['Authorization'];
             return { success: true, message: 'Đăng xuất thành công' };
         } catch (error) {
             console.error('Logout error:', error);
+            localStorage.removeItem('token');
+            localStorage.removeItem('refreshToken');
+            delete axios.defaults.headers.common['Authorization'];
             return { success: false, message: 'Đăng xuất thất bại' };
         }
     }
@@ -43,8 +63,38 @@ class AuthService {
         return localStorage.getItem('token');
     }
 
+    getRefreshToken() {
+        return localStorage.getItem('refreshToken');
+    }
+
     isAuthenticated() {
         return !!this.getCurrentToken();
+    }
+
+    async refreshToken() {
+        try {
+            const refreshToken = this.getRefreshToken();
+            if (!refreshToken) {
+                throw new Error('Không tìm thấy refresh token');
+            }
+
+            const response = await axios.post(`${API_URL}/auth/refresh-token`, {
+                refreshToken
+            });
+
+            if (response.data.data) {
+                const { accessToken, refreshToken: newRefreshToken } = response.data.data;
+                localStorage.setItem('token', accessToken);
+                localStorage.setItem('refreshToken', newRefreshToken);
+                axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+                return accessToken;
+            }
+            throw new Error('Không thể làm mới token');
+        } catch (error) {
+            localStorage.removeItem('token');
+            localStorage.removeItem('refreshToken');
+            throw new Error(error.response?.data?.message || 'Phiên đăng nhập đã hết hạn');
+        }
     }
 
     async register(userData) {

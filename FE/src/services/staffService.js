@@ -24,29 +24,49 @@ const staffService = {
 
   // Cập nhật thông tin nhân viên
   updateStaff: (id, staffData) => {
-    return api.put(`/staff/${id}`, staffData, getAuthHeader());
+    return api.put(`/user/${id}`, staffData, getAuthHeader());
   },
 
   // Xóa nhân viên
   deleteStaff: (id) => {
-    return api.delete(`/staff/${id}`, getAuthHeader());
+    return api.delete(`/user/${id}`, getAuthHeader());
   },
 
   // Lấy danh sách nhân viên theo trạng thái
   getStaffByStatus: (status) => {
-    return api.get('/staff', {
+    return api.get('/user', {
       params: { status },
       ...getAuthHeader()
     });
   },
 
   // Tìm kiếm nhân viên
-  searchStaff: (searchTerm) => {
-    return api.get('/staff/search', {
-      params: { q: searchTerm },
-      ...getAuthHeader()
+  searchStaff: (filter) => {
+    return api.post('/user/search', {
+      search: filter.search || '',
+      departmentId: filter.departmentId || null,
+      positionId: filter.positionId || null,
+      page: filter.page || 0,
+      size: filter.size || 10,
+      sort: filter.sort || ['id,desc']
+    }, {
+      ...getAuthHeader(),
+      headers: {
+        ...getAuthHeader().headers,
+        'Content-Type': 'application/json'
+      }
     });
-  }
+  },
+  // Lấy danh sách phòng ban
+  getDepartments: () => {
+    return api.get('/department/list', {
+      ...getAuthHeader(),
+      headers: {
+        ...getAuthHeader().headers,
+        'Content-Type': 'application/json'
+      }
+    });
+  },
 };
 
 export default staffService;

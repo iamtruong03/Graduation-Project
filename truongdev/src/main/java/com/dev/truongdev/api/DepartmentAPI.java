@@ -1,6 +1,7 @@
 package com.dev.truongdev.api;
 
 import com.dev.truongdev.entity.Department;
+import com.dev.truongdev.payload.filter.DepartmentFilter;
 import com.dev.truongdev.service.IDepartmentService;
 import com.dev.truongdev.utils.ApiResponse;
 import com.dev.truongdev.xdevbase.api.XDevBaseAPI;
@@ -28,14 +29,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("department")
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class DepartmentAPI extends XDevBaseAPI<Department> {
+public class DepartmentAPI extends XDevBaseAPI<Department, DepartmentFilter> {
 
-  final IXDevBaseService<Department> service;
   final IDepartmentService departmentService;
 
   @SuppressWarnings("unchecked")
-  public IXDevBaseService<Department> getService(){
-    return service;
+  public IXDevBaseService<Department, DepartmentFilter> getService(){
+    return departmentService;
   }
 
 

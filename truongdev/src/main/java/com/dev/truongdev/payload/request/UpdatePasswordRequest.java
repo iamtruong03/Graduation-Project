@@ -8,7 +8,6 @@ import lombok.Setter;
 @Setter
 @Data
 public class UpdatePasswordRequest {
-  private String code;
   private String password;
   private String newPassword;
 }

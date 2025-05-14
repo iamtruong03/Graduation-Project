@@ -9,27 +9,56 @@ const getAuthHeader = () => ({
 const departmentService = {
   // Lấy danh sách phòng ban
   getAllDepartments: () => {
-    return api.get('/department/getall', getAuthHeader());
+    return api.post('/department/search', {
+      search: ''
+    }, {
+      ...getAuthHeader(),
+      headers: {
+        ...getAuthHeader().headers,
+        'Content-Type': 'application/json'
+      },
+      params: {
+        page: 0,
+        size: 100
+      }
+    });
   },
 
   // Lấy chi tiết một phòng ban
   getDepartmentById: (id) => {
-    return api.get(`/department/${id}`, getAuthHeader());
+    return api.get(`/department/${id}`);
   },
 
   // Thêm phòng ban mới
   createDepartment: (departmentData) => {
-    return api.post('/department', departmentData, getAuthHeader());
+    return api.post('/department', departmentData);
   },
 
   // Cập nhật thông tin phòng ban
   updateDepartment: (id, departmentData) => {
-    return api.put(`/department/${id}`, departmentData, getAuthHeader());
+    return api.put(`/department/update/${id}`, departmentData);
   },
 
   // Xóa phòng ban
   deleteDepartment: (id) => {
-    return api.delete(`/department/delete/${id}`, getAuthHeader());
+    return api.delete(`/department/delete/${id}`);
+  },
+
+  // Tìm kiếm phòng ban với phân trang
+  searchDepartments: (search = '', page = 0, size = 10) => {
+    return api.post('/department/search', {
+      search
+    }, {
+      ...getAuthHeader(),
+      headers: {
+        ...getAuthHeader().headers,
+        'Content-Type': 'application/json'
+      },
+      params: {
+        page,
+        size
+      }
+    });
   },
 
   // Lấy danh sách nhân viên theo phòng ban

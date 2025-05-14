@@ -1,92 +1,143 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Avatar, Typography, Paper } from '@mui/material';
+import { Box, Avatar, Typography, Paper, CircularProgress } from '@mui/material';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
-import { chatService } from '../../services/chatService';
+import api from '../../services/api';
 
-const MessageList = ({ selectedUser, departmentId, cid }) => {
+const MessageList = ({ selectedUser }) => {
   const [messages, setMessages] = useState([]);
+  const [currentUserId, setCurrentUserId] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribes = [];
+    const fetchCurrentUser = async () => {
+      try {
+        const response = await api.get('/user/current-user');
+        setCurrentUserId(response.data.data.id);
+      } catch (error) {
+        console.error('Lỗi khi lấy thông tin người dùng hiện tại:', error);
+      }
+    };
 
-    if (selectedUser) {
-      // Lấy lịch sử tin nhắn khi chọn người dùng
-      chatService.getMessageHistory(selectedUser.id)
-        .then(history => {
-          setMessages(history);
-          // Đánh dấu tin nhắn đã đọc
-          const unreadMessages = history.filter(msg => !msg.isRead && msg.senderId === selectedUser.id);
-          unreadMessages.forEach(msg => chatService.markMessageAsRead(msg.id));
-        })
-        .catch(error => console.error('Lỗi khi lấy lịch sử tin nhắn:', error));
-
-      // Đăng ký nhận tin nhắn cá nhân
-      unsubscribes.push(chatService.onMessage(newMessage => {
-        if (newMessage.senderId === selectedUser.id || newMessage.receiverId === selectedUser.id) {
-          setMessages(prev => [...prev, newMessage]);
+    const fetchMessages = async () => {
+      if (selectedUser) {
+        setLoading(true);
+        try {
+          const response = await api.get(`/api/messages/history/${selectedUser.id}`);
+          // Kiểm tra response.data tồn tại trước khi truy cập
+          if (response?.data?.data) {
+            setMessages(response.data.data);
+            
+            // Kiểm tra mảng trước khi filter
+            const unreadMessages = response.data.data.filter(
+              msg => !msg.isRead && msg.senderId === selectedUser.id
+            );
+            
+            // Đánh dấu đã đọc cho các tin nhắn chưa đọc
+            unreadMessages.forEach(async (msg) => {
+              try {
+                await api.put(`/api/messages/${msg.id}/read`);
+              } catch (error) {
+                console.error('Lỗi khi đánh dấu tin nhắn đã đọc:', error);
+              }
+            });
+          } else {
+            setMessages([]); // Set mảng rỗng nếu không có dữ liệu
+          }
+        } catch (error) {
+          console.error('Lỗi khi lấy lịch sử tin nhắn:', error);
+          setMessages([]); // Set mảng rỗng nếu có lỗi
         }
-      }));
-    }
+      }
+    };
 
-    // Đăng ký nhận tin nhắn phòng ban
-    if (departmentId) {
-      unsubscribes.push(chatService.onDepartmentMessage(newMessage => {
-        setMessages(prev => [...prev, newMessage]);
-      }));
-    }
+    fetchCurrentUser();
+    fetchMessages();
 
-    // Đăng ký nhận tin nhắn toàn công ty
-    if (cid) {
-      unsubscribes.push(chatService.onCompanyMessage(newMessage => {
-        setMessages(prev => [...prev, newMessage]);
-      }));
-    }
+    // Thiết lập interval để cập nhật tin nhắn mỗi 5 giây
+    const interval = setInterval(fetchMessages, 5000);
 
-    return () => unsubscribes.forEach(unsubscribe => unsubscribe());
+    return () => clearInterval(interval);
   }, [selectedUser]);
-
-  const currentUserId = 1; // Giả lập ID người dùng hiện tại
 
   const MessageBubble = ({ message, isCurrentUser }) => (
     <Box
       sx={{
         display: 'flex',
         justifyContent: isCurrentUser ? 'flex-end' : 'flex-start',
-        mb: 2
+        mb: 2,
+        maxWidth: '80%',
+        marginLeft: isCurrentUser ? 'auto' : 0,
+        marginRight: isCurrentUser ? 0 : 'auto'
       }}
     >
       {!isCurrentUser && (
-        <Avatar sx={{ mr: 1 }}>
+        <Avatar 
+          sx={{ 
+            mr: 1,
+            width: 36,
+            height: 36,
+            bgcolor: 'secondary.main'
+          }}
+        >
           {message.senderName.charAt(0)}
         </Avatar>
       )}
       <Box>
         {!isCurrentUser && (
-          <Typography variant="caption" sx={{ ml: 1 }}>
+          <Typography 
+            variant="caption" 
+            sx={{ 
+              ml: 1,
+              color: 'text.secondary',
+              fontWeight: 500
+            }}
+          >
             {message.senderName}
           </Typography>
         )}
         <Paper
           sx={{
-            p: 1,
-            backgroundColor: isCurrentUser ? '#1976d2' : '#f5f5f5',
+            p: 1.5,
+            backgroundColor: isCurrentUser ? 'primary.main' : '#f5f5f5',
             color: isCurrentUser ? 'white' : 'black',
-            maxWidth: '70%',
             borderRadius: 2,
-            mt: 0.5
+            mt: 0.5,
+            boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+            position: 'relative',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: 10,
+              [isCurrentUser ? 'right' : 'left']: -6,
+              width: 0,
+              height: 0,
+              borderStyle: 'solid',
+              borderWidth: '6px 6px 6px 0',
+              borderColor: `transparent ${isCurrentUser ? '#1976d2' : '#f5f5f5'} transparent transparent`,
+              transform: isCurrentUser ? 'rotate(180deg)' : 'none'
+            }
           }}
         >
           <Box>
-            <Typography variant="body1">{message.content}</Typography>
+            <Typography 
+              variant="body1" 
+              sx={{ 
+                wordBreak: 'break-word',
+                lineHeight: 1.4
+              }}
+            >
+              {message.content}
+            </Typography>
             {isCurrentUser && (
               <Typography
                 variant="caption"
                 sx={{
                   display: 'block',
                   textAlign: 'right',
-                  color: message.isRead ? 'text.secondary' : 'primary.main',
-                  fontSize: '0.7rem'
+                  color: message.isRead ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.9)',
+                  fontSize: '0.7rem',
+                  mt: 0.5
                 }}
               >
                 {message.isRead ? 'Đã xem' : 'Đã gửi'}
@@ -100,14 +151,22 @@ const MessageList = ({ selectedUser, departmentId, cid }) => {
             display: 'block',
             textAlign: isCurrentUser ? 'right' : 'left',
             mt: 0.5,
-            color: 'text.secondary'
+            color: 'text.secondary',
+            fontSize: '0.75rem'
           }}
         >
           {format(message.timestamp, 'HH:mm', { locale: vi })}
         </Typography>
       </Box>
       {isCurrentUser && (
-        <Avatar sx={{ ml: 1 }}>
+        <Avatar 
+          sx={{ 
+            ml: 1,
+            width: 36,
+            height: 36,
+            bgcolor: 'primary.main'
+          }}
+        >
           {message.senderName.charAt(0)}
         </Avatar>
       )}
@@ -116,13 +175,25 @@ const MessageList = ({ selectedUser, departmentId, cid }) => {
 
   return (
     <Box sx={{ height: '100%', overflowY: 'auto' }}>
-      {messages.map((message) => (
-        <MessageBubble
-          key={message.id}
-          message={message}
-          isCurrentUser={message.senderId === currentUserId}
-        />
-      ))}
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+          <CircularProgress />
+        </Box>
+      ) : Array.isArray(messages) && messages.length > 0 ? (
+        messages.map((message) => (
+          <MessageBubble
+            key={message.id}
+            message={message}
+            isCurrentUser={message.senderId === currentUserId}
+          />
+        ))
+      ) : (
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+          <Typography color="text.secondary">
+            Chưa có tin nhắn nào
+          </Typography>
+        </Box>
+      )}
     </Box>
   );
 };

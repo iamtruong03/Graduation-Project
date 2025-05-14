@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Paper,
@@ -11,17 +11,14 @@ import {
   Select,
   MenuItem,
   Grid,
-  IconButton,
 } from '@mui/material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import vi from 'date-fns/locale/vi';
-import CloseIcon from '@mui/icons-material/Close';
 
-const ProjectEdit = () => {
+const ProjectCreate = () => {
   const navigate = useNavigate();
-  const { id } = useParams();
   const [formData, setFormData] = useState({
     code: '',
     name: '',
@@ -51,20 +48,6 @@ const ProjectEdit = () => {
     { code: 'CANCELLED', name: 'Đã hủy' },
   ]);
 
-  useEffect(() => {
-    // TODO: Load project data by ID
-    // Temporary mock data
-    setFormData({
-      code: 'PRJ001',
-      name: 'Dự án A',
-      manager: 1,
-      department: 1,
-      startDate: new Date('2024-01-01'),
-      endDate: new Date('2024-12-31'),
-      status: 'IN_PROGRESS',
-    });
-  }, [id]);
-
   const handleChange = (event) => {
     const { name, value } = event.target;
     setFormData((prev) => ({
@@ -82,23 +65,16 @@ const ProjectEdit = () => {
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    // TODO: Implement project update logic here
+    // TODO: Implement project creation logic here
     console.log('Form submitted:', formData);
     navigate('/project/list');
   };
 
   return (
     <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h5">Cập nhật dự án</Typography>
-        <IconButton
-          color="primary"
-          onClick={() => navigate('/project/list')}
-          sx={{ p: 1 }}
-        >
-          <CloseIcon />
-        </IconButton>
-      </Box>
+      <Typography variant="h5" sx={{ mb: 3 }}>
+        Thêm mới dự án
+      </Typography>
 
       <Paper sx={{ p: 3 }}>
         <form onSubmit={handleSubmit}>
@@ -111,7 +87,6 @@ const ProjectEdit = () => {
                 name="code"
                 value={formData.code}
                 onChange={handleChange}
-                disabled
               />
             </Grid>
 
@@ -168,12 +143,9 @@ const ProjectEdit = () => {
                   label="Ngày bắt đầu"
                   value={formData.startDate}
                   onChange={(value) => handleDateChange('startDate', value)}
-                  slotProps={{
-                    textField: {
-                      fullWidth: true,
-                      required: true
-                    }
-                  }}
+                  renderInput={(params) => (
+                    <TextField {...params} fullWidth required />
+                  )}
                 />
               </LocalizationProvider>
             </Grid>
@@ -184,33 +156,13 @@ const ProjectEdit = () => {
                   label="Ngày kết thúc"
                   value={formData.endDate}
                   onChange={(value) => handleDateChange('endDate', value)}
-                  slotProps={{
-                    textField: {
-                      fullWidth: true,
-                      required: true
-                    }
-                  }}
+                  renderInput={(params) => (
+                    <TextField {...params} fullWidth required />
+                  )}
                 />
               </LocalizationProvider>
             </Grid>
 
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth required>
-                <InputLabel>Trạng thái</InputLabel>
-                <Select
-                  name="status"
-                  value={formData.status}
-                  onChange={handleChange}
-                  label="Trạng thái"
-                >
-                  {statuses.map((status) => (
-                    <MenuItem key={status.code} value={status.code}>
-                      {status.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
 
             <Grid item xs={12}>
               <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
@@ -221,7 +173,7 @@ const ProjectEdit = () => {
                   Hủy
                 </Button>
                 <Button type="submit" variant="contained">
-                  Cập nhật
+                  Thêm mới
                 </Button>
               </Box>
             </Grid>
@@ -232,4 +184,4 @@ const ProjectEdit = () => {
   );
 };
 
-export default ProjectEdit;
+export default ProjectCreate;

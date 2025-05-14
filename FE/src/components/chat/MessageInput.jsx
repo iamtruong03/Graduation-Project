@@ -1,23 +1,19 @@
 import React, { useState } from 'react';
-import { Box, TextField, IconButton, Select, MenuItem, FormControl } from '@mui/material';
+import { Box, TextField, IconButton } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
-import { chatService } from '../../services/chatService';
+import api from '../../services/api';
 
-const MessageInput = ({ selectedUser, departmentId, cid }) => {
+const MessageInput = ({ selectedUser }) => {
   const [message, setMessage] = useState('');
-  const [messageType, setMessageType] = useState('PERSONAL');
 
-  const handleSendMessage = (e) => {
+  const handleSendMessage = async (e) => {
     e.preventDefault();
     if (message.trim()) {
       try {
-        const groupId = messageType === 'DEPARTMENT' ? departmentId : messageType === 'COMPANY' ? cid : null;
-        chatService.sendMessage(
-          messageType === 'PERSONAL' ? selectedUser.id : null,
-          message.trim(),
-          messageType,
-          groupId
-        );
+        await api.post('/api/messages/send', {
+          receiverId: selectedUser.id,
+          content: message.trim()
+        });
         setMessage('');
       } catch (error) {
         console.error('Lỗi khi gửi tin nhắn:', error);
@@ -31,29 +27,33 @@ const MessageInput = ({ selectedUser, departmentId, cid }) => {
       onSubmit={handleSendMessage}
       sx={{
         display: 'flex',
-        gap: 1
+        gap: 1,
+        alignItems: 'flex-end'
       }}
     >
-      <FormControl sx={{ minWidth: 120, mr: 1 }}>
-        <Select
-          size="small"
-          value={messageType}
-          onChange={(e) => setMessageType(e.target.value)}
-        >
-          <MenuItem value="PERSONAL">Cá nhân</MenuItem>
-          <MenuItem value="DEPARTMENT">Phòng ban</MenuItem>
-          <MenuItem value="COMPANY">Toàn công ty</MenuItem>
-        </Select>
-      </FormControl>
       <TextField
         fullWidth
-        size="small"
+        multiline
+        maxRows={4}
         placeholder="Nhập tin nhắn..."
         value={message}
         onChange={(e) => setMessage(e.target.value)}
         sx={{
           '& .MuiOutlinedInput-root': {
-            borderRadius: 3
+            borderRadius: 3,
+            backgroundColor: '#f8f9fa',
+            '&:hover': {
+              backgroundColor: '#f5f5f5'
+            },
+            '& fieldset': {
+              borderColor: 'transparent'
+            },
+            '&:hover fieldset': {
+              borderColor: 'rgba(0, 0, 0, 0.23)'
+            },
+            '&.Mui-focused fieldset': {
+              borderColor: 'primary.main'
+            }
           }
         }}
       />
@@ -62,7 +62,17 @@ const MessageInput = ({ selectedUser, departmentId, cid }) => {
         color="primary"
         disabled={!message.trim()}
         sx={{
-          borderRadius: 2
+          width: 45,
+          height: 45,
+          backgroundColor: 'primary.main',
+          color: 'white',
+          '&:hover': {
+            backgroundColor: 'primary.dark'
+          },
+          '&.Mui-disabled': {
+            backgroundColor: 'action.disabledBackground',
+            color: 'action.disabled'
+          }
         }}
       >
         <SendIcon />

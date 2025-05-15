@@ -17,7 +17,7 @@ import ProjectList from './components/project/ProjectList';
 import ProjectCreate from './components/project/ProjectCreate';
 import ProjectDetail from './components/project/ProjectDetail';
 import ProjectEdit from './components/project/ProjectEdit';
-import StaffManagement from './components/department/StaffManagement';
+import StaffManagement from './components/user/StaffManagement';
 import TaskList from './components/task/TaskList';
 import TaskCreate from './components/task/TaskCreate';
 import TaskDetail from './components/task/TaskDetail';

@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { FileDownload as FileDownloadIcon, Add as AddIcon } from '@mui/icons-material';
+import { Chip } from '@mui/material';
 import {
   Box,
   Button,
@@ -131,6 +133,8 @@ const RiskList = () => {
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [selectedRisk, setSelectedRisk] = useState(null);
   const [currentTab, setCurrentTab] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const rowsPerPage = 10;
 
   const [formData, setFormData] = useState({
@@ -236,123 +240,357 @@ const RiskList = () => {
   };
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h5" sx={{ mb: 3 }}>DANH SÁCH RỦI RO</Typography>
-      
-      <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
-        <TextField
-          size="small"
-          placeholder="Tên, mã rủi ro"
-          value={searchName}
-          onChange={(e) => setSearchName(e.target.value)}
-          InputProps={{
-            endAdornment: <SearchIcon color="action" />
+    <Box sx={{ p: 4, backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
+      <Paper elevation={3} sx={{ p: 3, borderRadius: 2 }}>
+        <Typography 
+          variant="h5" 
+          sx={{ 
+            mb: 4, 
+            fontWeight: 600,
+            color: '#1976d2',
+            borderBottom: '2px solid #1976d2',
+            pb: 1
           }}
-        />
-        
-        <FormControl size="small" sx={{ minWidth: 150 }}>
-          <InputLabel>Loại rủi ro</InputLabel>
-          <Select
-            value={riskType}
-            label="Loại rủi ro"
-            onChange={(e) => setRiskType(e.target.value)}
-          >
-            <MenuItem value="all">Tất cả</MenuItem>
-            <MenuItem value="operation">Vận hành</MenuItem>
-            <MenuItem value="technical">Kỹ thuật</MenuItem>
-            <MenuItem value="security">Bảo mật</MenuItem>
-            <MenuItem value="financial">Tài chính</MenuItem>
-            <MenuItem value="business">Nghiệp vụ</MenuItem>
-          </Select>
-        </FormControl>
-
-        <Button
-          variant="contained"
-          component={Link}
-          to="/risk/create"
-          sx={{ ml: 'auto' }}
         >
-          Tạo rủi ro
-        </Button>
-      </Stack>
+          DANH SÁCH RỦI RO
+        </Typography>
+        
+        <Stack 
+          direction="row" 
+          spacing={2} 
+          sx={{ 
+            mb: 3,
+            flexWrap: 'wrap',
+            gap: 2
+          }}
+        >
+          <TextField
+            size="small"
+            placeholder="Tên, mã rủi ro"
+            value={searchName}
+            onChange={(e) => setSearchName(e.target.value)}
+            InputProps={{
+              endAdornment: <SearchIcon color="action" />
+            }}
+            sx={{ 
+              minWidth: 250,
+              backgroundColor: '#fff'
+            }}
+          />
+          
+          <FormControl 
+            size="small" 
+            sx={{ 
+              minWidth: 200,
+              backgroundColor: '#fff'
+            }}
+          >
+            <InputLabel>Loại rủi ro</InputLabel>
+            <Select
+              value={riskType}
+              label="Loại rủi ro"
+              onChange={(e) => setRiskType(e.target.value)}
+            >
+              <MenuItem value="all">Tất cả</MenuItem>
+              <MenuItem value="operation">Vận hành</MenuItem>
+              <MenuItem value="technical">Kỹ thuật</MenuItem>
+              <MenuItem value="security">Bảo mật</MenuItem>
+              <MenuItem value="financial">Tài chính</MenuItem>
+              <MenuItem value="business">Nghiệp vụ</MenuItem>
+            </Select>
+          </FormControl>
 
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>STT</TableCell>
-              <TableCell>Mã rủi ro</TableCell>
-              <TableCell>Tên rủi ro</TableCell>
-              <TableCell>Loại rủi ro</TableCell>
-              <TableCell>Mức độ</TableCell>
-              <TableCell>Ngày phản ánh</TableCell>
-              <TableCell>Người phản ánh</TableCell>
-              <TableCell>Trạng thái</TableCell>
-              <TableCell align="center">Thao tác</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {mockData.map((row, index) => (
-              <TableRow key={row.id}>
-                <TableCell>{index + 1}</TableCell>
-                <TableCell>{row.code}</TableCell>
-                <TableCell>{row.name}</TableCell>
-                <TableCell>{row.type}</TableCell>
-                <TableCell>{row.level}</TableCell>
-                <TableCell>{row.updatedAt}</TableCell>
-                <TableCell>{row.reporter}</TableCell>
-                <TableCell>{row.stage}</TableCell>
-                <TableCell align="center">
-                  <IconButton size="small" onClick={() => handleEdit(row)} sx={{ mr: 1 }}>
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton size="small" color="error" onClick={() => handleDelete(row)}>
-                    <DeleteIcon />
-                  </IconButton>
-                </TableCell>
+          <FormControl 
+            size="small" 
+            sx={{ 
+              minWidth: 200,
+              backgroundColor: '#fff'
+            }}
+          >
+            <InputLabel>Mức độ</InputLabel>
+            <Select
+              value={riskLevel}
+              label="Mức độ"
+              onChange={(e) => setRiskLevel(e.target.value)}
+            >
+              <MenuItem value="all">Tất cả</MenuItem>
+              <MenuItem value="high">Cao</MenuItem>
+              <MenuItem value="medium">Trung bình</MenuItem>
+              <MenuItem value="low">Thấp</MenuItem>
+            </Select>
+          </FormControl>
+
+          <Button
+            variant="contained"
+            onClick={handleExport}
+            startIcon={<FileDownloadIcon />}
+            sx={{ 
+              backgroundColor: '#2e7d32',
+              '&:hover': {
+                backgroundColor: '#1b5e20'
+              }
+            }}
+          >
+            XUẤT DỮ LIỆU
+          </Button>
+
+          <Button
+            variant="contained"
+            component={Link}
+            to="/risk/create"
+            sx={{ 
+              ml: 'auto',
+              backgroundColor: '#1976d2',
+              '&:hover': {
+                backgroundColor: '#1565c0'
+              }
+            }}
+          >
+            TẠO RỦI RO
+          </Button>
+        </Stack>
+
+        <TableContainer 
+          component={Paper} 
+          sx={{ 
+            borderRadius: 1,
+            boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
+            overflow: 'hidden'
+          }}
+        >
+          <Table>
+            <TableHead>
+              <TableRow sx={{ backgroundColor: '#1976d2' }}>
+                <TableCell sx={{ color: '#fff', fontWeight: 600 }}>STT</TableCell>
+                <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Mã rủi ro</TableCell>
+                <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Tên rủi ro</TableCell>
+                <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Loại rủi ro</TableCell>
+                <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Mức độ</TableCell>
+                <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Ngày phản ánh</TableCell>
+                <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Người phản ánh</TableCell>
+                <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Trạng thái</TableCell>
+                <TableCell align="center" sx={{ color: '#fff', fontWeight: 600 }}>Thao tác</TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+            </TableHead>
+            <TableBody>
+              {error ? (
+                <TableRow>
+                  <TableCell colSpan={9}>
+                    <Alert 
+                      severity="error" 
+                      sx={{ 
+                        mb: 2,
+                        '& .MuiAlert-icon': {
+                          color: '#d32f2f'
+                        }
+                      }}
+                    >
+                      {error}
+                    </Alert>
+                  </TableCell>
+                </TableRow>
+              ) : loading ? (
+                <TableRow>
+                  <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
+                    <CircularProgress sx={{ color: '#1976d2' }} />
+                  </TableCell>
+                </TableRow>
+              ) : mockData.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
+                    <Typography color="text.secondary">
+                      Không tìm thấy dữ liệu
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                mockData.map((row, index) => (
+                  <TableRow 
+                    key={row.id}
+                    sx={{ 
+                      '&:hover': { 
+                        backgroundColor: '#f5f5f5'
+                      }
+                    }}
+                  >
+                    <TableCell>{index + 1}</TableCell>
+                    <TableCell>{row.code}</TableCell>
+                    <TableCell>{row.name}</TableCell>
+                    <TableCell>
+                      <Chip 
+                        label={row.type} 
+                        size="small"
+                        sx={{ 
+                          backgroundColor: getRiskTypeColor(row.type),
+                          color: '#fff'
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Chip 
+                        label={row.level} 
+                        size="small"
+                        sx={{ 
+                          backgroundColor: getRiskLevelColor(row.level),
+                          color: '#fff'
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell>{row.updatedAt}</TableCell>
+                    <TableCell>{row.reporter}</TableCell>
+                    <TableCell>
+                      <Chip 
+                        label={row.stage} 
+                        size="small"
+                        sx={{ 
+                          backgroundColor: getRiskStageColor(row.stage),
+                          color: '#fff'
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell align="center">
+                      <IconButton
+                        size="small"
+                        color="primary"
+                        onClick={() => handleEdit(row)}
+                        sx={{ mr: 1 }}
+                      >
+                        <EditIcon />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => handleDelete(row)}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
 
-      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-        <Pagination
-          count={Math.ceil(mockData.length / rowsPerPage)}
-          page={page}
-          onChange={handlePageChange}
-          color="primary"
-        />
-      </Box>
+        <Box sx={{ 
+          mt: 2, 
+          p: 2, 
+          backgroundColor: '#fff',
+          borderRadius: 1,
+          boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)'
+        }}>
+          <Stack
+            direction="row"
+            justifyContent="space-between"
+            alignItems="center"
+          >
+            <Typography variant="body2" color="text.secondary">
+              Tổng {mockData.length} bản ghi
+            </Typography>
+            <Pagination
+              count={Math.ceil(mockData.length / rowsPerPage)}
+              page={page}
+              onChange={handlePageChange}
+              color="primary"
+              size="small"
+            />
+          </Stack>
+        </Box>
+      </Paper>
 
-      {/* Thay thế Dialog cũ bằng component RiskEdit */}
-      <RiskEdit
-        open={openEditDialog}
-        onClose={() => setOpenEditDialog(false)}
-        risk={selectedRisk}
-        onSave={(formData) => {
-          console.log('Saving:', formData);
-          setOpenEditDialog(false);
+      <Dialog
+        open={openDeleteDialog}
+        onClose={() => setOpenDeleteDialog(false)}
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            p: 1
+          }
         }}
-      />
-
-      {/* Dialog Xác nhận xóa */}
-      <Dialog open={openDeleteDialog} onClose={() => setOpenDeleteDialog(false)}>
-        <DialogTitle>Xác nhận xóa</DialogTitle>
+      >
+        <DialogTitle sx={{ 
+          color: '#d32f2f',
+          pb: 1
+        }}>
+          Xác nhận xóa
+        </DialogTitle>
         <DialogContent>
           <DialogContentText>
             Bạn có chắc chắn muốn xóa rủi ro này không?
           </DialogContentText>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenDeleteDialog(false)}>Hủy</Button>
-          <Button onClick={handleConfirmDelete} color="error" variant="contained">
+        <DialogActions sx={{ p: 2, pt: 1 }}>
+          <Button 
+            onClick={() => setOpenDeleteDialog(false)}
+            sx={{ 
+              color: 'text.secondary',
+              '&:hover': {
+                backgroundColor: '#f5f5f5'
+              }
+            }}
+          >
+            Hủy
+          </Button>
+          <Button
+            onClick={handleConfirmDelete}
+            color="error"
+            variant="contained"
+            sx={{
+              '&:hover': {
+                backgroundColor: '#c62828'
+              }
+            }}
+          >
             Xóa
           </Button>
         </DialogActions>
       </Dialog>
     </Box>
   );
+};
+
+// Thêm các hàm helper để xác định màu sắc
+const getRiskTypeColor = (type) => {
+  switch (type) {
+    case 'Vận hành':
+      return '#1976d2'; // Blue
+    case 'Kỹ thuật':
+      return '#9c27b0'; // Purple
+    case 'Bảo mật':
+      return '#2e7d32'; // Green
+    case 'Tài chính':
+      return '#ed6c02'; // Orange
+    case 'Nghiệp vụ':
+      return '#9c27b0'; // Purple
+    default:
+      return '#757575'; // Grey
+  }
+};
+
+const getRiskLevelColor = (level) => {
+  switch (level) {
+    case 'Cao':
+      return '#d32f2f'; // Red
+    case 'Trung bình':
+      return '#ed6c02'; // Orange
+    case 'Thấp':
+      return '#2e7d32'; // Green
+    default:
+      return '#757575'; // Grey
+  }
+};
+
+const getRiskStageColor = (stage) => {
+  switch (stage) {
+    case 'Đang xử lý':
+      return '#1976d2'; // Blue
+    case 'Mới ghi nhận':
+      return '#ed6c02'; // Orange
+    case 'Đã đóng':
+      return '#2e7d32'; // Green
+    default:
+      return '#757575'; // Grey
+  }
 };
 
 export default RiskList;

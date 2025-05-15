@@ -194,212 +194,158 @@ const DepartmentList = () => {
   );
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h5" sx={{ mb: 3 }}>DANH SÁCH PHÒNG BAN</Typography>
-
-      <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
-        <TextField
-          size="small"
-          placeholder="Tên, mã phòng ban"
-          value={searchName}
-          onChange={(e) => setSearchName(e.target.value)}
-          InputProps={{ endAdornment: <SearchIcon color="action" /> }}
-        />
-        <FormControl size="small" sx={{ minWidth: 200 }}>
-          <InputLabel>Trạng thái hoạt động</InputLabel>
-          <Select
-            value={status}
-            label="Trạng thái hoạt động"
-            onChange={(e) => setStatus(e.target.value)}
+    <Box sx={{ p: 4, backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
+      <Paper elevation={3} sx={{ p: 3, borderRadius: 2 }}>
+        <Typography 
+          variant="h5" 
+          sx={{ 
+            mb: 4, 
+            fontWeight: 600,
+            color: '#1976d2',
+            borderBottom: '2px solid #1976d2',
+            pb: 1
+          }}
+        >
+          DANH SÁCH PHÒNG BAN
+        </Typography>
+    
+        <Stack 
+          direction="row" 
+          spacing={2} 
+          sx={{ 
+            mb: 3,
+            flexWrap: 'wrap',
+            gap: 2
+          }}
+        >
+          <TextField
+            size="small"
+            placeholder="Tên, mã phòng ban"
+            value={searchName}
+            onChange={(e) => setSearchName(e.target.value)}
+            InputProps={{
+              endAdornment: <SearchIcon color="action" />
+            }}
+            sx={{ 
+              minWidth: 250,
+              backgroundColor: '#fff'
+            }}
+          />
+          
+          <FormControl 
+            size="small" 
+            sx={{ 
+              minWidth: 200,
+              backgroundColor: '#fff'
+            }}
           >
-            <MenuItem value="all">Tất cả</MenuItem>
-            <MenuItem value="active">Hoạt động</MenuItem>
-            <MenuItem value="inactive">Không hoạt động</MenuItem>
-          </Select>
-        </FormControl>
-        <Button variant="contained" color="primary" sx={{ ml: 'auto' }} onClick={() => {
-          setDialogType('create');
-          setOpenDialog(true);
-        }}>
-          Tạo phòng ban
-        </Button>
-      </Stack>
-
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>STT</TableCell>
-              <TableCell>Mã phòng ban</TableCell>
-              <TableCell>Tên phòng ban</TableCell>
-              <TableCell>Tên phòng ban cha</TableCell>
-              <TableCell>Hoạt động</TableCell>
-              <TableCell>Ngày cập nhật</TableCell>
-              <TableCell align="center">Thao tác</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {error && (
-              <TableRow>
-                <TableCell colSpan={7}>
-                  <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
-                </TableCell>
-              </TableRow>
-            )}
-            {paginatedDepartments.map((row, index) => (
-              <TableRow key={row.id}>
-                <TableCell>{(page - 1) * rowsPerPage + index + 1}</TableCell>
-                <TableCell>{row.code}</TableCell>
-                <TableCell>{row.name}</TableCell>
-                <TableCell>{row.parentName || '-'}</TableCell>
-                <TableCell><Switch checked={row.active} /></TableCell>
-                <TableCell>{row.updatedAt}</TableCell>
-                <TableCell align="center">
-                  <IconButton size="small" onClick={() => handleViewDetail(row)} sx={{ mr: 1 }}><VisibilityIcon /></IconButton>
-                  <IconButton size="small" onClick={() => handleOpenEditDialog(row)} sx={{ mr: 1 }}><EditIcon /></IconButton>
-                  <IconButton size="small" onClick={() => {
-                    setSelectedDepartment(row);
-                    setOpenDeleteDialog(true);
-                  }} color="error"><DeleteIcon /></IconButton>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-
-      <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
-        <DialogTitle>
-          {dialogType === 'create' ? 'Tạo phòng ban mới' : 'Chỉnh sửa phòng ban'}
-        </DialogTitle>
-        <DialogContent>
-          <Paper sx={{ p: 3 }}>
-            <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  size="small"
-                  label="Mã phòng ban"
-                  required
-                  name="code"
-                  value={formData.code}
-                  onChange={handleInputChange}
-                  error={!!formErrors.code}
-                  helperText={formErrors.code}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  size="small"
-                  label="Tên phòng ban"
-                  required
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  error={!!formErrors.name}
-                  helperText={formErrors.name}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <FormControl fullWidth size="small">
-                  <InputLabel>Phòng ban cha</InputLabel>
-                  <Select
-                    label="Phòng ban cha"
-                    name="parentId"
-                    value={formData.parentId}
-                    onChange={handleInputChange}
-                  >
-                    <MenuItem value="">Không có</MenuItem>
-                    {departments.map(dept => (
-                      <MenuItem key={dept.id} value={dept.id}>{dept.name}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-            </Grid>
-          </Paper>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenDialog(false)}>Hủy</Button>
+            <InputLabel>Trạng thái hoạt động</InputLabel>
+            <Select
+              value={status}
+              label="Trạng thái hoạt động"
+              onChange={(e) => setStatus(e.target.value)}
+            >
+              <MenuItem value="all">Tất cả</MenuItem>
+              <MenuItem value="active">Hoạt động</MenuItem>
+              <MenuItem value="inactive">Không hoạt động</MenuItem>
+            </Select>
+          </FormControl>
+    
           <Button 
             variant="contained" 
-            color="primary"
-            onClick={dialogType === 'create' ? handleCreateDepartment : handleUpdateDepartment}
-            disabled={loading}
+            sx={{ 
+              ml: 'auto',
+              backgroundColor: '#1976d2',
+              '&:hover': {
+                backgroundColor: '#1565c0'
+              }
+            }} 
+            onClick={() => {
+              setDialogType('create');
+              setOpenDialog(true);
+            }}
           >
-            {loading ? 'Đang xử lý...' : (dialogType === 'create' ? 'Tạo' : 'Lưu')}
+            Tạo phòng ban
           </Button>
-        </DialogActions>
-      </Dialog>
-
-      <Dialog open={openDetailDialog} onClose={() => setOpenDetailDialog(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Chi tiết phòng ban</DialogTitle>
-        <DialogContent>
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="subtitle1" gutterBottom>Thông tin cơ bản</Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={6}>
-                <Typography><strong>Mã phòng ban:</strong> {selectedDepartment?.code}</Typography>
-              </Grid>
-              <Grid item xs={6}>
-                <Typography><strong>Tên phòng ban:</strong> {selectedDepartment?.name}</Typography>
-              </Grid>
-              <Grid item xs={6}>
-                <Typography><strong>Phòng ban cha:</strong> {selectedDepartment?.parentName || 'Không có'}</Typography>
-              </Grid>
-              <Grid item xs={6}>
-                <Typography><strong>Trạng thái:</strong> {selectedDepartment?.active ? 'Hoạt động' : 'Không hoạt động'}</Typography>
-              </Grid>
-            </Grid>
-          </Box>
-
-          <Typography variant="subtitle1" gutterBottom>Danh sách nhân viên</Typography>
-          <TableContainer component={Paper}>
-            <Table size="small">
-              <TableHead>
+        </Stack>
+    
+        <TableContainer 
+          component={Paper} 
+          sx={{ 
+            borderRadius: 1,
+            boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
+            overflow: 'hidden'
+          }}
+        >
+          <Table>
+            <TableHead>
+              <TableRow sx={{ backgroundColor: '#1976d2' }}>
+                <TableCell sx={{ color: '#fff', fontWeight: 600 }}>STT</TableCell>
+                <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Mã phòng ban</TableCell>
+                <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Tên phòng ban</TableCell>
+                <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Tên phòng ban cha</TableCell>
+                <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Hoạt động</TableCell>
+                <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Ngày cập nhật</TableCell>
+                <TableCell align="center" sx={{ color: '#fff', fontWeight: 600 }}>Thao tác</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {error && (
                 <TableRow>
-                  <TableCell>STT</TableCell>
-                  <TableCell>Mã nhân viên</TableCell>
-                  <TableCell>Họ tên</TableCell>
-                  <TableCell>Chức vụ</TableCell>
+                  <TableCell colSpan={7}>
+                    <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
+                  </TableCell>
                 </TableRow>
-              </TableHead>
-              <TableBody>
-                {departmentStaff.map((staff, index) => (
-                  <TableRow key={staff.id}>
-                    <TableCell>{index + 1}</TableCell>
-                    <TableCell>{staff.code}</TableCell>
-                    <TableCell>{staff.name}</TableCell>
-                    <TableCell>{staff.position}</TableCell>
-                  </TableRow>
-                ))}
-                {departmentStaff.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={4} align="center">Không có nhân viên</TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenDetailDialog(false)}>Đóng</Button>
-        </DialogActions>
-      </Dialog>
-
-      <Dialog open={openDeleteDialog} onClose={() => setOpenDeleteDialog(false)}>
-        <DialogTitle>Xác nhận xóa phòng ban</DialogTitle>
-        <DialogContent>
-          <Typography>Bạn có chắc chắn muốn xóa phòng ban "{selectedDepartment?.name}"?</Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenDeleteDialog(false)}>Hủy</Button>
-          <Button onClick={handleDelete} color="error" variant="contained">Xóa</Button>
-        </DialogActions>
-      </Dialog>
+              )}
+              {paginatedDepartments.map((row, index) => (
+                <TableRow key={row.id}>
+                  <TableCell>{(page - 1) * rowsPerPage + index + 1}</TableCell>
+                  <TableCell>{row.code}</TableCell>
+                  <TableCell>{row.name}</TableCell>
+                  <TableCell>{row.parentName || '-'}</TableCell>
+                  <TableCell><Switch checked={row.active} /></TableCell>
+                  <TableCell>{row.updatedAt}</TableCell>
+                  <TableCell align="center">
+                    <IconButton size="small" onClick={() => handleViewDetail(row)} sx={{ mr: 1 }}><VisibilityIcon /></IconButton>
+                    <IconButton size="small" onClick={() => handleOpenEditDialog(row)} sx={{ mr: 1 }}><EditIcon /></IconButton>
+                    <IconButton size="small" onClick={() => {
+                      setSelectedDepartment(row);
+                      setOpenDeleteDialog(true);
+                    }} color="error"><DeleteIcon /></IconButton>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+    
+        <Box sx={{ 
+          mt: 2, 
+          p: 2, 
+          backgroundColor: '#fff',
+          borderRadius: 1,
+          boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)'
+        }}>
+          <Stack
+            direction="row"
+            justifyContent="space-between"
+            alignItems="center"
+          >
+            <Typography variant="body2" color="text.secondary">
+              Tổng {departments.length} bản ghi
+            </Typography>
+            <Pagination
+              count={totalPages}
+              page={page}
+              onChange={handlePageChange}
+              color="primary"
+              size="small"
+            />
+          </Stack>
+        </Box>
+      </Paper>
     </Box>
-  );
+);
 };
 
 export default DepartmentList;

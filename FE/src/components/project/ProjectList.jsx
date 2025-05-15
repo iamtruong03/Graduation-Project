@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import {
   Box,
   Button,
@@ -154,134 +155,183 @@ const ProjectList = () => {
     setPage(newPage);
   };
 
+  const handleExport = async () => {
+    try {
+      setLoading(true);
+      await projectService.exportProjects();
+      setError(null);
+    } catch (err) {
+      setError('Không thể xuất dữ liệu dự án');
+      console.error('Error exporting projects:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h5" sx={{ mb: 3 }}>DANH SÁCH DỰ ÁN</Typography>
-      
-      <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
-        <TextField
-          size="small"
-          placeholder="Tên, mã dự án"
-          value={searchCode}
-          onChange={(e) => setSearchCode(e.target.value)}
-          InputProps={{
-            endAdornment: <SearchIcon color="action" />
+    <Box sx={{ p: 4, backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
+      <Paper elevation={3} sx={{ p: 3, borderRadius: 2 }}>
+        <Typography 
+          variant="h5" 
+          sx={{ 
+            mb: 4, 
+            fontWeight: 600,
+            color: '#1976d2',
+            borderBottom: '2px solid #1976d2',
+            pb: 1
           }}
-          sx={{ minWidth: 200 }}
-        />
-        
-        <FormControl size="small" sx={{ minWidth: 200 }}>
-          <InputLabel>Loại dự án</InputLabel>
-          <Select
-            value={status}
-            label="Loại dự án"
-            onChange={(e) => setStatus(e.target.value)}
-          >
-            <MenuItem value="all">Tất cả</MenuItem>
-            <MenuItem value="software">Phát triển phần mềm</MenuItem>
-            <MenuItem value="mobile">Mobile</MenuItem>
-            <MenuItem value="web">Web</MenuItem>
-          </Select>
-        </FormControl>
-
-        <FormControl size="small" sx={{ minWidth: 200 }}>
-          <InputLabel>Trạng thái</InputLabel>
-          <Select
-            value={status}
-            label="Trạng thái"
-            onChange={(e) => setStatus(e.target.value)}
-          >
-            <MenuItem value="all">Tất cả</MenuItem>
-            <MenuItem value="new">Tạo mới</MenuItem>
-            <MenuItem value="pending">Chờ phê duyệt</MenuItem>
-            <MenuItem value="approved">Đã duyệt</MenuItem>
-            <MenuItem value="inProgress">Đang thực hiện</MenuItem>
-            <MenuItem value="cancelled">Hủy bỏ</MenuItem>
-          </Select>
-        </FormControl>
-
-        <Button
-          variant="contained"
-          component={Link}
-          to="/project/create"
-          sx={{ ml: 'auto' }}
         >
-          TẠO DỰ ÁN
-        </Button>
-      </Stack>
-
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Mã dự án</TableCell>
-              <TableCell>Tên dự án</TableCell>
-              <TableCell>Loại dự án</TableCell>
-              <TableCell>Trạng thái</TableCell>
-              <TableCell>Ngày bắt đầu</TableCell>
-              <TableCell>Ngày kết thúc</TableCell>
-              <TableCell>Người tạo</TableCell>
-              <TableCell align="center">Thao tác</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={8} align="center">
-                  <CircularProgress />
-                </TableCell>
-              </TableRow>
-            ) : (
-              projects.map((row) => (
-                <TableRow key={row.id}>
-                  <TableCell>{row.code}</TableCell>
-                  <TableCell>{row.name}</TableCell>
-                  <TableCell>{row.type}</TableCell>
-                  <TableCell>
-                    <Box
-                      sx={{
-                        display: 'inline-block',
-                        px: 1,
-                        py: 0.5,
-                        borderRadius: 1,
-                        backgroundColor: getStatusColor(row.status),
-                        color: '#fff'
-                      }}
-                    >
-                      {row.status}
-                    </Box>
-                  </TableCell>
-                  <TableCell>{new Date(row.startDate).toLocaleDateString('vi-VN')}</TableCell>
-                  <TableCell>{new Date(row.endDate).toLocaleDateString('vi-VN')}</TableCell>
-                  <TableCell>{row.manager}</TableCell>
-                  <TableCell align="center">
-                    <IconButton size="small" component={Link} to={`/project/detail/${row.id}`} sx={{ mr: 1 }}>
-                      <VisibilityIcon />
-                    </IconButton>
-                    <IconButton size="small" component={Link} to={`/project/edit/${row.id}`} sx={{ mr: 1 }}>
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton size="small" color="error" onClick={() => handleDelete(row.id)}>
-                      <DeleteIcon />
-                    </IconButton>
-                  </TableCell>
+          DANH SÁCH DỰ ÁN
+        </Typography>
+        
+        <Stack 
+          direction="row" 
+          spacing={2} 
+          sx={{ 
+            mb: 3,
+            flexWrap: 'wrap',
+            gap: 2
+          }}
+        >
+          <TextField
+            size="small"
+            placeholder="Tên, mã dự án"
+            value={searchCode}
+            onChange={(e) => setSearchCode(e.target.value)}
+            InputProps={{
+              endAdornment: <SearchIcon color="action" />
+            }}
+            sx={{ 
+              minWidth: 250,
+              backgroundColor: '#fff'
+            }}
+          />
+          
+          <FormControl 
+            size="small" 
+            sx={{ 
+              minWidth: 200,
+              backgroundColor: '#fff'
+            }}
+          >
+            <InputLabel>Loại dự án</InputLabel>
+            <Select
+              value={status}
+              label="Loại dự án"
+              onChange={(e) => setStatus(e.target.value)}
+            >
+              <MenuItem value="all">Tất cả</MenuItem>
+              <MenuItem value="software">Phát triển phần mềm</MenuItem>
+              <MenuItem value="mobile">Mobile</MenuItem>
+              <MenuItem value="web">Web</MenuItem>
+            </Select>
+          </FormControl>
+    
+          <FormControl 
+            size="small" 
+            sx={{ 
+              minWidth: 200,
+              backgroundColor: '#fff'
+            }}
+          >
+            <InputLabel>Trạng thái</InputLabel>
+            <Select
+              value={status}
+              label="Trạng thái"
+              onChange={(e) => setStatus(e.target.value)}
+            >
+              <MenuItem value="all">Tất cả</MenuItem>
+              <MenuItem value="new">Tạo mới</MenuItem>
+              <MenuItem value="pending">Chờ phê duyệt</MenuItem>
+              <MenuItem value="approved">Đã duyệt</MenuItem>
+              <MenuItem value="inProgress">Đang thực hiện</MenuItem>
+              <MenuItem value="cancelled">Hủy bỏ</MenuItem>
+            </Select>
+          </FormControl>
+    
+          <Button
+            variant="contained"
+            onClick={handleExport}
+            startIcon={<FileDownloadIcon />}
+            sx={{ 
+              backgroundColor: '#2e7d32',
+              '&:hover': {
+                backgroundColor: '#1b5e20'
+              }
+            }}
+          >
+            XUẤT DỮ LIỆU
+          </Button>
+    
+          <Button
+            variant="contained"
+            component={Link}
+            to="/project/create"
+            sx={{ 
+              ml: 'auto',
+              backgroundColor: '#1976d2',
+              '&:hover': {
+                backgroundColor: '#1565c0'
+              }
+            }}
+          >
+            TẠO DỰ ÁN
+          </Button>
+        </Stack>
+    
+          <TableContainer 
+            component={Paper} 
+            sx={{ 
+              borderRadius: 1,
+              boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
+              overflow: 'hidden'
+            }}
+          >
+            <Table>
+              <TableHead>
+                <TableRow sx={{ backgroundColor: '#1976d2' }}>
+                  <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Mã dự án</TableCell>
+                  <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Tên dự án</TableCell>
+                  <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Loại dự án</TableCell>
+                  <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Trạng thái</TableCell>
+                  <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Ngày bắt đầu</TableCell>
+                  <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Ngày kết thúc</TableCell>
+                  <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Người tạo</TableCell>
+                  <TableCell align="center" sx={{ color: '#fff', fontWeight: 600 }}>Thao tác</TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
-
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
-        <Typography>Tổng {projects.length} bản ghi</Typography>
-        <Pagination
-          count={totalPages}
-          page={page}
-          onChange={handlePageChange}
-          color="primary"
-        />
+              </TableHead>
+              <TableBody>
+                {/* ... existing table body code ... */}
+              </TableBody>
+            </Table>
+          </TableContainer>
+    
+          <Box sx={{ 
+            mt: 2, 
+            p: 2, 
+            backgroundColor: '#fff',
+            borderRadius: 1,
+            boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)'
+          }}>
+            <Stack
+              direction="row"
+              justifyContent="space-between"
+              alignItems="center"
+            >
+              <Typography variant="body2" color="text.secondary">
+                Tổng {projects.length} bản ghi
+              </Typography>
+              <Pagination
+                count={totalPages}
+                page={page}
+                onChange={handlePageChange}
+                color="primary"
+                size="small"
+              />
+            </Stack>
+          </Box>
+        </Paper>
       </Box>
-    </Box>
   );
 };
 

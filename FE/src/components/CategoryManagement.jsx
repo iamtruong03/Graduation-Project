@@ -172,7 +172,6 @@ const CategoryManagement = () => {
                 <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Tên danh mục</TableCell>
                 <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Loại danh mục</TableCell>
                 <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Mô tả</TableCell>
-                <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Trạng thái</TableCell>
                 <TableCell align="center" sx={{ color: '#fff', fontWeight: 600 }}>Thao tác</TableCell>
               </TableRow>
             </TableHead>
@@ -231,16 +230,6 @@ const CategoryManagement = () => {
                       />
                     </TableCell>
                     <TableCell>{row.description}</TableCell>
-                    <TableCell>
-                      <Chip 
-                        label={row.active ? 'Hoạt động' : 'Không hoạt động'} 
-                        size="small"
-                        sx={{ 
-                          backgroundColor: row.active ? '#2e7d32' : '#d32f2f',
-                          color: '#fff'
-                        }}
-                      />
-                    </TableCell>
                     <TableCell align="center">
                       <IconButton
                         size="small"

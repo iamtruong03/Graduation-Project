@@ -80,41 +80,31 @@ const Layout = ({ children }) => {
       id: 'risk',
       text: 'Quản lý rủi ro',
       icon: <Warning />,
-      subItems: [
-        { id: 'risk-list', text: 'Danh sách rủi ro', path: '/risk/list' },
-      ],
+      path: '/risk/list'
     },
     {
       id: 'project',
       text: 'Quản lý dự án',
       icon: <Assignment />,
-      subItems: [
-        { id: 'project-list', text: 'Danh sách dự án', path: '/project/list' },
-      ],
+      path: '/project/list'
     },
     {
       id: 'task',
       text: 'Quản lý công việc',
       icon: <Task />,
-      subItems: [
-        { id: 'task-list', text: 'Danh sách công việc', path: '/task/list' },
-      ],
+      path: '/task/list'
     },
     {
       id: 'department',
       text: 'Quản lý phòng ban',
       icon: <Business />,
-      subItems: [
-        { id: 'department-list', text: 'Danh sách phòng ban', path: '/department/list' },
-      ],
+      path: '/department/list'
     },
     {
       id: 'staff',
       text: 'Quản lý nhân sự',
       icon: <People />,
-      subItems: [
-        { id: 'staff-management', text: 'Quản lý nhân sự', path: '/staff/management' },
-      ],
+      path: '/staff/management'
     },
     {
       id: 'statistics',
@@ -122,24 +112,20 @@ const Layout = ({ children }) => {
       icon: <BarChart />,
       subItems: [
         { id: 'department-stats', text: 'Thống kê phòng ban', icon: <Groups />, path: '/dashboard/department' },
-        { id: 'employee-stats', text: 'Thống kê hiệu suất nhân viên', icon: <Person />, path: '/dashboard/employee' },
+        { id: 'employee-stats', text: 'Thống kê dự án', icon: <Task />, path: '/dashboard/employee' },
       ]
     },
     {
       id: 'document',
       text: 'Quản lý tài liệu',
       icon: <Description />,
-      subItems: [
-        { id: 'document-management', text: 'Danh sách tài liệu', path: '/document/management' },
-      ],
+      path: '/document/management'
     },
     {
       id: 'category',
-      text: 'Quản lý danh mục',
+      text: 'Danh mục chung',
       icon: <Assessment />,
-      subItems: [
-        { id: 'category-management', text: 'Danh mục chung', path: '/category/management' },
-      ],
+      path: '/category/management'
     }
   ];
 
@@ -148,28 +134,41 @@ const Layout = ({ children }) => {
       <List>
         {items.map((item) => (
           <React.Fragment key={item.id}>
-            <ListItem disablePadding>
-              <ListItemButton onClick={() => handleClick(item.id)}>
-                <ListItemIcon>{item.icon}</ListItemIcon>
-                <ListItemText primary={item.text} />
-                {selectedMenu === item.id ? <ExpandLess /> : <ExpandMore />}
-              </ListItemButton>
-            </ListItem>
-            <Collapse in={selectedMenu === item.id} timeout="auto" unmountOnExit>
-              <List component="div" disablePadding>
-                {item.subItems.map((subItem) => (
-                  <ListItemButton
-                    key={subItem.id}
-                    sx={{ pl: 4 }}
-                    component={Link}
-                    to={subItem.path}
-                  >
-                    <ListItemIcon>{subItem.icon}</ListItemIcon>
-                    <ListItemText primary={subItem.text} />
+            {item.subItems ? (
+              // Menu có nhiều phần tử con (giữ nguyên cấu trúc cũ)
+              <>
+                <ListItem disablePadding>
+                  <ListItemButton onClick={() => handleClick(item.id)}>
+                    <ListItemIcon>{item.icon}</ListItemIcon>
+                    <ListItemText primary={item.text} />
+                    {selectedMenu === item.id ? <ExpandLess /> : <ExpandMore />}
                   </ListItemButton>
-                ))}
-              </List>
-            </Collapse>
+                </ListItem>
+                <Collapse in={selectedMenu === item.id} timeout="auto" unmountOnExit>
+                  <List component="div" disablePadding>
+                    {item.subItems.map((subItem) => (
+                      <ListItemButton
+                        key={subItem.id}
+                        sx={{ pl: 4 }}
+                        component={Link}
+                        to={subItem.path}
+                      >
+                        <ListItemIcon>{subItem.icon}</ListItemIcon>
+                        <ListItemText primary={subItem.text} />
+                      </ListItemButton>
+                    ))}
+                  </List>
+                </Collapse>
+              </>
+            ) : (
+              // Menu cấp 1 (không có submenu)
+              <ListItem disablePadding>
+                <ListItemButton component={Link} to={item.path}>
+                  <ListItemIcon>{item.icon}</ListItemIcon>
+                  <ListItemText primary={item.text} />
+                </ListItemButton>
+              </ListItem>
+            )}
           </React.Fragment>
         ))}
       </List>

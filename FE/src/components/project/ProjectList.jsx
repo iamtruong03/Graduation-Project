@@ -301,7 +301,77 @@ const ProjectList = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {/* ... existing table body code ... */}
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={8} align="center">
+                      <CircularProgress size={30} />
+                    </TableCell>
+                  </TableRow>
+                ) : projects.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} align="center">
+                      Không có dữ liệu
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  projects.map((project) => (
+                    <TableRow 
+                      key={project.id}
+                      sx={{ 
+                        '&:hover': { 
+                          backgroundColor: '#f5f5f5'
+                        }
+                      }}
+                    >
+                      <TableCell>{project.code}</TableCell>
+                      <TableCell>{project.name}</TableCell>
+                      <TableCell>{project.type}</TableCell>
+                      <TableCell>
+                        <Box
+                          sx={{
+                            backgroundColor: getStatusColor(project.status),
+                            color: '#fff',
+                            py: 0.5,
+                            px: 1.5,
+                            borderRadius: 1,
+                            display: 'inline-block',
+                            fontSize: '0.875rem'
+                          }}
+                        >
+                          {project.status}
+                        </Box>
+                      </TableCell>
+                      <TableCell>{new Date(project.startDate).toLocaleDateString('vi-VN')}</TableCell>
+                      <TableCell>{new Date(project.endDate).toLocaleDateString('vi-VN')}</TableCell>
+                      <TableCell>{project.creator}</TableCell>
+                      <TableCell align="center">
+                        <IconButton
+                          size="small"
+                          component={Link}
+                          to={`/project/detail/${project.id}`}
+                          sx={{ mr: 1 }}
+                        >
+                          <VisibilityIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          component={Link}
+                          to={`/project/edit/${project.id}`}
+                          sx={{ mr: 1 }}
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() => handleDelete(project.id)}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </TableContainer>

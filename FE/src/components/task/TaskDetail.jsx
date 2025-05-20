@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -8,18 +8,36 @@ import {
   Stack,
   Divider,
   Chip,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
   IconButton,
-  Link
+  Button,
+  Avatar,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  TextField
 } from '@mui/material';
-import DescriptionIcon from '@mui/icons-material/Description';
-import HistoryIcon from '@mui/icons-material/History';
-import AttachFileIcon from '@mui/icons-material/AttachFile';
-import DownloadIcon from '@mui/icons-material/Download';
-import CloseIcon from '@mui/icons-material/Close';
+import {
+  Timeline,
+  TimelineItem,
+  TimelineSeparator,
+  TimelineConnector,
+  TimelineContent,
+  TimelineDot,
+  TimelineOppositeContent
+} from '@mui/lab';
+import {
+  History as HistoryIcon,
+  Assignment as AssignmentIcon,
+  Flag as FlagIcon,
+  Business as BusinessIcon,
+  Person as PersonIcon,
+  Schedule as ScheduleIcon,
+  ArrowBack as ArrowBackIcon,
+  Edit as EditIcon,
+  Save as SaveIcon,
+  Cancel as CancelIcon
+} from '@mui/icons-material';
 
 const mockTask = {
   id: 1,
@@ -35,8 +53,11 @@ const mockTask = {
   assignee: 'Trần Thị B',
   description: 'Phát triển tính năng quản lý công việc mới cho hệ thống, bao gồm các chức năng thêm, sửa, xóa và phân công công việc.',
   active: true,
+  startDate: '15/07/2023',
+  dueDate: '30/07/2023',
   createdAt: '15/07/2023',
   updatedAt: '20/07/2023',
+  progress: 60,
   statusHistory: [
     { status: 'Chưa bắt đầu', updatedAt: '15/07/2023', updatedBy: 'Nguyễn Văn A' },
     { status: 'Đang thực hiện', updatedAt: '16/07/2023', updatedBy: 'Trần Thị B' },
@@ -50,98 +71,418 @@ const mockTask = {
   ]
 };
 
+const getStatusColor = (status) => {
+  switch (status) {
+    case 'Đang thực hiện':
+      return 'info';
+    case 'Hoàn thành':
+      return 'success';
+    case 'Tạm dừng':
+      return 'warning';
+    case 'Đã hủy':
+      return 'error';
+    default:
+      return 'grey';
+  }
+};
+
+const getPriorityColor = (priority) => {
+  switch (priority) {
+    case 'Cao':
+      return 'error';
+    case 'Trung bình':
+      return 'warning';
+    case 'Thấp':
+      return 'success';
+    default:
+      return 'default';
+  }
+};
+
 const TaskDetail = () => {
   const navigate = useNavigate();
-  
+  const [task, setTask] = useState(mockTask);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedTask, setEditedTask] = useState(null);
+
   const handleClose = () => {
     navigate('/task/list');
   };
-  
+
+  const handleEdit = () => {
+    setIsEditing(true);
+    setEditedTask({...task});
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditedTask(null);
+  };
+
+  const handleSave = () => {
+    setTask(editedTask);
+    setIsEditing(false);
+  };
+
+  const handleTaskChange = (event) => {
+    const { name, value } = event.target;
+    setEditedTask(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
   return (
-    <Box sx={{ p: 3, position: 'relative' }}>
-      <IconButton 
-        aria-label="close" 
-        onClick={handleClose}
-        sx={{ 
-          position: 'absolute', 
-          right: 8, 
-          top: 8,
-          color: (theme) => theme.palette.grey[500],
-        }}
-      >
-        <CloseIcon />
-      </IconButton>
-      <Typography variant="h5" sx={{ mb: 3 }}>CHI TIẾT CÔNG VIỆC</Typography>
-      
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={8}>
-          <Paper sx={{ p: 3 }}>
-            <Stack spacing={2}>
-              <Box>
-                <Typography variant="subtitle2" color="text.secondary">Mã công việc</Typography>
-                <Typography variant="body1">{mockTask.code}</Typography>
-              </Box>
-              
-              <Box>
-                <Typography variant="subtitle2" color="text.secondary">Tên công việc</Typography>
-                <Typography variant="body1">{mockTask.name}</Typography>
-              </Box>
+    <Box sx={{ p: 3, backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
+      <Paper elevation={0} sx={{ p: 3, mb: 3, borderRadius: 2 }}>
+        <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 3 }}>
+          <IconButton onClick={handleClose} sx={{ color: 'text.secondary' }}>
+            <ArrowBackIcon />
+          </IconButton>
+          <Typography variant="h5" sx={{ fontWeight: 600 }}>Chi tiết công việc</Typography>
+          <Box sx={{ flexGrow: 1 }} />
+          {isEditing ? (
+            <>
+              <Button
+                variant="outlined"
+                startIcon={<CancelIcon />}
+                onClick={handleCancelEdit}
+                sx={{
+                  borderColor: '#929292',
+                  color: '#929292',
+                  '&:hover': {
+                    borderColor: '#6f6f6f',
+                    color: '#6f6f6f',
+                    backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                  }
+                }}
+              >
+                HỦY
+              </Button>
+              <Button
+                variant="contained"
+                startIcon={<SaveIcon />}
+                onClick={handleSave}
+                sx={{
+                  backgroundColor: '#1976d2',
+                  '&:hover': {
+                    backgroundColor: '#1565c0'
+                  }
+                }}
+              >
+                LƯU
+              </Button>
+            </>
+          ) : (
+            <Button
+              variant="contained"
+              startIcon={<EditIcon />}
+              onClick={handleEdit}
+              sx={{
+                backgroundColor: '#1976d2',
+                '&:hover': {
+                  backgroundColor: '#1565c0'
+                }
+              }}
+            >
+              CHỈNH SỬA
+            </Button>
+          )}
+        </Stack>
 
-              <Box>
-                <Typography variant="subtitle2" color="text.secondary">Loại công việc</Typography>
-                <Typography variant="body1">
-                  {mockTask.taskType === 'project' ? 'Công việc dự án' : 'Công việc phòng ban'}
-                </Typography>
-              </Box>
-
-              {mockTask.taskType === 'project' && (
+        <Grid container spacing={3}>
+          {/* Thông tin chính */}
+          <Grid item xs={12} md={8}>
+            <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>
+              <Stack spacing={3}>
                 <Box>
-                  <Typography variant="subtitle2" color="text.secondary">Dự án</Typography>
-                  <Typography variant="body1">{mockTask.project}</Typography>
+                  <Typography variant="h6" sx={{ mb: 2, color: 'primary.main', fontWeight: 600 }}>
+                    {isEditing ? (
+                      <TextField
+                        fullWidth
+                        name="name"
+                        value={editedTask.name}
+                        onChange={handleTaskChange}
+                        size="small"
+                      />
+                    ) : (
+                      task.name
+                    )}
+                  </Typography>
+                  <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
+                    <Chip
+                      icon={<AssignmentIcon />}
+                      label={task.code}
+                      variant="outlined"
+                    />
+                    {isEditing ? (
+                      <FormControl sx={{ minWidth: 150 }} size="small">
+                        <Select
+                          name="priority"
+                          value={editedTask.priority}
+                          onChange={handleTaskChange}
+                        >
+                          <MenuItem value="Cao">Cao</MenuItem>
+                          <MenuItem value="Trung bình">Trung bình</MenuItem>
+                          <MenuItem value="Thấp">Thấp</MenuItem>
+                        </Select>
+                      </FormControl>
+                    ) : (
+                      <Chip
+                        icon={<FlagIcon />}
+                        label={task.priority}
+                        color={getPriorityColor(task.priority)}
+                      />
+                    )}
+                    {isEditing ? (
+                      <FormControl sx={{ minWidth: 150 }} size="small">
+                        <Select
+                          name="status"
+                          value={editedTask.status}
+                          onChange={handleTaskChange}
+                        >
+                          <MenuItem value="Chưa bắt đầu">Chưa bắt đầu</MenuItem>
+                          <MenuItem value="Đang thực hiện">Đang thực hiện</MenuItem>
+                          <MenuItem value="Hoàn thành">Hoàn thành</MenuItem>
+                          <MenuItem value="Đã hủy">Đã hủy</MenuItem>
+                        </Select>
+                      </FormControl>
+                    ) : (
+                      <Chip
+                        label={task.status}
+                        color={getStatusColor(task.status)}
+                      />
+                    )}
+                  </Stack>
                 </Box>
-              )}
 
-              <Box>
-                <Typography variant="subtitle2" color="text.secondary">Phòng ban</Typography>
-                <Typography variant="body1">{mockTask.department}</Typography>
-              </Box>
+                <Divider />
 
-              <Box>
-                <Typography variant="subtitle2" color="text.secondary">Trạng thái</Typography>
-                <Chip
-                  label={mockTask.status}
-                  color={mockTask.status === 'Đang thực hiện' ? 'primary' : 'default'}
-                  size="small"
-                />
-              </Box>
+                <Grid container spacing={3}>
+                  <Grid item xs={12} sm={6}>
+                    <Stack spacing={2}>
+                      <Box>
+                        <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                          Loại công việc
+                        </Typography>
+                        {isEditing ? (
+                          <FormControl fullWidth size="small">
+                            <Select
+                              name="taskType"
+                              value={editedTask.taskType}
+                              onChange={handleTaskChange}
+                            >
+                              <MenuItem value="project">Công việc dự án</MenuItem>
+                              <MenuItem value="department">Công việc phòng ban</MenuItem>
+                            </Select>
+                          </FormControl>
+                        ) : (
+                          <Typography>
+                            {task.taskType === 'project' ? 'Công việc dự án' : 'Công việc phòng ban'}
+                          </Typography>
+                        )}
+                      </Box>
 
-              <Box>
-                <Typography variant="subtitle2" color="text.secondary">Mức độ ưu tiên</Typography>
-                <Chip
-                  label={mockTask.priority}
-                  color={mockTask.priority === 'Cao' ? 'error' : 'default'}
-                  size="small"
-                />
-              </Box>
+                      {(isEditing ? editedTask.taskType : task.taskType) === 'project' && (
+                        <Box>
+                          <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                            Dự án
+                          </Typography>
+                          {isEditing ? (
+                            <FormControl fullWidth size="small">
+                              <Select
+                                name="project"
+                                value={editedTask.project}
+                                onChange={handleTaskChange}
+                              >
+                                <MenuItem value="Dự án A">Dự án A</MenuItem>
+                                <MenuItem value="Dự án B">Dự án B</MenuItem>
+                                <MenuItem value="Dự án C">Dự án C</MenuItem>
+                              </Select>
+                            </FormControl>
+                          ) : (
+                            <Typography>{task.project}</Typography>
+                          )}
+                        </Box>
+                      )}
 
-              <Box>
-                <Typography variant="subtitle2" color="text.secondary">Người phụ trách</Typography>
-                <Typography variant="body1">{mockTask.manager}</Typography>
-              </Box>
+                      <Box>
+                        <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                          <BusinessIcon sx={{ fontSize: 16, mr: 1, verticalAlign: 'text-bottom' }} />
+                          Phòng ban
+                        </Typography>
+                        {isEditing ? (
+                          <FormControl fullWidth size="small">
+                            <Select
+                              name="department"
+                              value={editedTask.department}
+                              onChange={handleTaskChange}
+                            >
+                              <MenuItem value="Phòng kỹ thuật">Phòng kỹ thuật</MenuItem>
+                              <MenuItem value="Phòng kinh doanh">Phòng kinh doanh</MenuItem>
+                              <MenuItem value="Phòng nhân sự">Phòng nhân sự</MenuItem>
+                            </Select>
+                          </FormControl>
+                        ) : (
+                          <Typography>{task.department}</Typography>
+                        )}
+                      </Box>
+                    </Stack>
+                  </Grid>
 
-              <Box>
-                <Typography variant="subtitle2" color="text.secondary">Người thực hiện</Typography>
-                <Typography variant="body1">{mockTask.assignee}</Typography>
-              </Box>
+                  <Grid item xs={12} sm={6}>
+                    <Stack spacing={2}>
+                      <Box>
+                        <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                          <PersonIcon sx={{ fontSize: 16, mr: 1, verticalAlign: 'text-bottom' }} />
+                          Người phụ trách
+                        </Typography>
+                        {isEditing ? (
+                          <FormControl fullWidth size="small">
+                            <Select
+                              name="manager"
+                              value={editedTask.manager}
+                              onChange={handleTaskChange}
+                            >
+                              <MenuItem value="Nguyễn Văn A">Nguyễn Văn A</MenuItem>
+                              <MenuItem value="Trần Thị B">Trần Thị B</MenuItem>
+                              <MenuItem value="Lê Văn C">Lê Văn C</MenuItem>
+                            </Select>
+                          </FormControl>
+                        ) : (
+                          <Stack direction="row" spacing={1} alignItems="center">
+                            <Avatar sx={{ width: 24, height: 24 }}>
+                              {task.manager.charAt(0)}
+                            </Avatar>
+                            <Typography>{task.manager}</Typography>
+                          </Stack>
+                        )}
+                      </Box>
 
-              <Box>
-                <Typography variant="subtitle2" color="text.secondary">Mô tả</Typography>
-                <Typography variant="body1">{mockTask.description}</Typography>
-              </Box>
-            </Stack>
-          </Paper>
+                      <Box>
+                        <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                          <PersonIcon sx={{ fontSize: 16, mr: 1, verticalAlign: 'text-bottom' }} />
+                          Người thực hiện
+                        </Typography>
+                        {isEditing ? (
+                          <FormControl fullWidth size="small">
+                            <Select
+                              name="assignee"
+                              value={editedTask.assignee}
+                              onChange={handleTaskChange}
+                            >
+                              <MenuItem value="Trần Thị B">Trần Thị B</MenuItem>
+                              <MenuItem value="Phạm Văn C">Phạm Văn C</MenuItem>
+                              <MenuItem value="Lê Thị D">Lê Thị D</MenuItem>
+                            </Select>
+                          </FormControl>
+                        ) : (
+                          <Stack direction="row" spacing={1} alignItems="center">
+                            <Avatar sx={{ width: 24, height: 24 }}>
+                              {task.assignee.charAt(0)}
+                            </Avatar>
+                            <Typography>{task.assignee}</Typography>
+                          </Stack>
+                        )}
+                      </Box>
+
+                      <Box>
+                        <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                          <ScheduleIcon sx={{ fontSize: 16, mr: 1, verticalAlign: 'text-bottom' }} />
+                          Thời gian
+                        </Typography>
+                        {isEditing ? (
+                          <Stack direction="row" spacing={2}>
+                            <TextField
+                              type="date"
+                              name="startDate"
+                              label="Ngày bắt đầu"
+                              value={editedTask.startDate}
+                              onChange={handleTaskChange}
+                              size="small"
+                              fullWidth
+                              InputLabelProps={{ shrink: true }}
+                            />
+                            <TextField
+                              type="date"
+                              name="dueDate"
+                              label="Ngày kết thúc"
+                              value={editedTask.dueDate}
+                              onChange={handleTaskChange}
+                              size="small"
+                              fullWidth
+                              InputLabelProps={{ shrink: true }}
+                            />
+                          </Stack>
+                        ) : (
+                          <Typography>
+                            {task.startDate} - {task.dueDate}
+                          </Typography>
+                        )}
+                      </Box>
+                    </Stack>
+                  </Grid>
+                </Grid>
+
+                <Divider />
+
+                <Box>
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                    Mô tả công việc
+                  </Typography>
+                  {isEditing ? (
+                    <TextField
+                      fullWidth
+                      multiline
+                      rows={4}
+                      name="description"
+                      value={editedTask.description}
+                      onChange={handleTaskChange}
+                    />
+                  ) : (
+                    <Typography variant="body1" sx={{ whiteSpace: 'pre-line' }}>
+                      {task.description}
+                    </Typography>
+                  )}
+                </Box>
+              </Stack>
+            </Paper>
+          </Grid>
+
+          {/* Sidebar - Lịch sử trạng thái */}
+          <Grid item xs={12} md={4}>
+            <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>
+              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
+                <HistoryIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />
+                Lịch sử trạng thái
+              </Typography>
+              <Timeline>
+                {task.statusHistory.map((history, index) => (
+                  <TimelineItem key={index}>
+                    <TimelineOppositeContent color="text.secondary">
+                      <Typography variant="caption">
+                        {history.updatedAt}
+                      </Typography>
+                    </TimelineOppositeContent>
+                    <TimelineSeparator>
+                      <TimelineDot variant="outlined" color={getStatusColor(history.status)} />
+                      {index < task.statusHistory.length - 1 && <TimelineConnector />}
+                    </TimelineSeparator>
+                    <TimelineContent>
+                      <Typography variant="body2" component="span">
+                        {history.status}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" display="block">
+                        bởi {history.updatedBy}
+                      </Typography>
+                    </TimelineContent>
+                  </TimelineItem>
+                ))}
+              </Timeline>
+            </Paper>
+          </Grid>
         </Grid>
-      </Grid>
+      </Paper>
     </Box>
   );
 };

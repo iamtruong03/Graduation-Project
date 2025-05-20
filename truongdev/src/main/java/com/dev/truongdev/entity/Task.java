@@ -1,12 +1,9 @@
 package com.dev.truongdev.entity;
 
-import com.dev.truongdev.utils.StringListConverter;
 import com.dev.truongdev.xdevbase.entity.XDevBaseEntity;
 import jakarta.persistence.Column;
-import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import java.util.Date;
-import java.util.List;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -12,52 +12,92 @@ import {
   Paper,
   Typography,
   IconButton,
-  FormControl,
-  Select,
-  MenuItem,
-  InputLabel,
-  Stack,
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogContentText,
   DialogActions,
   Grid,
   Chip,
   CircularProgress,
-  Alert
+  Alert,
+  Stack
 } from '@mui/material';
-import SearchIcon from '@mui/icons-material/Search';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import { Add as AddIcon } from '@mui/icons-material';
+import {
+  Add as AddIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Search as SearchIcon
+} from '@mui/icons-material';
 
+// Mock data - sẽ được thay thế bằng API call
 const mockData = [
-  { id: 1, code: 'TASK_TYPE_01', name: 'Phát triển', type: 'task_type', description: 'Công việc phát triển tính năng mới', active: true },
-  { id: 2, code: 'TASK_TYPE_02', name: 'Bảo trì', type: 'task_type', description: 'Công việc bảo trì hệ thống', active: true },
-  { id: 3, code: 'DEPT_TYPE_01', name: 'Phòng ban chuyên môn', type: 'department_type', description: 'Phòng ban thực hiện các công việc chuyên môn', active: true },
-  { id: 4, code: 'DEPT_TYPE_02', name: 'Phòng ban hỗ trợ', type: 'department_type', description: 'Phòng ban hỗ trợ hoạt động', active: false },
+  { 
+    id: 1, 
+    code: 'CATEGORY_TYPE_01', 
+    name: 'Loại công việc', 
+    description: 'Phân loại các loại công việc trong dự án',
+    active: true 
+  },
+  { 
+    id: 2, 
+    code: 'CATEGORY_TYPE_02', 
+    name: 'Loại phòng ban', 
+    description: 'Phân loại các loại phòng ban trong tổ chức',
+    active: true 
+  },
+  { 
+    id: 3, 
+    code: 'CATEGORY_TYPE_03', 
+    name: 'Loại dự án', 
+    description: 'Phân loại các loại dự án',
+    active: true 
+  }
 ];
 
-const CategoryManagement = () => {
+const CategoryTypeManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [categoryType, setCategoryType] = useState('all');
   const [openDialog, setOpenDialog] = useState(false);
   const [dialogType, setDialogType] = useState('create');
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [categoryTypes, setCategoryTypes] = useState(mockData);
+
+  const [formData, setFormData] = useState({
+    code: '',
+    name: '',
+    description: ''
+  });
+
+  const [formErrors, setFormErrors] = useState({});
+
+  useEffect(() => {
+    // TODO: Fetch category types from API
+    // fetchCategoryTypes();
+  }, []);
 
   const handleOpenCreateDialog = () => {
     setDialogType('create');
     setSelectedCategory(null);
+    setFormData({
+      code: '',
+      name: '',
+      description: ''
+    });
+    setFormErrors({});
     setOpenDialog(true);
   };
 
   const handleOpenEditDialog = (category) => {
     setDialogType('edit');
     setSelectedCategory(category);
+    setFormData({
+      code: category.code,
+      name: category.name,
+      description: category.description
+    });
+    setFormErrors({});
     setOpenDialog(true);
   };
 
@@ -69,6 +109,12 @@ const CategoryManagement = () => {
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setSelectedCategory(null);
+    setFormData({
+      code: '',
+      name: '',
+      description: ''
+    });
+    setFormErrors({});
   };
 
   const handleCloseDeleteDialog = () => {
@@ -76,11 +122,78 @@ const CategoryManagement = () => {
     setSelectedCategory(null);
   };
 
-  const handleDelete = () => {
-    // Thực hiện xóa danh mục
-    setOpenDeleteDialog(false);
-    setSelectedCategory(null);
+  const validateForm = () => {
+    const errors = {};
+    if (!formData.code) errors.code = 'Vui lòng nhập mã loại danh mục';
+    if (!formData.name) errors.name = 'Vui lòng nhập tên loại danh mục';
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
   };
+
+  const handleSubmit = async () => {
+    if (!validateForm()) return;
+
+    setLoading(true);
+    try {
+      // TODO: Add API call to save category type
+      console.log('Submitting form data:', formData);
+      
+      // Mock API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      if (dialogType === 'create') {
+        setCategoryTypes([...categoryTypes, {
+          id: categoryTypes.length + 1,
+          ...formData,
+          active: true
+        }]);
+      } else {
+        setCategoryTypes(categoryTypes.map(cat => 
+          cat.id === selectedCategory.id ? { ...cat, ...formData } : cat
+        ));
+      }
+      
+      handleCloseDialog();
+    } catch (err) {
+      setError('Có lỗi xảy ra khi lưu loại danh mục. Vui lòng thử lại.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setLoading(true);
+    try {
+      // TODO: Add API call to delete category type
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      setCategoryTypes(categoryTypes.filter(cat => cat.id !== selectedCategory.id));
+      handleCloseDeleteDialog();
+    } catch (err) {
+      setError('Có lỗi xảy ra khi xóa loại danh mục. Vui lòng thử lại.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleInputChange = (field) => (event) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: event.target.value
+    }));
+    if (formErrors[field]) {
+      setFormErrors(prev => ({
+        ...prev,
+        [field]: undefined
+      }));
+    }
+  };
+
+  const filteredCategories = categoryTypes.filter(category =>
+    category.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    category.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <Box sx={{ p: 4, backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
@@ -95,9 +208,9 @@ const CategoryManagement = () => {
             pb: 1
           }}
         >
-          QUẢN LÝ DANH MỤC
+          QUẢN LÝ LOẠI DANH MỤC
         </Typography>
-        
+
         <Stack 
           direction="row" 
           spacing={2} 
@@ -109,36 +222,17 @@ const CategoryManagement = () => {
         >
           <TextField
             size="small"
-            placeholder="Tìm kiếm theo mã, tên danh mục"
+            placeholder="Tìm kiếm theo mã, tên loại danh mục"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             InputProps={{
               endAdornment: <SearchIcon color="action" />
             }}
             sx={{ 
-              minWidth: 250,
+              minWidth: 300,
               backgroundColor: '#fff'
             }}
           />
-          
-          <FormControl 
-            size="small" 
-            sx={{ 
-              minWidth: 200,
-              backgroundColor: '#fff'
-            }}
-          >
-            <InputLabel>Loại danh mục</InputLabel>
-            <Select
-              value={categoryType}
-              label="Loại danh mục"
-              onChange={(e) => setCategoryType(e.target.value)}
-            >
-              <MenuItem value="all">Tất cả</MenuItem>
-              <MenuItem value="task_type">Loại công việc</MenuItem>
-              <MenuItem value="department_type">Loại phòng ban</MenuItem>
-            </Select>
-          </FormControl>
 
           <Button
             variant="contained"
@@ -152,9 +246,19 @@ const CategoryManagement = () => {
               }
             }}
           >
-            THÊM DANH MỤC
+            THÊM LOẠI DANH MỤC
           </Button>
         </Stack>
+
+        {error && (
+          <Alert 
+            severity="error" 
+            onClose={() => setError(null)}
+            sx={{ mb: 2 }}
+          >
+            {error}
+          </Alert>
+        )}
 
         <TableContainer 
           component={Paper} 
@@ -168,48 +272,31 @@ const CategoryManagement = () => {
             <TableHead>
               <TableRow sx={{ backgroundColor: '#1976d2' }}>
                 <TableCell sx={{ color: '#fff', fontWeight: 600 }}>STT</TableCell>
-                <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Mã danh mục</TableCell>
-                <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Tên danh mục</TableCell>
-                <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Loại danh mục</TableCell>
+                <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Mã loại danh mục</TableCell>
+                <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Tên loại danh mục</TableCell>
                 <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Mô tả</TableCell>
                 <TableCell align="center" sx={{ color: '#fff', fontWeight: 600 }}>Thao tác</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {error ? (
+              {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7}>
-                    <Alert 
-                      severity="error" 
-                      sx={{ 
-                        mb: 2,
-                        '& .MuiAlert-icon': {
-                          color: '#d32f2f'
-                        }
-                      }}
-                    >
-                      {error}
-                    </Alert>
+                  <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
+                    <CircularProgress />
                   </TableCell>
                 </TableRow>
-              ) : loading ? (
+              ) : filteredCategories.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
-                    <CircularProgress sx={{ color: '#1976d2' }} />
-                  </TableCell>
-                </TableRow>
-              ) : mockData.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
+                  <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
                     <Typography color="text.secondary">
                       Không tìm thấy dữ liệu
                     </Typography>
                   </TableCell>
                 </TableRow>
               ) : (
-                mockData.map((row, index) => (
+                filteredCategories.map((category, index) => (
                   <TableRow 
-                    key={row.id}
+                    key={category.id}
                     sx={{ 
                       '&:hover': { 
                         backgroundColor: '#f5f5f5'
@@ -217,24 +304,14 @@ const CategoryManagement = () => {
                     }}
                   >
                     <TableCell>{index + 1}</TableCell>
-                    <TableCell>{row.code}</TableCell>
-                    <TableCell>{row.name}</TableCell>
-                    <TableCell>
-                      <Chip 
-                        label={row.type === 'task_type' ? 'Loại công việc' : 'Loại phòng ban'} 
-                        size="small"
-                        sx={{ 
-                          backgroundColor: row.type === 'task_type' ? '#1976d2' : '#9c27b0',
-                          color: '#fff'
-                        }}
-                      />
-                    </TableCell>
-                    <TableCell>{row.description}</TableCell>
+                    <TableCell>{category.code}</TableCell>
+                    <TableCell>{category.name}</TableCell>
+                    <TableCell>{category.description}</TableCell>
                     <TableCell align="center">
                       <IconButton
                         size="small"
                         color="primary"
-                        onClick={() => handleOpenEditDialog(row)}
+                        onClick={() => handleOpenEditDialog(category)}
                         sx={{ mr: 1 }}
                       >
                         <EditIcon />
@@ -242,7 +319,7 @@ const CategoryManagement = () => {
                       <IconButton
                         size="small"
                         color="error"
-                        onClick={() => handleOpenDeleteDialog(row)}
+                        onClick={() => handleOpenDeleteDialog(category)}
                       >
                         <DeleteIcon />
                       </IconButton>
@@ -261,19 +338,13 @@ const CategoryManagement = () => {
           borderRadius: 1,
           boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)'
         }}>
-          <Stack
-            direction="row"
-            justifyContent="space-between"
-            alignItems="center"
-          >
-            <Typography variant="body2" color="text.secondary">
-              Tổng {mockData.length} bản ghi
-            </Typography>
-          </Stack>
+          <Typography variant="body2" color="text.secondary">
+            Tổng số: {filteredCategories.length} loại danh mục
+          </Typography>
         </Box>
       </Paper>
 
-      {/* Dialog thêm/sửa danh mục */}
+      {/* Dialog thêm/sửa loại danh mục */}
       <Dialog 
         open={openDialog} 
         onClose={handleCloseDialog}
@@ -291,36 +362,30 @@ const CategoryManagement = () => {
           color: '#1976d2',
           fontWeight: 600
         }}>
-          {dialogType === 'create' ? 'Thêm danh mục mới' : 'Chỉnh sửa danh mục'}
+          {dialogType === 'create' ? 'Thêm loại danh mục mới' : 'Chỉnh sửa loại danh mục'}
         </DialogTitle>
         <DialogContent sx={{ pt: 3 }}>
           <Grid container spacing={2}>
             <Grid item xs={12}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Loại danh mục</InputLabel>
-                <Select
-                  label="Loại danh mục"
-                  defaultValue={selectedCategory?.type || ''}
-                >
-                  <MenuItem value="task_type">Loại công việc</MenuItem>
-                  <MenuItem value="department_type">Loại phòng ban</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12}>
               <TextField
                 fullWidth
                 size="small"
-                label="Mã danh mục"
-                defaultValue={selectedCategory?.code || ''}
+                label="Mã loại danh mục"
+                value={formData.code}
+                onChange={handleInputChange('code')}
+                error={!!formErrors.code}
+                helperText={formErrors.code}
               />
             </Grid>
             <Grid item xs={12}>
               <TextField
                 fullWidth
                 size="small"
-                label="Tên danh mục"
-                defaultValue={selectedCategory?.name || ''}
+                label="Tên loại danh mục"
+                value={formData.name}
+                onChange={handleInputChange('name')}
+                error={!!formErrors.name}
+                helperText={formErrors.name}
               />
             </Grid>
             <Grid item xs={12}>
@@ -330,7 +395,8 @@ const CategoryManagement = () => {
                 label="Mô tả"
                 multiline
                 rows={3}
-                defaultValue={selectedCategory?.description || ''}
+                value={formData.description}
+                onChange={handleInputChange('description')}
               />
             </Grid>
           </Grid>
@@ -338,6 +404,7 @@ const CategoryManagement = () => {
         <DialogActions sx={{ p: 2, pt: 1, borderTop: '1px solid #e0e0e0' }}>
           <Button 
             onClick={handleCloseDialog}
+            disabled={loading}
             sx={{ 
               color: 'text.secondary',
               '&:hover': {
@@ -349,7 +416,8 @@ const CategoryManagement = () => {
           </Button>
           <Button 
             variant="contained" 
-            onClick={handleCloseDialog}
+            onClick={handleSubmit}
+            disabled={loading}
             sx={{
               backgroundColor: '#1976d2',
               '&:hover': {
@@ -357,7 +425,9 @@ const CategoryManagement = () => {
               }
             }}
           >
-            {dialogType === 'create' ? 'Thêm' : 'Cập nhật'}
+            {loading ? (
+              <CircularProgress size={24} sx={{ color: '#fff' }} />
+            ) : dialogType === 'create' ? 'Thêm' : 'Cập nhật'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -380,13 +450,14 @@ const CategoryManagement = () => {
           Xác nhận xóa
         </DialogTitle>
         <DialogContent>
-          <DialogContentText>
-            Bạn có chắc chắn muốn xóa danh mục này không?
-          </DialogContentText>
+          <Typography>
+            Bạn có chắc chắn muốn xóa loại danh mục "{selectedCategory?.name}" không?
+          </Typography>
         </DialogContent>
         <DialogActions sx={{ p: 2, pt: 1 }}>
           <Button 
             onClick={handleCloseDeleteDialog}
+            disabled={loading}
             sx={{ 
               color: 'text.secondary',
               '&:hover': {
@@ -398,6 +469,7 @@ const CategoryManagement = () => {
           </Button>
           <Button
             onClick={handleDelete}
+            disabled={loading}
             color="error"
             variant="contained"
             sx={{
@@ -406,7 +478,9 @@ const CategoryManagement = () => {
               }
             }}
           >
-            Xóa
+            {loading ? (
+              <CircularProgress size={24} sx={{ color: '#fff' }} />
+            ) : 'Xóa'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -414,4 +488,4 @@ const CategoryManagement = () => {
   );
 };
 
-export default CategoryManagement;
+export default CategoryTypeManagement; 

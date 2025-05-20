@@ -269,9 +269,6 @@ const TaskList = () => {
                         <IconButton size="small" component={Link} to={`/task/detail/${row.id}`} sx={{ mr: 1 }}>
                           <VisibilityIcon />
                         </IconButton>
-                        <IconButton size="small" component={Link} to={`/task/edit/${row.id}`} sx={{ mr: 1 }}>
-                          <EditIcon />
-                        </IconButton>
                         <IconButton size="small" color="error" onClick={() => handleDelete(row.id)}>
                           <DeleteIcon />
                         </IconButton>

@@ -14,7 +14,6 @@ import {
   Paper,
   Typography,
   IconButton,
-  Switch,
   FormControl,
   Select,
   MenuItem,
@@ -26,13 +25,9 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
-  Grid,
-  Tabs,
-  Tab,
-  TextareaAutosize
+  Alert
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
-import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import { Link } from 'react-router-dom';
@@ -120,67 +115,20 @@ const mockData = [
   }
 ];
 
-import RiskEdit from './RiskEdit';
-
 const RiskList = () => {
-  const [searchCode, setSearchCode] = useState('');
   const [searchName, setSearchName] = useState('');
   const [riskType, setRiskType] = useState('all');
   const [riskLevel, setRiskLevel] = useState('all');
   const [status, setStatus] = useState('all');
   const [page, setPage] = useState(1);
-  const [openEditDialog, setOpenEditDialog] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [selectedRisk, setSelectedRisk] = useState(null);
-  const [currentTab, setCurrentTab] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const rowsPerPage = 10;
 
-  const [formData, setFormData] = useState({
-    code: '',
-    name: '',
-    type: '',
-    level: '',
-    stage: '',
-    impactScope: '',
-    projectName: '',
-    planVersion: '',
-    department: '',
-    reporter: '',
-    reportDate: null,
-    analyst: '',
-    analysisDate: null,
-    description: '',
-    impactLevel: '',
-    riskLevel: '',
-    probability: '',
-    priority: '',
-    rootCause: '',
-    impact: '',
-    preventiveMeasures: '',
-    remedialMeasures: ''
-  });
-
   const handlePageChange = (event, newPage) => {
     setPage(newPage);
-  };
-
-  const handleEdit = (risk) => {
-    setSelectedRisk(risk);
-    setOpenEditDialog(true);
-  };
-
-  const handleTabChange = (event, newValue) => {
-    setCurrentTab(newValue);
-  };
-
-  const handleFormChange = (event) => {
-    const { name, value } = event.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
   };
 
   const handleDelete = (risk) => {
@@ -196,9 +144,6 @@ const RiskList = () => {
     setSelectedRisk(null);
   };
 
-  // Thêm state cho dialog thêm mới rủi ro
-  const [openAddDialog, setOpenAddDialog] = useState(false);
-  
   // Thêm hàm xử lý export
   const handleExport = () => {
     // Logic xuất file Excel/PDF
@@ -206,7 +151,7 @@ const RiskList = () => {
       'Mã rủi ro': risk.code,
       'Tên rủi ro': risk.name,
       'Loại': risk.type,
-      'Mức độ': risk.level,
+      'Mức độ ảnh hưởng': risk.level,
       'Trạng thái': risk.stage,
       'Người báo cáo': risk.reporter,
       'Phòng ban': risk.department,
@@ -220,32 +165,13 @@ const RiskList = () => {
     XLSX.writeFile(workbook, "danh-sach-rui-ro.xlsx");
   };
 
-  const handleAddRisk = () => {
-    setOpenEditDialog(true);
-    setSelectedRisk(null);
-    setFormData({
-      code: '',
-      name: '',
-      type: '',
-      level: '',
-      impactLevel: '',
-      riskLevel: '',
-      probability: '',
-      priority: '',
-      rootCause: '',
-      impact: '',
-      preventiveMeasures: '',
-      remedialMeasures: ''
-    });
-  };
-
   return (
     <Box sx={{ p: 4, backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
       <Paper elevation={3} sx={{ p: 3, borderRadius: 2 }}>
-        <Typography 
-          variant="h5" 
-          sx={{ 
-            mb: 4, 
+        <Typography
+          variant="h5"
+          sx={{
+            mb: 4,
             fontWeight: 600,
             color: '#1976d2',
             borderBottom: '2px solid #1976d2',
@@ -254,11 +180,11 @@ const RiskList = () => {
         >
           DANH SÁCH RỦI RO
         </Typography>
-        
-        <Stack 
-          direction="row" 
-          spacing={2} 
-          sx={{ 
+
+        <Stack
+          direction="row"
+          spacing={2}
+          sx={{
             mb: 3,
             flexWrap: 'wrap',
             gap: 2
@@ -272,15 +198,15 @@ const RiskList = () => {
             InputProps={{
               endAdornment: <SearchIcon color="action" />
             }}
-            sx={{ 
+            sx={{
               minWidth: 250,
               backgroundColor: '#fff'
             }}
           />
-          
-          <FormControl 
-            size="small" 
-            sx={{ 
+
+          <FormControl
+            size="small"
+            sx={{
               minWidth: 200,
               backgroundColor: '#fff'
             }}
@@ -300,17 +226,17 @@ const RiskList = () => {
             </Select>
           </FormControl>
 
-          <FormControl 
-            size="small" 
-            sx={{ 
+          <FormControl
+            size="small"
+            sx={{
               minWidth: 200,
               backgroundColor: '#fff'
             }}
           >
-            <InputLabel>Mức độ</InputLabel>
+            <InputLabel>Mức độ ảnh hưởng</InputLabel>
             <Select
               value={riskLevel}
-              label="Mức độ"
+              label="Mức độ ảnh hưởng"
               onChange={(e) => setRiskLevel(e.target.value)}
             >
               <MenuItem value="all">Tất cả</MenuItem>
@@ -324,7 +250,7 @@ const RiskList = () => {
             variant="contained"
             onClick={handleExport}
             startIcon={<FileDownloadIcon />}
-            sx={{ 
+            sx={{
               backgroundColor: '#2e7d32',
               '&:hover': {
                 backgroundColor: '#1b5e20'
@@ -338,7 +264,7 @@ const RiskList = () => {
             variant="contained"
             component={Link}
             to="/risk/create"
-            sx={{ 
+            sx={{
               ml: 'auto',
               backgroundColor: '#1976d2',
               '&:hover': {
@@ -350,9 +276,9 @@ const RiskList = () => {
           </Button>
         </Stack>
 
-        <TableContainer 
-          component={Paper} 
-          sx={{ 
+        <TableContainer
+          component={Paper}
+          sx={{
             borderRadius: 1,
             boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
             overflow: 'hidden'
@@ -365,7 +291,7 @@ const RiskList = () => {
                 <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Mã rủi ro</TableCell>
                 <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Tên rủi ro</TableCell>
                 <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Loại rủi ro</TableCell>
-                <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Mức độ</TableCell>
+                <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Mức độ ảnh hưởng</TableCell>
                 <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Ngày phản ánh</TableCell>
                 <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Người phản ánh</TableCell>
                 <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Trạng thái</TableCell>
@@ -376,9 +302,9 @@ const RiskList = () => {
               {error ? (
                 <TableRow>
                   <TableCell colSpan={9}>
-                    <Alert 
-                      severity="error" 
-                      sx={{ 
+                    <Alert
+                      severity="error"
+                      sx={{
                         mb: 2,
                         '& .MuiAlert-icon': {
                           color: '#d32f2f'
@@ -405,10 +331,10 @@ const RiskList = () => {
                 </TableRow>
               ) : (
                 mockData.map((row, index) => (
-                  <TableRow 
+                  <TableRow
                     key={row.id}
-                    sx={{ 
-                      '&:hover': { 
+                    sx={{
+                      '&:hover': {
                         backgroundColor: '#f5f5f5'
                       }
                     }}
@@ -417,20 +343,20 @@ const RiskList = () => {
                     <TableCell>{row.code}</TableCell>
                     <TableCell>{row.name}</TableCell>
                     <TableCell>
-                      <Chip 
-                        label={row.type} 
+                      <Chip
+                        label={row.type}
                         size="small"
-                        sx={{ 
+                        sx={{
                           backgroundColor: getRiskTypeColor(row.type),
                           color: '#fff'
                         }}
                       />
                     </TableCell>
                     <TableCell>
-                      <Chip 
-                        label={row.level} 
+                      <Chip
+                        label={row.level}
                         size="small"
-                        sx={{ 
+                        sx={{
                           backgroundColor: getRiskLevelColor(row.level),
                           color: '#fff'
                         }}
@@ -439,10 +365,10 @@ const RiskList = () => {
                     <TableCell>{row.updatedAt}</TableCell>
                     <TableCell>{row.reporter}</TableCell>
                     <TableCell>
-                      <Chip 
-                        label={row.stage} 
+                      <Chip
+                        label={row.stage}
                         size="small"
-                        sx={{ 
+                        sx={{
                           backgroundColor: getRiskStageColor(row.stage),
                           color: '#fff'
                         }}
@@ -452,10 +378,11 @@ const RiskList = () => {
                       <IconButton
                         size="small"
                         color="primary"
-                        onClick={() => handleEdit(row)}
+                        component={Link}
+                        to={`/risk/detail/${row.id}`}
                         sx={{ mr: 1 }}
                       >
-                        <EditIcon />
+                        <VisibilityIcon />
                       </IconButton>
                       <IconButton
                         size="small"
@@ -472,9 +399,9 @@ const RiskList = () => {
           </Table>
         </TableContainer>
 
-        <Box sx={{ 
-          mt: 2, 
-          p: 2, 
+        <Box sx={{
+          mt: 2,
+          p: 2,
           backgroundColor: '#fff',
           borderRadius: 1,
           boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)'
@@ -508,7 +435,7 @@ const RiskList = () => {
           }
         }}
       >
-        <DialogTitle sx={{ 
+        <DialogTitle sx={{
           color: '#d32f2f',
           pb: 1
         }}>
@@ -520,9 +447,9 @@ const RiskList = () => {
           </DialogContentText>
         </DialogContent>
         <DialogActions sx={{ p: 2, pt: 1 }}>
-          <Button 
+          <Button
             onClick={() => setOpenDeleteDialog(false)}
-            sx={{ 
+            sx={{
               color: 'text.secondary',
               '&:hover': {
                 backgroundColor: '#f5f5f5'
@@ -545,16 +472,6 @@ const RiskList = () => {
           </Button>
         </DialogActions>
       </Dialog>
-      <RiskEdit
-        open={openEditDialog}
-        onClose={() => setOpenEditDialog(false)}
-        risk={selectedRisk}
-        onSave={(updatedData) => {
-          // Xử lý lưu dữ liệu
-          console.log('Updated data:', updatedData);
-          setOpenEditDialog(false);
-        }}
-      />
     </Box>
   );
 };

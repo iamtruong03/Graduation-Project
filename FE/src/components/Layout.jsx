@@ -121,12 +121,7 @@ const Layout = ({ children }) => {
       icon: <Description />,
       path: '/document/management'
     },
-    {
-      id: 'category',
-      text: 'Danh mục chung',
-      icon: <Assessment />,
-      path: '/category/management'
-    }
+        {      id: 'category',      text: 'Danh mục chung',      icon: <Assessment />,      subItems: [        { id: 'category-list', text: 'Danh mục', icon: <Assessment />, path: '/category/management' },        { id: 'category-type', text: 'Loại danh mục', icon: <AccountTree />, path: '/category/type' }      ]    }
   ];
 
   const drawer = (

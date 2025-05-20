@@ -4,10 +4,9 @@ import com.dev.truongdev.entity.User;
 import com.dev.truongdev.payload.filter.UserFilter;
 import com.dev.truongdev.payload.request.UpdatePasswordRequest;
 import com.dev.truongdev.xdevbase.service.IXDevBaseService;
-import com.dev.truongdev.dto.UserRegistrationDTO;
 import java.util.List;
 
-public interface IUserService<E, F> extends IXDevBaseService<User, UserFilter> {
+public interface IUserService extends IXDevBaseService<User, UserFilter> {
 //  Long save(UserRegistrationDTO userDTO);
 //  Long getCurrentUserCode();
 //  Long findById(Long id);
@@ -32,4 +31,6 @@ public interface IUserService<E, F> extends IXDevBaseService<User, UserFilter> {
   List<User> listUserParentDep(String uid);
 
   List<User> listHeadChildDep(String uid);
+
+  String getUserDisplayName(String userId);
 }

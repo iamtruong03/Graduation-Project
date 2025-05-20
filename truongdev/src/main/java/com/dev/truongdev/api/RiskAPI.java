@@ -1,10 +1,10 @@
 package com.dev.truongdev.api;
 
-import com.dev.truongdev.entity.Project;
-import com.dev.truongdev.entity.ProjectHistory;
-import com.dev.truongdev.dto.ProjectHistoryDTO;
-import com.dev.truongdev.payload.filter.ProjectFilter;
-import com.dev.truongdev.repo.ProjectHistoryRepo;
+import com.dev.truongdev.entity.Risk;
+import com.dev.truongdev.entity.RiskHistory;
+import com.dev.truongdev.dto.RiskHistoryDTO;
+import com.dev.truongdev.payload.filter.RiskFilter;
+import com.dev.truongdev.repo.RiskHistoryRepo;
 import com.dev.truongdev.xdevbase.api.XDevBaseAPI;
 import com.dev.truongdev.xdevbase.service.IXDevBaseService;
 import lombok.AccessLevel;
@@ -17,26 +17,26 @@ import java.util.List;
 import java.util.Date;
 
 @RestController
-@RequestMapping("project")
+@RequestMapping("risk")
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class ProjectAPI extends XDevBaseAPI<Project, ProjectFilter> {
+public class RiskAPI extends XDevBaseAPI<Risk, RiskFilter> {
 
-  final IXDevBaseService<Project, ProjectFilter> service;
-  final ProjectHistoryRepo projectHistoryRepo;
+  final IXDevBaseService<Risk, RiskFilter> service;
+  final RiskHistoryRepo riskHistoryRepo;
 
   @SuppressWarnings("unchecked")
-  public IXDevBaseService<Project, ProjectFilter> getService(){
+  public IXDevBaseService<Risk, RiskFilter> getService(){
     return service;
   }
 
   @GetMapping("/{id}/history")
-  public ResponseEntity<List<ProjectHistoryDTO>> getProjectHistory(@PathVariable Long id) {
-    List<ProjectHistory> histories = projectHistoryRepo.findByProjectIdOrderByChangedAtDesc(id);
-    List<ProjectHistoryDTO> dtos = histories.stream().map(history -> {
-      ProjectHistoryDTO dto = new ProjectHistoryDTO();
+  public ResponseEntity<List<RiskHistoryDTO>> getRiskHistory(@PathVariable Long id) {
+    List<RiskHistory> histories = riskHistoryRepo.findByRiskIdOrderByChangedAtDesc(id);
+    List<RiskHistoryDTO> dtos = histories.stream().map(history -> {
+      RiskHistoryDTO dto = new RiskHistoryDTO();
       dto.setId(history.getId());
-      dto.setProjectId(history.getProjectId());
+      dto.setRiskId(history.getRiskId());
       dto.setPreviousState(history.getPreviousState());
       dto.setNewState(history.getNewState());
       dto.setChangedBy(history.getChangedBy());
@@ -49,15 +49,15 @@ public class ProjectAPI extends XDevBaseAPI<Project, ProjectFilter> {
   }
 
   @PostMapping("/{id}/history")
-  public ResponseEntity<Void> addProjectHistory(
+  public ResponseEntity<Void> addRiskHistory(
       @PathVariable Long id,
       @RequestParam Integer previousState,
       @RequestParam Integer newState,
       @RequestParam String changedBy,
       @RequestParam(required = false) String comment) {
     
-    ProjectHistory history = ProjectHistory.builder()
-        .projectId(id)
+    RiskHistory history = RiskHistory.builder()
+        .riskId(id)
         .previousState(previousState)
         .newState(newState)
         .changedBy(changedBy)
@@ -65,8 +65,7 @@ public class ProjectAPI extends XDevBaseAPI<Project, ProjectFilter> {
         .comment(comment)
         .build();
     
-    projectHistoryRepo.save(history);
+    riskHistoryRepo.save(history);
     return ResponseEntity.ok().build();
   }
-}
-
+} 

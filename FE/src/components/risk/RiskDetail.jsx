@@ -37,10 +37,12 @@ import {
   Save as SaveIcon,
   Cancel as CancelIcon,
   Delete as DeleteIcon,
-  Add as AddIcon
+  Add as AddIcon,
+  History as HistoryIcon
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import vi from 'date-fns/locale/vi';
+import { Timeline, TimelineItem, TimelineOppositeContent, TimelineSeparator, TimelineDot, TimelineConnector, TimelineContent } from '@mui/lab';
 
 const mockRisk = {
   id: 1,
@@ -143,6 +145,11 @@ const RiskDetail = () => {
     priority: 'MEDIUM',
     status: 'NEW'
   });
+  const [riskHistory, setRiskHistory] = useState([
+    { id: 1, changedAt: '2024-01-15', stateName: 'Đang xử lý', changedByName: 'Nguyễn Văn A', comment: null },
+    { id: 2, changedAt: '2024-01-16', stateName: 'Đã xử lý', changedByName: 'Nguyễn Văn B', comment: 'Hoàn thành được 50% công việc' },
+    { id: 3, changedAt: '2024-01-17', stateName: 'Đã đóng', changedByName: 'Nguyễn Văn C', comment: 'Hoàn thành toàn bộ công việc' }
+  ]);
 
   const formatDate = (dateString) => {
     try {
@@ -752,6 +759,41 @@ const RiskDetail = () => {
                   </Paper>
                 ))}
               </Stack>
+            </Paper>
+
+            <Paper elevation={1} sx={{ p: 3, borderRadius: 2, mt: 3 }}>
+              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
+                <HistoryIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />
+                Lịch sử trạng thái
+              </Typography>
+              <Timeline>
+                {riskHistory.map((history, index) => (
+                  <TimelineItem key={history.id}>
+                    <TimelineOppositeContent color="text.secondary">
+                      <Typography variant="caption">
+                        {new Date(history.changedAt).toLocaleDateString()}
+                      </Typography>
+                    </TimelineOppositeContent>
+                    <TimelineSeparator>
+                      <TimelineDot variant="outlined" color={getStatusColor(history.stateName)} />
+                      {index < riskHistory.length - 1 && <TimelineConnector />}
+                    </TimelineSeparator>
+                    <TimelineContent>
+                      <Typography variant="body2" component="span">
+                        {history.stateName}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" display="block">
+                        bởi {history.changedByName}
+                      </Typography>
+                      {history.comment && (
+                        <Typography variant="caption" color="text.secondary" display="block">
+                          {history.comment}
+                        </Typography>
+                      )}
+                    </TimelineContent>
+                  </TimelineItem>
+                ))}
+              </Timeline>
             </Paper>
           </Grid>
         </Grid>

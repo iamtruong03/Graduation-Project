@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import taskService from '../../services/taskService';
 import {
   Box,
   Paper,
@@ -101,9 +102,31 @@ const getPriorityColor = (priority) => {
 
 const TaskDetail = () => {
   const navigate = useNavigate();
-  const [task, setTask] = useState(mockTask);
+  const { id } = useParams();
+  const [task, setTask] = useState(null);
+  const [taskHistory, setTaskHistory] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
   const [editedTask, setEditedTask] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [taskData, historyData] = await Promise.all([
+          taskService.getTaskById(id),
+          taskService.getTaskHistory(id)
+        ]);
+        setTask(taskData);
+        setTaskHistory(historyData);
+      } catch (error) {
+        console.error('Error fetching task data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [id]);
 
   const handleClose = () => {
     navigate('/task/list');
@@ -119,9 +142,17 @@ const TaskDetail = () => {
     setEditedTask(null);
   };
 
-  const handleSave = () => {
-    setTask(editedTask);
-    setIsEditing(false);
+  const handleSave = async () => {
+    try {
+      const updatedTask = await taskService.updateTask(id, editedTask);
+      setTask(updatedTask);
+      // Refresh history after update
+      const newHistory = await taskService.getTaskHistory(id);
+      setTaskHistory(newHistory);
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Error updating task:', error);
+    }
   };
 
   const handleTaskChange = (event) => {
@@ -131,6 +162,10 @@ const TaskDetail = () => {
       [name]: value
     }));
   };
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <Box sx={{ p: 3, backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
@@ -335,7 +370,7 @@ const TaskDetail = () => {
                       <Box>
                         <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                           <PersonIcon sx={{ fontSize: 16, mr: 1, verticalAlign: 'text-bottom' }} />
-                          Người phụ trách
+                          Người phê duyệt
                         </Typography>
                         {isEditing ? (
                           <FormControl fullWidth size="small">
@@ -457,24 +492,29 @@ const TaskDetail = () => {
                 Lịch sử trạng thái
               </Typography>
               <Timeline>
-                {task.statusHistory.map((history, index) => (
-                  <TimelineItem key={index}>
+                {taskHistory.map((history, index) => (
+                  <TimelineItem key={history.id}>
                     <TimelineOppositeContent color="text.secondary">
                       <Typography variant="caption">
-                        {history.updatedAt}
+                        {new Date(history.changedAt).toLocaleDateString()}
                       </Typography>
                     </TimelineOppositeContent>
                     <TimelineSeparator>
-                      <TimelineDot variant="outlined" color={getStatusColor(history.status)} />
-                      {index < task.statusHistory.length - 1 && <TimelineConnector />}
+                      <TimelineDot variant="outlined" color={getStatusColor(history.stateName)} />
+                      {index < taskHistory.length - 1 && <TimelineConnector />}
                     </TimelineSeparator>
                     <TimelineContent>
                       <Typography variant="body2" component="span">
-                        {history.status}
+                        {history.stateName}
                       </Typography>
                       <Typography variant="caption" color="text.secondary" display="block">
-                        bởi {history.updatedBy}
+                        bởi {history.changedByName}
                       </Typography>
+                      {history.comment && (
+                        <Typography variant="caption" color="text.secondary" display="block">
+                          {history.comment}
+                        </Typography>
+                      )}
                     </TimelineContent>
                   </TimelineItem>
                 ))}

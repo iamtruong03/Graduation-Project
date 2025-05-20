@@ -50,11 +50,11 @@ public class Task extends XDevBaseEntity {
     @Column(name = "completed_date")
     Date completedDate;
 
-    // Người được giao
+    // Người được giao/ thực hiện
     @Column(name = "assignee_id")
     String assigneeId;
 
-    // Độ phức tạp (1: Easy, 2: Medium, 3: Hard)
-    @Column(name = "complexity_id")
-    Integer complexityId;
+    // Người phê duyệt
+    @Column(name = "approver_id")
+    String approverId;
 }

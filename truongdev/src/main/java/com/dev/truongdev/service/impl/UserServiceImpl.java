@@ -25,9 +25,8 @@ import org.springframework.stereotype.Service;
 
 @Service
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class UserServiceImpl extends
-    XDevBaseServiceImpl<User, UserFilter,UserRepo> implements
-    IUserService<User, UserFilter> {
+public class UserServiceImpl extends XDevBaseServiceImpl<User, UserFilter, UserRepo> 
+        implements IUserService {
 
   final UserRepo userRepo;
   final DepartmentServiceImpl departmentService;
@@ -192,5 +191,12 @@ public class UserServiceImpl extends
     return userRepo.findByDepartmentIdInAndPositionIdAndStatus(
         departmentIds, AppConstants.POSITION_HEAD, AppConstants.STATUS_ACTIVE);
 
+  }
+
+  @Override
+  public String getUserDisplayName(String userId) {
+    User user = userRepo.findById(Long.valueOf(userId))
+            .orElse(null);
+    return user != null ? user.getName() : userId;
   }
 }

@@ -42,6 +42,7 @@ import {
   Add as AddIcon
 } from '@mui/icons-material';
 import projectService from '../../services/projectService';
+import { PROJECT_STATES, PROJECT_TYPES } from '../../utils/constants';
 
 // Thêm dữ liệu mẫu
 const mockProject = {
@@ -126,14 +127,17 @@ const ProjectDetail = () => {
     const fetchProjectDetail = async () => {
       try {
         setLoading(true);
-        // Tạm thời sử dụng dữ liệu mẫu
-        setTimeout(() => {
-          setProject(mockProject);
-          setEditedProject(mockProject);
-          setLoading(false);
-        }, 500);
+        const response = await projectService.getProjectById(id);
+        if (response.success) {
+          setProject(response.data);
+          setEditedProject(response.data);
+        } else {
+          setError(response.message);
+        }
       } catch (err) {
         setError('Không thể tải thông tin dự án');
+        console.error('Error fetching project:', err);
+      } finally {
         setLoading(false);
       }
     };
@@ -244,11 +248,24 @@ const ProjectDetail = () => {
 
   const handleSave = async () => {
     try {
-      // Gọi API để lưu thông tin dự án
-      setProject(editedProject);
-      setIsEditing(false);
+      setLoading(true);
+      const response = await projectService.updateProjectState(
+        id,
+        editedProject.state,
+        editedProject.updatedBy,
+        'Cập nhật thông tin dự án'
+      );
+      if (response.success) {
+        setProject(response.data);
+        setIsEditing(false);
+      } else {
+        setError(response.message);
+      }
     } catch (error) {
-      console.error('Lỗi khi cập nhật dự án:', error);
+      setError('Không thể cập nhật dự án');
+      console.error('Error updating project:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -386,6 +403,40 @@ const ProjectDetail = () => {
     handleCloseTaskDialog();
   };
 
+  const handleSubmitApproval = async () => {
+    try {
+      setLoading(true);
+      const response = await projectService.submitForApproval(id, project.approvers);
+      if (response.success) {
+        setProject(response.data);
+      } else {
+        setError(response.message);
+      }
+    } catch (error) {
+      setError('Không thể gửi phê duyệt');
+      console.error('Error submitting approval:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApprove = async () => {
+    try {
+      setLoading(true);
+      const response = await projectService.approveProject(id, 'CURRENT_USER'); // Thay thế bằng user thực tế
+      if (response.success) {
+        setProject(response.data);
+      } else {
+        setError(response.message);
+      }
+    } catch (error) {
+      setError('Không thể phê duyệt dự án');
+      console.error('Error approving project:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Box sx={{ p: 3 }}>
       <Paper elevation={3} sx={{ p: 3, mb: 3, borderRadius: 2 }}>
@@ -520,6 +571,29 @@ const ProjectDetail = () => {
                     />
                   ) : (
                     <Typography variant="body1">{project.department}</Typography>
+                  )}
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Loại dự án
+                  </Typography>
+                  {isEditing ? (
+                    <FormControl fullWidth size="small" sx={{ mt: 1 }}>
+                      <Select
+                        name="projectTypeId"
+                        value={editedProject.projectTypeId}
+                        onChange={handleProjectChange}
+                      >
+                        <MenuItem value={1}>Phát triển phần mềm</MenuItem>
+                        <MenuItem value={2}>Mobile</MenuItem>
+                        <MenuItem value={3}>Web</MenuItem>
+                      </Select>
+                    </FormControl>
+                  ) : (
+                    <Typography variant="body1">
+                      {PROJECT_TYPES[project.projectTypeId] || project.projectTypeId}
+                    </Typography>
                   )}
                 </Grid>
 

@@ -4,7 +4,9 @@ import com.dev.truongdev.entity.Task;
 import com.dev.truongdev.xdevbase.repo.XDevBaseRepo;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 @Repository
 public interface TaskRepo extends XDevBaseRepo<Task> {
-    // Additional custom query methods if needed
+    List<Task> findByProjectId(Long projectId);
 } 

@@ -27,7 +27,8 @@
     "react-router": "^6.22.3",
     "react-router-dom": "^6.22.3",
     "recharts": "^2.15.2",
-    "sockjs-client": "^1.6.1"
+    "sockjs-client": "^1.6.1",
+    "yup": "^1.6.1"
   },
   "devDependencies": {
     "@types/react": "^18.2.14",

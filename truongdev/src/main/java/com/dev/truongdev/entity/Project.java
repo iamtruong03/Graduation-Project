@@ -1,74 +1,63 @@
 package com.dev.truongdev.entity;
 
-import com.dev.truongdev.utils.StringListConverter;
+import com.dev.truongdev.dto.ProjectDTO;
 import com.dev.truongdev.xdevbase.entity.XDevBaseEntity;
 import jakarta.persistence.Column;
-import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
-import java.util.Date;
-import java.util.List;
+import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
-import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.FieldDefaults;
 import lombok.experimental.SuperBuilder;
 
+import java.util.Date;
+import java.util.List;
+import org.springframework.beans.BeanUtils;
+
 @Entity
-@Setter
+@Table(name = "project")
 @Getter
+@Setter
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-@EqualsAndHashCode(callSuper = false)
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class Project extends XDevBaseEntity {
 
-    // Loại dự án (development, research, etc.)
-    @Column(name = "project_type_id", length = 30)
-    Long projectTypeId;
-
-    // Trạng thái dự án
-    @Column(name = "state")
-    Integer state;
+    Integer projectTypeId;
 
     // Phòng ban phụ trách
-    @Column(name = "department_id", length = 30)
+    @Column(name = "department_id")
     Long departmentId;
-
-    // Ngày bắt đầu
-    @Column(name = "start_date", nullable = false)
+    
+    @Column(name = "start_date")
     Date startDate;
+    
+    @Column(name = "end_date")
+    Date endDate;
+    
+    @Column(name = "state")
+    Integer state;
+    
+    @Column(name = "is_approved")
+    Boolean isApproved;
 
-    // Ngày kết thúc dự kiến
-    @Column(name = "deadline")
-    Date deadline;
-
-    // Ngày kết thúc thực tế
-    @Column(name = "actual_end_date")
-    Date actualEndDate;
-
-    // Mức độ ưu tiên (1: Low, 2: Medium, 3: High)
-    @Column(name = "priority_id")
-    Integer priorityId;
-
-    // Người phê duyệt
+    // Additional fields for legacy support
     @Column(name = "approver_id")
     String approverId;
-
-    // Danh sách người chịu trách nhiệm
-    @Column(name = "responsible_ids", columnDefinition = "TEXT")
-    @Convert(converter = StringListConverter.class)
-    List<String> responsibleIds;
-
-    // Người quản lý dự án
+    
     @Column(name = "manager_id")
     String managerId;
+    
+    @Column(name = "responsible_ids")
+    List<String> responsibleIds;
 
-    // Tiến độ dự án (%)
-    @Column(name = "progress")
-    Integer progress;
-
+    public ProjectDTO toDTO() {
+        ProjectDTO dto = new ProjectDTO();
+        BeanUtils.copyProperties(this, dto);
+        return dto;
+    }
 }

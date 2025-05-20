@@ -6,28 +6,34 @@ import java.util.List;
 
 @Data
 public class ProjectDTO {
+    // Basic fields from XDevBaseEntity
     private Long id;
     private String code;
     private String name;
-    private Long projectTypeId;
-    private Integer state;
+    private String description;
+    private Integer status;
+    private Date createDate;
+    private Date modifiedDate;
+    private String createBy;
+    private String updateBy;
+
+    // Project specific fields
+    Integer projectTypeId;
     private Long departmentId;
     private Date startDate;
-    private Date deadline;
-    private Date actualEndDate;
-    private Integer priorityId;
-    private String approverId;
-    private List<String> responsibleIds;
-    private String managerId;
-    private Integer progress;
-    private String updateBy;
+    private Date endDate;
+    private Integer state;
+    private Boolean isApproved;
     
-    // Additional fields for UI display
-    private String projectTypeName;
-    private String departmentName;
-    private String priorityName;
-    private String approverName;
-    private String managerName;
-    private String stateName;
-    private List<String> responsibleNames;
+    // Approval fields
+    private String approverId;
+    
+    // Management fields
+    private String managerId;
+    private List<String> responsibleIds;
+
+    // Progress tracking
+    private Integer completedTasks;
+    private Integer totalTasks;
+    private Double progressPercentage;
 } 

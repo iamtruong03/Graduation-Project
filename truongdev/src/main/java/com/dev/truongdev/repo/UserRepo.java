@@ -1,6 +1,5 @@
 package com.dev.truongdev.repo;
 
-import com.dev.truongdev.entity.Department;
 import com.dev.truongdev.entity.User;
 import com.dev.truongdev.xdevbase.repo.XDevBaseRepo;
 import java.util.List;
@@ -27,6 +26,10 @@ public interface UserRepo extends XDevBaseRepo<User> {
     List<User> findByDepartmentIdInAndPositionIdAndStatus(List<Long> dids, Integer positionId, Integer status);
 
     List<User> findAllByPositionIdAndStatus(Integer positionId,Integer status);
+
+    List<User> findAllByStatus(Integer status);
+
+    List<User> findByDepartmentIdAndPositionIdAndStatus(Long departmentId, Integer positionId, Integer status);
 
     @Query("SELECT d FROM User d "
         + "WHERE d.status = :status "

@@ -24,6 +24,17 @@ const departmentService = {
     });
   },
 
+  // Lấy danh sách phòng ban hiện tại + con cháu
+  getAll: () => {
+    return api.get('/department/list', {
+      ...getAuthHeader(),
+      headers: {
+        ...getAuthHeader().headers,
+        'Content-Type': 'application/json'
+      }
+    });
+  },
+
   // Lấy chi tiết một phòng ban
   getDepartmentById: (id) => {
     return api.get(`/department/${id}`);

@@ -57,16 +57,17 @@ const staffService = {
       }
     });
   },
-  // Lấy danh sách phòng ban
-  getDepartments: () => {
-    return api.get('/department/list', {
-      ...getAuthHeader(),
-      headers: {
-        ...getAuthHeader().headers,
-        'Content-Type': 'application/json'
-      }
-    });
+
+  // Lấy danh sách user con và user phòng ban chính nó
+  listUserChildDep: () => {
+    return api.get('/user/list-user-child-dep', getAuthHeader());
   },
+
+  // Lấy thông tin user theo ID
+  getUserById: (id) => {
+    return api.get(`/user/${id}`, getAuthHeader());
+  },
+
 };
 
 export default staffService;

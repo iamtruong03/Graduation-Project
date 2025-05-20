@@ -545,6 +545,16 @@ const RiskList = () => {
           </Button>
         </DialogActions>
       </Dialog>
+      <RiskEdit
+        open={openEditDialog}
+        onClose={() => setOpenEditDialog(false)}
+        risk={selectedRisk}
+        onSave={(updatedData) => {
+          // Xử lý lưu dữ liệu
+          console.log('Updated data:', updatedData);
+          setOpenEditDialog(false);
+        }}
+      />
     </Box>
   );
 };

@@ -24,33 +24,51 @@ import lombok.experimental.SuperBuilder;
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = false)
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class Project extends XDevBaseEntity{
+public class Project extends XDevBaseEntity {
 
-  // loai du an
-  @Column(name = "project_type_id", length = 30)
-  Long projectTypeId;
+    // Loại dự án (development, research, etc.)
+    @Column(name = "project_type_id", length = 30)
+    Long projectTypeId;
 
-  // Pham vi
-  @Column(name = "scope_id", length = 30)
-  Long scopeId;
+    // Trạng thái dự án
+    @Column(name = "state")
+    Integer state;
 
-//  @Column(name = "department_id", length = 30)
-//  Long departmentId;
+    // Phòng ban phụ trách
+    @Column(name = "department_id", length = 30)
+    Long departmentId;
 
-  // Ngay bat dau
-  @Column(name = "occurrence_date", nullable = false)
-  Date occurrenceDate;
+    // Ngày bắt đầu
+    @Column(name = "start_date", nullable = false)
+    Date startDate;
 
-  // Ngay ket thuc
-  @Column(name = "deadline")
-  Date deadline;
+    // Ngày kết thúc dự kiến
+    @Column(name = "deadline")
+    Date deadline;
 
-  // nguoi phe duyet
-  @Column(name = "approver_id")
-  String approverId;
+    // Ngày kết thúc thực tế
+    @Column(name = "actual_end_date")
+    Date actualEndDate;
 
-  // nguoi chiu trach nhiem
-  @Column(name = "responsible_ids", columnDefinition = "TEXT")
-  @Convert(converter = StringListConverter.class)
-  List<String> responsibleIds;
+    // Mức độ ưu tiên (1: Low, 2: Medium, 3: High)
+    @Column(name = "priority_id")
+    Integer priorityId;
+
+    // Người phê duyệt
+    @Column(name = "approver_id")
+    String approverId;
+
+    // Danh sách người chịu trách nhiệm
+    @Column(name = "responsible_ids", columnDefinition = "TEXT")
+    @Convert(converter = StringListConverter.class)
+    List<String> responsibleIds;
+
+    // Người quản lý dự án
+    @Column(name = "manager_id")
+    String managerId;
+
+    // Tiến độ dự án (%)
+    @Column(name = "progress")
+    Integer progress;
+
 }

@@ -29,7 +29,6 @@ public class XDevBaseServiceImpl <
     e.setCreateBy(Optional.ofNullable(e.getCreateBy()).orElse(uid));
     e.setUpdateBy(uid);
     e.setStatus(AppConstants.STATUS_ACTIVE);
-    e.setState(AppConstants.STATUS_NEW);
   }
 
   @Override

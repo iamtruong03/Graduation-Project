@@ -3,9 +3,6 @@ package com.dev.truongdev.entity;
 import com.dev.truongdev.xdevbase.entity.XDevBaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
-import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
@@ -14,7 +11,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.FieldDefaults;
 import lombok.experimental.SuperBuilder;
-import org.hibernate.annotations.GenericGenerator;
 
 @Entity
 @Setter
@@ -24,14 +20,15 @@ import org.hibernate.annotations.GenericGenerator;
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = false)
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class Message extends XDevBaseEntity {
-    Long senderId;
+public class Document extends XDevBaseEntity {
 
-    Long receiverId;
+  String filePath;
 
-    String content;
+  // phan loai
+  @Column(name = "document_type_id", length = 30)
+  Long documentTypeId;
 
-    LocalDateTime timestamp;
+  Long departmentId;
 
-    boolean isRead;
+  Long projectId;
 }

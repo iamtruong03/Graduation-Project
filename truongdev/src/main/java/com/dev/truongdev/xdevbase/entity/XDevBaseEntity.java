@@ -44,19 +44,6 @@ public class XDevBaseEntity {
   @Column(name = "status", nullable = false)
   Integer status;
 
-  // nguoi quan ly
-  String managerId;
-
-  // Nguoi phu trach
-  @Column(name = "responsible_id")
-  String responsibleId;
-
-//  @Column(name = "process_instance_id")
-//  Long processInstanceId;
-
-  @Column(name = "state")
-  Integer state;
-
   @Temporal(TemporalType.TIMESTAMP)
   @JsonFormat(shape=JsonFormat.Shape.STRING, pattern="yyyy-MM-dd'T'HH:mm:ssZ", timezone="Asia/Ho_Chi_Minh")
   Date createDate;

@@ -26,6 +26,8 @@ public class Task extends XDevBaseEntity {
     @Column(name = "state")
     Integer state;
 
+    Long riskId;
+
     // Phòng ban phụ trách
     @Column(name = "department_id")
     Long departmentId;

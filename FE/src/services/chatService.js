@@ -15,6 +15,8 @@ class ChatService {
     const socket = new SockJS('http://localhost:8080/ws');
     this.stompClient = Stomp.over(() => socket);
     this.stompClient.reconnect_delay = 5000;
+    this.stompClient.heartbeat.outgoing = 20000; // 20 seconds
+    this.stompClient.heartbeat.incoming = 20000; // 20 seconds
 
     return new Promise((resolve, reject) => {
       const token = localStorage.getItem('token');

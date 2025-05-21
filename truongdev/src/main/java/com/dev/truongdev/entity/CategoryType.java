@@ -15,7 +15,6 @@ import lombok.experimental.SuperBuilder;
 @Table(name = "category_type")
 @SuperBuilder
 @NoArgsConstructor
-@AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class CategoryType extends XDevBaseEntity {
 }

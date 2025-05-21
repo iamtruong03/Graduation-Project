@@ -244,12 +244,12 @@ const RiskCreate = () => {
               size="small"
               error={!!errors.analyst}
             >
-              <InputLabel>Người phân tích</InputLabel>
+              <InputLabel>Người phản ánh</InputLabel>
               <Select
                 name="analyst"
                 value={formData.analyst}
                 onChange={handleFormChange}
-                label="Người phân tích"
+                label="Người phản ánh"
               >
                 <MenuItem value="Phạm Như Hoài">Phạm Như Hoài</MenuItem>
               </Select>
@@ -265,7 +265,7 @@ const RiskCreate = () => {
             <TextField
               fullWidth
               type="date"
-              label="Ngày phân tích"
+              label="Ngày phản ánh"
               name="analysisDate"
               value={formData.analysisDate}
               onChange={handleFormChange}

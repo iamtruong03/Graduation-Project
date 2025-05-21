@@ -34,6 +34,8 @@ public class Risk extends XDevBaseEntity {
     @Column(name = "project_id")
     Long projectId;
 
+    Long departmentId;
+
     // Mức độ ảnh hưởng (1: Low, 2: Medium, 3: High, 4: Critical)
     @Column(name = "impact_level_id")
     Integer impactLevelId;
@@ -41,8 +43,26 @@ public class Risk extends XDevBaseEntity {
     // phạm vi ảnh hưởng
     Integer scopeId;
 
+    // khả năng xảy ra
+    Integer possibilityId;
+
+    // mức độ ưu tiên
+    Integer priorityId;
+
     // Người phản ánh
     String reflectorId;
+
+    // Nguyên nhân gốc rễ
+    String rootCause;
+
+    // Phân tích ảnh hưởng
+    String impactAnalysis;
+
+    // Biện pháp khắc phục
+    String remedy;
+
+    // Biện pháp phòng ngừa
+    String precautions;
 
     // Ngày phan anh
     Date reflectionDay;

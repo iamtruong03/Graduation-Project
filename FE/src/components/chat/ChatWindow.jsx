@@ -45,26 +45,29 @@ const ChatWindow = () => {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const response = await api.post('/user/search', {
-          search: searchTerm,
-          departmentId: null, // Có thể thêm filter theo phòng ban nếu cần
-          positionId: null // Có thể thêm filter theo chức vụ nếu cần
-        });
+        const response = await api.get('/user/list');
+        console.log('Response from /user/list API:', response);
         
-        if (response?.data?.content) {
+        if (response?.data && Array.isArray(response.data)) {
+          const usersData = response.data;
           const currentUserId = localStorage.getItem('code');
-          const filteredUsers = response.data.content.filter(user => 
+          const filteredUsers = usersData.filter(user => 
             user.id !== parseInt(currentUserId)
           );
+          console.log('Filtered users from /user/list:', filteredUsers);
           setUsers(filteredUsers);
+        } else {
+          console.error('Response từ API /user/list không hợp lệ hoặc data không phải là mảng:', response);
+          setUsers([]);
         }
       } catch (error) {
-        console.error('Lỗi khi lấy danh sách người dùng:', error);
+        console.error('Lỗi khi lấy danh sách người dùng từ /user/list:', error);
+        setUsers([]);
       }
     };
 
     fetchUsers();
-  }, [searchTerm]); // Thêm searchTerm vào dependencies để search realtime
+  }, []);
   const [departmentId, setDepartmentId] = useState(null);
   const [cid, setCid] = useState(null);
 
@@ -76,38 +79,24 @@ const ChatWindow = () => {
         const fetchUserInfo = async () => {
           try {
             const response = await api.get('/user/current-user');
-            setDepartmentId(response.data.departmentId);
-            setCid(response.data.cid);
-          } catch (error) {
-            console.error('Lỗi khi lấy thông tin người dùng:', error);
-          }
-        };
-    
-        const fetchUsers = async () => {
-          try {
-            const response = await api.get('/user/list-user-dep');
-            console.log('Response from API:', response);
-            
-            // Kiểm tra response data
-            if (response?.data?.data && Array.isArray(response.data.data)) {
-              const currentUserId = localStorage.getItem('code');
-              const filteredUsers = response.data.data.filter(user => 
-                user.id !== parseInt(currentUserId)
-              );
-              console.log('Filtered users:', filteredUsers);
-              setUsers(filteredUsers);
-            } else {
-              console.error('Không thể lấy danh sách người dùng');
-              setUsers([]);
+            // Kiểm tra cấu trúc response của người dùng hiện tại
+            if (response?.data && response.data.id) { // Giả định user ID nằm trực tiếp trong data
+              // setDepartmentId(response.data.departmentId);
+              // setCid(response.data.cid);
+               console.log('Fetched departmentId and cid from /user/current-user:', response.data.departmentId, response.data.cid);
+               // Có thể lưu departmentId và cid vào localStorage hoặc state nếu cần
+            } else if (response?.data?.data && response.data.data.id) { // Kiểm tra nếu ID nằm trong data.data
+              // setDepartmentId(response.data.data.departmentId);
+              // setCid(response.data.data.cid);
+              console.log('Fetched departmentId and cid from /user/current-user (from data.data):', response.data.data.departmentId, response.data.data.cid);
+              // Có thể lưu departmentId và cid vào localStorage hoặc state nếu cần
             }
           } catch (error) {
-            console.error('Lỗi khi lấy danh sách người dùng:', error);
-            setUsers([]);
+            console.error('Lỗi khi lấy thông tin người dùng hiện tại (departmentId, cid): ', error);
           }
         };
     
         await fetchUserInfo();
-        await fetchUsers();
       } catch (error) {
         console.error('Lỗi khởi tạo chat:', error);
       }

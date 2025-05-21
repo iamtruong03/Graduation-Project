@@ -231,26 +231,8 @@ const DepartmentList = () => {
               backgroundColor: '#fff'
             }}
           />
-          
-          <FormControl 
-            size="small" 
-            sx={{ 
-              minWidth: 200,
-              backgroundColor: '#fff'
-            }}
-          >
-            <InputLabel>Trạng thái hoạt động</InputLabel>
-            <Select
-              value={status}
-              label="Trạng thái hoạt động"
-              onChange={(e) => setStatus(e.target.value)}
-            >
-              <MenuItem value="all">Tất cả</MenuItem>
-              <MenuItem value="active">Hoạt động</MenuItem>
-              <MenuItem value="inactive">Không hoạt động</MenuItem>
-            </Select>
-          </FormControl>
-    
+        
+      
           <Button 
             variant="contained" 
             sx={{ 
@@ -284,7 +266,6 @@ const DepartmentList = () => {
                 <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Mã phòng ban</TableCell>
                 <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Tên phòng ban</TableCell>
                 <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Tên phòng ban cha</TableCell>
-                <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Hoạt động</TableCell>
                 <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Ngày cập nhật</TableCell>
                 <TableCell align="center" sx={{ color: '#fff', fontWeight: 600 }}>Thao tác</TableCell>
               </TableRow>
@@ -303,7 +284,6 @@ const DepartmentList = () => {
                   <TableCell>{row.code}</TableCell>
                   <TableCell>{row.name}</TableCell>
                   <TableCell>{row.parentName || '-'}</TableCell>
-                  <TableCell><Switch checked={row.active} /></TableCell>
                   <TableCell>{row.updatedAt}</TableCell>
                   <TableCell align="center">
                     <IconButton size="small" onClick={() => handleViewDetail(row)} sx={{ mr: 1 }}><VisibilityIcon /></IconButton>

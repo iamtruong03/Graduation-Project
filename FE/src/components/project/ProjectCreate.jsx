@@ -117,14 +117,15 @@ const ProjectCreate = () => {
       };
 
       const response = await projectService.createProject(projectData);
-      if (response.status === 200) {
+      
+      if (response.data.status === 200) {
         setOpenSnackbar(true);
         // Đợi 1 giây trước khi chuyển trang để người dùng thấy thông báo
         setTimeout(() => {
           navigate('/project/list');
         }, 1000);
       } else {
-        setError(response.message || 'Có lỗi xảy ra khi tạo dự án');
+        setError(response.data.message || 'Có lỗi xảy ra khi tạo dự án');
       }
     } catch (err) {
       if (err.name === 'ValidationError') {
@@ -133,6 +134,9 @@ const ProjectCreate = () => {
           errors[error.path] = error.message;
         });
         setValidationErrors(errors);
+      } else if (err.response) {
+        // Xử lý lỗi từ API
+        setError(err.response.data.message || 'Có lỗi xảy ra khi tạo dự án');
       } else {
         console.error('Error creating project:', err);
         setError('Không thể tạo dự án. Vui lòng thử lại sau.');
@@ -164,7 +168,16 @@ const ProjectCreate = () => {
         </Stack>
 
         {error && (
-          <Alert severity="error" sx={{ mb: 3 }}>
+          <Alert 
+            severity="error" 
+            onClose={() => setError(null)}
+            sx={{ 
+              mb: 3,
+              '& .MuiAlert-message': {
+                color: '#d32f2f'
+              }
+            }}
+          >
             {error}
           </Alert>
         )}
@@ -269,13 +282,14 @@ const ProjectCreate = () => {
                     label="Ngày kết thúc"
                     value={project.endDate}
                     onChange={(value) => handleDateChange('endDate', value)}
+                    minDate={project.startDate || null}
                     renderInput={(params) => (
                       <TextField 
                         {...params} 
                         fullWidth 
                         required
                         error={!!validationErrors.endDate}
-                        helperText={validationErrors.endDate}
+                        helperText={validationErrors.endDate || (project.endDate && project.startDate && project.endDate < project.startDate ? 'Ngày kết thúc phải sau ngày bắt đầu' : '')}
                         sx={{
                           backgroundColor: '#fff',
                           '& .MuiOutlinedInput-root': {
@@ -286,6 +300,10 @@ const ProjectCreate = () => {
                         }}
                       />
                     )}
+                    shouldDisableDate={(date) => {
+                      if (!project.startDate) return false;
+                      return date < project.startDate;
+                    }}
                   />
                 </LocalizationProvider>
               </Grid>

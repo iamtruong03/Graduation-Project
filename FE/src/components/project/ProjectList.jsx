@@ -478,7 +478,7 @@ const ProjectList = () => {
                             textDecoration: 'underline'
                           }
                         }}
-                        onClick={() => navigate(`/project/detail/${project.id}`)}
+                        onClick={() => navigate(`/project/${project.id}`)}
                       >
                         {project.name}
                       </Typography>
@@ -524,7 +524,7 @@ const ProjectList = () => {
                       <Stack direction="row" spacing={1} justifyContent="center">
                         <IconButton
                           size="small"
-                          onClick={() => navigate(`/project/detail/${project.id}`)}
+                          onClick={() => navigate(`/project/${project.id}`)}
                           sx={{ 
                             color: '#1976d2',
                             '&:hover': {
@@ -534,18 +534,7 @@ const ProjectList = () => {
                         >
                           <VisibilityIcon fontSize="small" />
                         </IconButton>
-                        <IconButton
-                          size="small"
-                          onClick={() => navigate(`/project/edit/${project.id}`)}
-                          sx={{ 
-                            color: '#2e7d32',
-                            '&:hover': {
-                              backgroundColor: 'rgba(46, 125, 50, 0.04)'
-                            }
-                          }}
-                        >
-                          <EditIcon fontSize="small" />
-                        </IconButton>
+                      
                         {project.state === 1 && (
                           <IconButton
                             size="small"
@@ -703,7 +692,7 @@ const ProjectList = () => {
                             <IconButton
                               size="small"
                               component={Link}
-                              to={`/project/detail/${project.id}`}
+                              to={`/project/${project.id}`}
                               sx={{ mr: 1 }}
                             >
                               <VisibilityIcon fontSize="small" />

@@ -49,7 +49,7 @@ function App() {
           <Route path="/department/list" element={<DepartmentList />} />
           <Route path="/project/list" element={<ProjectList />} />
           <Route path="/project/create" element={<ProjectCreate />} />
-          <Route path="/project/detail/:id" element={<ProjectDetail />} />
+          <Route path="/project/:id" element={<ProjectDetail />} />
           <Route path="/staff/management" element={<StaffManagement />} />
           <Route path="/task/list" element={<TaskList />} />
           <Route path="/task/create" element={<TaskCreate />} />

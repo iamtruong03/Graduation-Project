@@ -21,6 +21,7 @@ import com.dev.truongdev.utils.StateNameUtils;
 import com.dev.truongdev.xdevbase.service.impl.XDevBaseServiceImpl;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -34,6 +35,7 @@ import java.util.stream.Collectors;
 
 @Service
 @FieldDefaults(level = AccessLevel.PRIVATE)
+@Slf4j
 public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilter, ProjectRepo> 
         implements IProjectService {
 
@@ -216,24 +218,25 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
 
         List<Task> tasks = taskRepo.findByProjectId(projectId);
         
-        if (tasks.isEmpty()) {
-            return;
-        }
-        
         boolean allTasksCompleted = tasks.stream()
                 .allMatch(task -> task.getState() == State.COMPLETED.ordinal());
                 
         if (allTasksCompleted) {
             // Kiểm tra thời hạn dự án
             Date now = new Date();
+            if (project.getEndDate() != null) {
+                if (now.after(project.getEndDate())) {
+                    // Nếu quá hạn
+                    updateProjectState(AppConstants.SYSTEM, projectId, AppConstants.STATUS_OVERDUE, 
+                        AppConstants.SYSTEM, "Tự động cập nhật trạng thái quá hạn do đã hoàn thành sau thời hạn");
+                }
+            }
+        } else {
+            // Kiểm tra nếu đã quá hạn
+            Date now = new Date();
             if (project.getEndDate() != null && now.after(project.getEndDate())) {
-                // Nếu quá hạn
-                updateProjectState(AppConstants.SYSTEM, projectId, AppConstants.STATUS_OVERDUE, 
-                    AppConstants.SYSTEM, "Tự động cập nhật trạng thái quá hạn do đã hoàn thành sau thời hạn");
-            } else {
-                // Nếu trong hạn
-                updateProjectState(AppConstants.SYSTEM, projectId, AppConstants.STATUS_COMPLETE, 
-                    AppConstants.SYSTEM, "Tự động cập nhật trạng thái hoàn thành do tất cả task đã hoàn thành");
+                updateProjectState(AppConstants.SYSTEM, projectId, AppConstants.STATUS_OVERDUE,
+                    AppConstants.SYSTEM, "Tự động cập nhật trạng thái quá hạn do đã vượt thời hạn dự án");
             }
         }
     }
@@ -322,9 +325,9 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
     public Page<Project> searchAll(Long departmentId, String uid, ProjectFilter filter, Pageable pageable) {
         User user = userRepo.findById(Long.valueOf(uid))
             .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
-
+    
         Page<Project> page;
-
+    
         // Kiểm tra quyền xem toàn hệ thống (admin hoặc phòng ban root)
         if (user.getRole().equals("ROLE_ADMIN") ||
             (departmentRepo.findById(departmentId).get().getParentId() == null)) {
@@ -339,7 +342,7 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
             // Tìm kiếm trong phạm vi phòng ban và phòng ban con
             Department department = departmentRepo.findById(departmentId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy phòng ban"));
-
+    
             List<Long> departmentIds = new ArrayList<>();
             departmentIds.add(departmentId);
             departmentIds.addAll(
@@ -347,7 +350,7 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
                     .map(Department::getId)
                     .collect(Collectors.toList())
             );
-
+    
             // Tìm kiếm dự án theo phòng ban
             page = projectRepo.searchByCodeOrNameAndDepartments(
                 AppConstants.STATUS_ACTIVE,
@@ -356,7 +359,17 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
                 pageable
             );
         }
-
+    
+        // Thêm kiểm tra và cập nhật trạng thái cho từng dự án
+        page.getContent().forEach(project -> {
+            try {
+                checkAndUpdateProjectCompletion(project.getId());
+            } catch (Exception e) {
+                log.error("Error checking project completion for project {}: {}", 
+                    project.getId(), e.getMessage());
+            }
+        });
+    
         return page;
     }
 

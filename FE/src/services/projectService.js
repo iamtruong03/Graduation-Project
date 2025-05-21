@@ -27,8 +27,8 @@ const projectService = {
 
   // Lấy chi tiết dự án theo ID
   getProjectById: async (id) => {
-    const response = await api.get(`/api/projects/${id}/details`, getAuthHeader());
-    return response.data;
+    const response = await api.get(`/api/projects/${id}`, getAuthHeader());
+    return response;
   },
 
   // Gửi phê duyệt dự án
@@ -65,11 +65,24 @@ const projectService = {
 
   // Lấy lịch sử thay đổi trạng thái
   getProjectHistory: async (id) => {
-    const response = await api.get(
-      `/api/projects/${id}/history`,
-      getAuthHeader()
-    );
-    return response.data;
+    try {
+      console.log('Calling project history API for id:', id);
+      const response = await api.get(
+        `/api/projects/${id}/history`,
+        getAuthHeader()
+      );
+      console.log('Raw API Response:', response.data);
+      console.log('Response data:', response.data.data);
+      // Trả về đúng cấu trúc dữ liệu từ API
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching project history:', error);
+      return {
+        status: 500,
+        data: [],
+        message: error.message || 'Có lỗi xảy ra khi tải lịch sử'
+      };
+    }
   },
 
   // Xóa dự án

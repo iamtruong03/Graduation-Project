@@ -18,8 +18,4 @@ import lombok.experimental.SuperBuilder;
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class CategoryType extends XDevBaseEntity {
-    private String name;
-    private String code;
-    private String description;
-    private Integer status;
 }

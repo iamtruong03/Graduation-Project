@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FileDownload as FileDownloadIcon, Add as AddIcon } from '@mui/icons-material';
 import { Chip } from '@mui/material';
 import {
@@ -25,97 +25,18 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
-  Alert
+  Alert,
+  CircularProgress
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import DeleteIcon from '@mui/icons-material/Delete';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import { Link } from 'react-router-dom';
-
-const mockData = [
-  {
-    id: 1,
-    code: 'RR001',
-    name: 'Rủi ro về tiến độ dự án',
-    type: 'Vận hành',
-    level: 'Cao',
-    stage: 'Đang xử lý',
-    updatedAt: '2024-01-15',
-    reporter: 'Nguyễn Văn A',
-    department: 'Phòng Quản lý dự án',
-    description: 'Dự án có nguy cơ chậm tiến độ do thiếu nhân lực',
-    impactLevel: 'Cao',
-    probability: 'Cao',
-    priority: 'Cao',
-    active: true
-  },
-  {
-    id: 2,
-    code: 'RR002',
-    name: 'Rủi ro về chất lượng phần mềm',
-    type: 'Kỹ thuật',
-    level: 'Trung bình',
-    stage: 'Mới ghi nhận',
-    updatedAt: '2024-01-16',
-    reporter: 'Trần Thị B',
-    department: 'Phòng Kiểm thử',
-    description: 'Phát hiện nhiều lỗi trong quá trình testing',
-    impactLevel: 'Trung bình',
-    probability: 'Cao',
-    priority: 'Trung bình',
-    active: true
-  },
-  {
-    id: 3,
-    code: 'RR003',
-    name: 'Rủi ro về bảo mật dữ liệu',
-    type: 'Bảo mật',
-    level: 'Cao',
-    stage: 'Đã đóng',
-    updatedAt: '2024-01-17',
-    reporter: 'Lê Văn C',
-    department: 'Phòng An ninh mạng',
-    description: 'Phát hiện lỗ hổng bảo mật trong hệ thống',
-    impactLevel: 'Cao',
-    probability: 'Thấp',
-    priority: 'Cao',
-    active: false
-  },
-  {
-    id: 4,
-    code: 'RR004',
-    name: 'Rủi ro về chi phí phát triển',
-    type: 'Tài chính',
-    level: 'Trung bình',
-    stage: 'Đang xử lý',
-    updatedAt: '2024-01-18',
-    reporter: 'Phạm Thị D',
-    department: 'Phòng Tài chính',
-    description: 'Chi phí phát triển vượt ngân sách dự kiến',
-    impactLevel: 'Trung bình',
-    probability: 'Trung bình',
-    priority: 'Trung bình',
-    active: true
-  },
-  {
-    id: 5,
-    code: 'RR005',
-    name: 'Rủi ro về yêu cầu thay đổi',
-    type: 'Nghiệp vụ',
-    level: 'Thấp',
-    stage: 'Mới ghi nhận',
-    updatedAt: '2024-01-19',
-    reporter: 'Hoàng Văn E',
-    department: 'Phòng Phân tích',
-    description: 'Khách hàng thường xuyên thay đổi yêu cầu',
-    impactLevel: 'Thấp',
-    probability: 'Cao',
-    priority: 'Thấp',
-    active: true
-  }
-];
+import riskService from '../../services/riskService';
 
 const RiskList = () => {
+  const [risks, setRisks] = useState([]);
+  const [totalPages, setTotalPages] = useState(1);
   const [searchName, setSearchName] = useState('');
   const [riskType, setRiskType] = useState('all');
   const [riskLevel, setRiskLevel] = useState('all');
@@ -126,6 +47,26 @@ const RiskList = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const rowsPerPage = 10;
+
+  // Fetch API
+  const fetchRisks = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await riskService.searchRisks({ search: searchName }, page - 1, rowsPerPage);
+      setRisks(response.data.content);
+      setTotalPages(response.data.totalPages);
+    } catch (err) {
+      setError('Không thể tải danh sách rủi ro');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRisks();
+    // eslint-disable-next-line
+  }, [page, searchName]);
 
   const handlePageChange = (event, newPage) => {
     setPage(newPage);
@@ -138,7 +79,7 @@ const RiskList = () => {
 
   const handleConfirmDelete = () => {
     // Thực hiện xóa rủi ro
-    const newData = mockData.filter(risk => risk.id !== selectedRisk.id);
+    const newData = risks.filter(risk => risk.id !== selectedRisk.id);
     // Cập nhật state hoặc gọi API xóa
     setOpenDeleteDialog(false);
     setSelectedRisk(null);
@@ -147,7 +88,7 @@ const RiskList = () => {
   // Thêm hàm xử lý export
   const handleExport = () => {
     // Logic xuất file Excel/PDF
-    const data = mockData.map(risk => ({
+    const data = risks.map(risk => ({
       'Mã rủi ro': risk.code,
       'Tên rủi ro': risk.name,
       'Loại': risk.type,
@@ -321,7 +262,7 @@ const RiskList = () => {
                     <CircularProgress sx={{ color: '#1976d2' }} />
                   </TableCell>
                 </TableRow>
-              ) : mockData.length === 0 ? (
+              ) : risks.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
                     <Typography color="text.secondary">
@@ -330,7 +271,7 @@ const RiskList = () => {
                   </TableCell>
                 </TableRow>
               ) : (
-                mockData.map((row, index) => (
+                risks.map((row, index) => (
                   <TableRow
                     key={row.id}
                     sx={{
@@ -339,37 +280,37 @@ const RiskList = () => {
                       }
                     }}
                   >
-                    <TableCell>{index + 1}</TableCell>
+                    <TableCell>{(page - 1) * rowsPerPage + index + 1}</TableCell>
                     <TableCell>{row.code}</TableCell>
                     <TableCell>{row.name}</TableCell>
                     <TableCell>
                       <Chip
-                        label={row.type}
+                        label={row.riskTypeName || row.type}
                         size="small"
                         sx={{
-                          backgroundColor: getRiskTypeColor(row.type),
+                          backgroundColor: getRiskTypeColor(row.riskTypeName || row.type),
                           color: '#fff'
                         }}
                       />
                     </TableCell>
                     <TableCell>
                       <Chip
-                        label={row.level}
+                        label={row.impactLevelName || row.level}
                         size="small"
                         sx={{
-                          backgroundColor: getRiskLevelColor(row.level),
+                          backgroundColor: getRiskLevelColor(row.impactLevelName || row.level),
                           color: '#fff'
                         }}
                       />
                     </TableCell>
-                    <TableCell>{row.updatedAt}</TableCell>
-                    <TableCell>{row.reporter}</TableCell>
+                    <TableCell>{row.reflectionDay || row.updatedAt}</TableCell>
+                    <TableCell>{row.reflectorName || row.reporter}</TableCell>
                     <TableCell>
                       <Chip
-                        label={row.stage}
+                        label={row.stateName || row.stage}
                         size="small"
                         sx={{
-                          backgroundColor: getRiskStageColor(row.stage),
+                          backgroundColor: getRiskStageColor(row.stateName || row.stage),
                           color: '#fff'
                         }}
                       />
@@ -412,12 +353,12 @@ const RiskList = () => {
             alignItems="center"
           >
             <Typography variant="body2" color="text.secondary">
-              Tổng {mockData.length} bản ghi
+              Tổng {risks.length} bản ghi
             </Typography>
             <Pagination
-              count={Math.ceil(mockData.length / rowsPerPage)}
+              count={totalPages}
               page={page}
-              onChange={handlePageChange}
+              onChange={(e, value) => setPage(value)}
               color="primary"
               size="small"
             />

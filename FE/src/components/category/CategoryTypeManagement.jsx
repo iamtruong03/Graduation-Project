@@ -28,31 +28,7 @@ import {
   Delete as DeleteIcon,
   Search as SearchIcon
 } from '@mui/icons-material';
-
-// Mock data - sẽ được thay thế bằng API call
-const mockData = [
-  { 
-    id: 1, 
-    code: 'CATEGORY_TYPE_01', 
-    name: 'Loại công việc', 
-    description: 'Phân loại các loại công việc trong dự án',
-    active: true 
-  },
-  { 
-    id: 2, 
-    code: 'CATEGORY_TYPE_02', 
-    name: 'Loại phòng ban', 
-    description: 'Phân loại các loại phòng ban trong tổ chức',
-    active: true 
-  },
-  { 
-    id: 3, 
-    code: 'CATEGORY_TYPE_03', 
-    name: 'Loại dự án', 
-    description: 'Phân loại các loại dự án',
-    active: true 
-  }
-];
+import categoryTypeService from '../../services/categoryTypeService';
 
 const CategoryTypeManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -62,7 +38,10 @@ const CategoryTypeManagement = () => {
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [categoryTypes, setCategoryTypes] = useState(mockData);
+  const [categoryTypes, setCategoryTypes] = useState([]);
+  const [totalPages, setTotalPages] = useState(1);
+  const [page, setPage] = useState(1);
+  const rowsPerPage = 10;
 
   const [formData, setFormData] = useState({
     code: '',
@@ -72,10 +51,27 @@ const CategoryTypeManagement = () => {
 
   const [formErrors, setFormErrors] = useState({});
 
+  const fetchCategoryTypes = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const filter = {
+        search: searchTerm
+      };
+      const response = await categoryTypeService.searchCategoryTypes(filter, page - 1, rowsPerPage);
+      setCategoryTypes(response.data.content);
+      setTotalPages(response.data.totalPages);
+    } catch (err) {
+      setError('Không thể tải danh sách loại danh mục');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    // TODO: Fetch category types from API
-    // fetchCategoryTypes();
-  }, []);
+    fetchCategoryTypes();
+    // eslint-disable-next-line
+  }, [searchTerm, page]);
 
   const handleOpenCreateDialog = () => {
     setDialogType('create');
@@ -190,11 +186,6 @@ const CategoryTypeManagement = () => {
     }
   };
 
-  const filteredCategories = categoryTypes.filter(category =>
-    category.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    category.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   return (
     <Box sx={{ p: 4, backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
       <Paper elevation={3} sx={{ p: 3, borderRadius: 2 }}>
@@ -285,7 +276,7 @@ const CategoryTypeManagement = () => {
                     <CircularProgress />
                   </TableCell>
                 </TableRow>
-              ) : filteredCategories.length === 0 ? (
+              ) : categoryTypes.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
                     <Typography color="text.secondary">
@@ -294,7 +285,7 @@ const CategoryTypeManagement = () => {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredCategories.map((category, index) => (
+                categoryTypes.map((category, index) => (
                   <TableRow 
                     key={category.id}
                     sx={{ 
@@ -303,7 +294,7 @@ const CategoryTypeManagement = () => {
                       }
                     }}
                   >
-                    <TableCell>{index + 1}</TableCell>
+                    <TableCell>{(page - 1) * rowsPerPage + index + 1}</TableCell>
                     <TableCell>{category.code}</TableCell>
                     <TableCell>{category.name}</TableCell>
                     <TableCell>{category.description}</TableCell>
@@ -339,7 +330,7 @@ const CategoryTypeManagement = () => {
           boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)'
         }}>
           <Typography variant="body2" color="text.secondary">
-            Tổng số: {filteredCategories.length} loại danh mục
+            Tổng số: {categoryTypes.length} loại danh mục
           </Typography>
         </Box>
       </Paper>

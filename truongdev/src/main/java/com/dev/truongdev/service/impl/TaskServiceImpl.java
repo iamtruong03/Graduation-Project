@@ -2,10 +2,14 @@ package com.dev.truongdev.service.impl;
 
 import com.dev.truongdev.dto.TaskDTO;
 import com.dev.truongdev.dto.TaskHistoryDTO;
+import com.dev.truongdev.entity.Department;
 import com.dev.truongdev.entity.Task;
 import com.dev.truongdev.entity.TaskHistory;
+import com.dev.truongdev.entity.User;
+import com.dev.truongdev.repo.DepartmentRepo;
 import com.dev.truongdev.repo.TaskHistoryRepo;
 import com.dev.truongdev.repo.TaskRepo;
+import com.dev.truongdev.service.IDepartmentService;
 import com.dev.truongdev.service.ITaskService;
 import com.dev.truongdev.service.IUserService;
 import com.dev.truongdev.utils.StateNameUtils;
@@ -13,6 +17,8 @@ import com.dev.truongdev.payload.filter.TaskFilter;
 import com.dev.truongdev.xdevbase.service.impl.XDevBaseServiceImpl;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,12 +34,16 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
     final TaskRepo taskRepo;
     final TaskHistoryRepo taskHistoryRepository;
     final IUserService userService;
+    final DepartmentRepo departmentRepo;
+    final IDepartmentService<Department, ?> departmentService;
 
-    public TaskServiceImpl(TaskRepo repo, TaskHistoryRepo historyRepo, IUserService userService) {
+    public TaskServiceImpl(TaskRepo repo, TaskHistoryRepo historyRepo, IUserService userService, DepartmentRepo departmentRepo, IDepartmentService<Department, ?> departmentService) {
         super(repo);
         this.taskRepo = repo;
         this.taskHistoryRepository = historyRepo;
         this.userService = userService;
+        this.departmentRepo = departmentRepo;
+        this.departmentService = departmentService;
     }
 
     @Override
@@ -131,5 +141,45 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
         dto.setStateName(StateNameUtils.getTaskStateName(history.getNewState()));
         
         return dto;
+    }
+
+    @Override
+    public Page<Task> searchAll(Long departmentId, String uid, TaskFilter filter, Pageable pageable) {
+        // Lấy user
+        User user = userService.getById(uid, Long.valueOf(uid));
+
+        Page<Task> page;
+
+        // Kiểm tra quyền admin hoặc phòng ban gốc
+        if (user.getRole().equals("ROLE_ADMIN") ||
+            (departmentRepo.findById(departmentId).get().getParentId() == null)) {
+            // Tìm kiếm toàn bộ task
+            page = taskRepo.searchByCodeOrName(
+                1, // STATUS_ACTIVE
+                filter.getSearch(),
+                pageable
+            );
+        } else {
+            // Tìm kiếm trong phòng ban và phòng ban con
+            Department department = departmentRepo.findById(departmentId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy phòng ban"));
+
+            List<Long> departmentIds = new java.util.ArrayList<>();
+            departmentIds.add(departmentId);
+            departmentIds.addAll(
+                departmentService.getAllSubDepartments(departmentId).stream()
+                    .map(Department::getId)
+                    .collect(java.util.stream.Collectors.toList())
+            );
+
+            page = taskRepo.searchByCodeOrNameAndDepartments(
+                1, // STATUS_ACTIVE
+                filter.getSearch(),
+                departmentIds,
+                pageable
+            );
+        }
+        return page;
+        // Nếu muốn trả về Page<TaskDTO> thì cần map như page.map(this::convertToDTO)
     }
 } 

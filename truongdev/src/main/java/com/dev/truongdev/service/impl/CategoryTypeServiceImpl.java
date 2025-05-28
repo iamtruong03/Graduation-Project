@@ -9,6 +9,8 @@ import com.dev.truongdev.xdevbase.service.impl.XDevBaseServiceImpl;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 import org.springframework.beans.BeanUtils;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -51,6 +53,15 @@ public class CategoryTypeServiceImpl extends XDevBaseServiceImpl<CategoryType, C
             throw new RuntimeException("Category type not found");
         }
         categoryTypeRepo.deleteById(id);
+    }
+
+    @Override
+    public Page<CategoryType> searchAll(Long departmentId, String uid, CategoryTypeFilter filter, Pageable pageable) {
+        return categoryTypeRepo.searchByCodeOrName(
+            1, // STATUS_ACTIVE
+            filter.getSearch(),
+            pageable
+        );
     }
 
     private CategoryTypeDTO convertToDTO(CategoryType categoryType) {

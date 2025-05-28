@@ -4,10 +4,14 @@ import com.dev.truongdev.dto.RiskDTO;
 import com.dev.truongdev.dto.RiskHistoryDTO;
 import com.dev.truongdev.entity.Risk;
 import com.dev.truongdev.entity.RiskHistory;
+import com.dev.truongdev.entity.Department;
+import com.dev.truongdev.entity.User;
 import com.dev.truongdev.repo.RiskHistoryRepo;
 import com.dev.truongdev.repo.RiskRepo;
+import com.dev.truongdev.repo.DepartmentRepo;
 import com.dev.truongdev.service.IRiskService;
 import com.dev.truongdev.service.IUserService;
+import com.dev.truongdev.service.IDepartmentService;
 import com.dev.truongdev.utils.StateNameUtils;
 import com.dev.truongdev.payload.filter.RiskFilter;
 import com.dev.truongdev.xdevbase.service.impl.XDevBaseServiceImpl;
@@ -15,6 +19,8 @@ import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.Date;
 import java.util.List;
@@ -28,12 +34,16 @@ public class RiskServiceImpl extends XDevBaseServiceImpl<Risk, RiskFilter, RiskR
     final RiskRepo riskRepo;
     final RiskHistoryRepo riskHistoryRepository;
     final IUserService userService;
+    final DepartmentRepo departmentRepo;
+    final IDepartmentService<Department, ?> departmentService;
 
-    public RiskServiceImpl(RiskRepo repo, RiskHistoryRepo historyRepo, IUserService userService) {
+    public RiskServiceImpl(RiskRepo repo, RiskHistoryRepo historyRepo, IUserService userService, DepartmentRepo departmentRepo, IDepartmentService<Department, ?> departmentService) {
         super(repo);
         this.riskRepo = repo;
         this.riskHistoryRepository = historyRepo;
         this.userService = userService;
+        this.departmentRepo = departmentRepo;
+        this.departmentService = departmentService;
     }
 
     @Override
@@ -89,6 +99,45 @@ public class RiskServiceImpl extends XDevBaseServiceImpl<Risk, RiskFilter, RiskR
                 .comment(comment)
                 .build();
         riskHistoryRepository.save(history);
+    }
+
+    @Override
+    public Page<Risk> searchAll(Long departmentId, String uid, RiskFilter filter, Pageable pageable) {
+        // Lấy user
+        User user = userService.getById(uid, Long.valueOf(uid));
+
+        Page<Risk> page;
+
+        // Kiểm tra quyền admin hoặc phòng ban gốc
+        if (user.getRole().equals("ROLE_ADMIN") ||
+            (departmentRepo.findById(departmentId).get().getParentId() == null)) {
+            // Tìm kiếm toàn bộ risk
+            page = riskRepo.searchByCodeOrName(
+                1, // STATUS_ACTIVE
+                filter.getSearch(),
+                pageable
+            );
+        } else {
+            // Tìm kiếm trong phòng ban và phòng ban con
+            Department department = departmentRepo.findById(departmentId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy phòng ban"));
+
+            List<Long> departmentIds = new java.util.ArrayList<>();
+            departmentIds.add(departmentId);
+            departmentIds.addAll(
+                departmentService.getAllSubDepartments(departmentId).stream()
+                    .map(Department::getId)
+                    .collect(java.util.stream.Collectors.toList())
+            );
+
+            page = riskRepo.searchByCodeOrNameAndDepartments(
+                1, // STATUS_ACTIVE
+                filter.getSearch(),
+                departmentIds,
+                pageable
+            );
+        }
+        return page;
     }
 
     private RiskDTO convertToDTO(Risk risk) {

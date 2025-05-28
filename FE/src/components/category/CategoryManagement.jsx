@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -31,15 +31,11 @@ import SearchIcon from '@mui/icons-material/Search';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { Add as AddIcon } from '@mui/icons-material';
-
-const mockData = [
-  { id: 1, code: 'TASK_TYPE_01', name: 'Phát triển', type: 'task_type', description: 'Công việc phát triển tính năng mới', active: true },
-  { id: 2, code: 'TASK_TYPE_02', name: 'Bảo trì', type: 'task_type', description: 'Công việc bảo trì hệ thống', active: true },
-  { id: 3, code: 'DEPT_TYPE_01', name: 'Phòng ban chuyên môn', type: 'department_type', description: 'Phòng ban thực hiện các công việc chuyên môn', active: true },
-  { id: 4, code: 'DEPT_TYPE_02', name: 'Phòng ban hỗ trợ', type: 'department_type', description: 'Phòng ban hỗ trợ hoạt động', active: false },
-];
+import categoryService from '../../services/categoryService';
 
 const CategoryManagement = () => {
+  const [categories, setCategories] = useState([]);
+  const [totalPages, setTotalPages] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryType, setCategoryType] = useState('all');
   const [openDialog, setOpenDialog] = useState(false);
@@ -48,6 +44,8 @@ const CategoryManagement = () => {
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [page, setPage] = useState(1);
+  const rowsPerPage = 10;
 
   // Thêm state mới cho form
   const [formData, setFormData] = useState({
@@ -155,6 +153,30 @@ const CategoryManagement = () => {
       }));
     }
   };
+
+  // Fetch API
+  const fetchCategories = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const filter = {
+        search: searchTerm,
+        type: categoryType !== 'all' ? categoryType : undefined
+      };
+      const response = await categoryService.searchCategories(filter, page - 1, rowsPerPage);
+      setCategories(response.data.content);
+      setTotalPages(response.data.totalPages);
+    } catch (err) {
+      setError('Không thể tải danh sách danh mục');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCategories();
+    // eslint-disable-next-line
+  }, [searchTerm, categoryType, page]);
 
   return (
     <Box sx={{ p: 4, backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
@@ -272,7 +294,7 @@ const CategoryManagement = () => {
                     <CircularProgress sx={{ color: '#1976d2' }} />
                   </TableCell>
                 </TableRow>
-              ) : mockData.length === 0 ? (
+              ) : categories.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
                     <Typography color="text.secondary">
@@ -281,7 +303,7 @@ const CategoryManagement = () => {
                   </TableCell>
                 </TableRow>
               ) : (
-                mockData.map((row, index) => (
+                categories.map((row, index) => (
                   <TableRow 
                     key={row.id}
                     sx={{ 
@@ -290,7 +312,7 @@ const CategoryManagement = () => {
                       }
                     }}
                   >
-                    <TableCell>{index + 1}</TableCell>
+                    <TableCell>{(page - 1) * rowsPerPage + index + 1}</TableCell>
                     <TableCell>{row.code}</TableCell>
                     <TableCell>{row.name}</TableCell>
                     <TableCell>
@@ -341,7 +363,7 @@ const CategoryManagement = () => {
             alignItems="center"
           >
             <Typography variant="body2" color="text.secondary">
-              Tổng {mockData.length} bản ghi
+              Tổng {categories.length} bản ghi
             </Typography>
           </Stack>
         </Box>

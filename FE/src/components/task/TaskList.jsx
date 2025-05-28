@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FileDownload as FileDownloadIcon } from '@mui/icons-material';
 import {
   Box,
@@ -24,22 +24,20 @@ import {
   DialogTitle,
   DialogContent,
   DialogContentText,
-  DialogActions
+  DialogActions,
+  Alert,
+  CircularProgress
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import EditIcon from '@mui/icons-material/Edit';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { Link } from 'react-router-dom';
-
-const mockData = [
-  { id: 1, code: 'CV001', name: 'Phát triển tính năng mới', taskType: 'project', project: 'Dự án A', department: 'Phòng kỹ thuật', type: 'Phát triển', status: 'Đang thực hiện', priority: 'Cao', manager: 'Nguyễn Văn A', assignee: 'Trần Thị B', active: true, updatedAt: '20/07/2023' },
-  { id: 2, code: 'CV002', name: 'Sửa lỗi giao diện', taskType: 'project', project: 'Dự án B', department: 'Phòng kỹ thuật', type: 'Bảo trì', status: 'Hoàn thành', priority: 'Trung bình', manager: 'Lê Văn C', assignee: 'Phạm Thị D', active: true, updatedAt: '19/07/2023' },
-  { id: 3, code: 'CV003', name: 'Tối ưu hóa hiệu suất', taskType: 'department', project: null, department: 'Phòng kế toán', type: 'Cải tiến', status: 'Chưa bắt đầu', priority: 'Thấp', manager: 'Nguyễn Văn A', assignee: 'Hoàng Văn E', active: false, updatedAt: '18/07/2023' },
-  { id: 4, code: 'CV004', name: 'Kiểm thử hệ thống', taskType: 'department', project: null, department: 'Phòng hành chính', type: 'Kiểm thử', status: 'Đang thực hiện', priority: 'Cao', manager: 'Trần Thị F', assignee: 'Lê Thị G', active: true, updatedAt: '17/07/2023' },
-];
+import taskService from '../../services/taskService';
 
 const TaskList = () => {
+  const [tasks, setTasks] = useState([]);
+  const [totalPages, setTotalPages] = useState(1);
   const [searchCode, setSearchCode] = useState('');
   const [searchName, setSearchName] = useState('');
   const [taskType, setTaskType] = useState('all');
@@ -53,6 +51,25 @@ const TaskList = () => {
   const [error, setError] = useState(null);
   const rowsPerPage = 10;
 
+  const fetchTasks = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await taskService.searchTasks({ search: searchName }, page - 1, rowsPerPage);
+      setTasks(response.data.content);
+      setTotalPages(response.data.totalPages);
+    } catch (err) {
+      setError('Không thể tải danh sách công việc');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTasks();
+    // eslint-disable-next-line
+  }, [page, searchName]);
+
   const handleDelete = (id) => {
     setDeleteId(id);
     setOpenDialog(true);
@@ -60,7 +77,7 @@ const TaskList = () => {
 
   const handleConfirmDelete = () => {
     // Thực hiện xóa công việc
-    const newData = mockData.filter(task => task.id !== deleteId);
+    const newData = tasks.filter(task => task.id !== deleteId);
     // Cập nhật state hoặc gọi API xóa
     setOpenDialog(false);
     setDeleteId(null);
@@ -253,17 +270,23 @@ const TaskList = () => {
                       <CircularProgress />
                     </TableCell>
                   </TableRow>
+                ) : tasks.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={11} align="center">
+                      <Typography color="text.secondary">Không tìm thấy dữ liệu</Typography>
+                    </TableCell>
+                  </TableRow>
                 ) : (
-                  mockData.map((row, index) => (
+                  tasks.map((row, index) => (
                     <TableRow key={row.id}>
                       <TableCell>{(page - 1) * rowsPerPage + index + 1}</TableCell>
                       <TableCell>{row.code}</TableCell>
                       <TableCell>{row.name}</TableCell>
                       <TableCell>{row.taskType === 'project' ? 'Công việc dự án' : 'Công việc phòng ban'}</TableCell>
-                      <TableCell>{row.taskType === 'project' ? row.project : row.department}</TableCell>
-                      <TableCell>{row.priority}</TableCell>
-                      <TableCell>{row.manager}</TableCell>
-                      <TableCell>{row.assignee}</TableCell>
+                      <TableCell>{row.taskType === 'project' ? row.projectName || row.project : row.departmentName || row.department}</TableCell>
+                      <TableCell>{row.priorityName || row.priority}</TableCell>
+                      <TableCell>{row.managerName || row.manager}</TableCell>
+                      <TableCell>{row.assigneeName || row.assignee}</TableCell>
                       <TableCell>{row.updatedAt}</TableCell>
                       <TableCell align="center">
                         <IconButton size="small" component={Link} to={`/task/detail/${row.id}`} sx={{ mr: 1 }}>
@@ -293,10 +316,10 @@ const TaskList = () => {
               alignItems="center"
             >
               <Typography variant="body2" color="text.secondary">
-                Tổng {mockData.length} bản ghi
+                Tổng {tasks.length} bản ghi
               </Typography>
               <Pagination
-                count={Math.ceil(mockData.length / rowsPerPage)}
+                count={totalPages}
                 page={page}
                 onChange={handlePageChange}
                 color="primary"

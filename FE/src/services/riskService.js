@@ -1,54 +1,59 @@
-import axios from 'axios';
+import api from './api';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+const getAuthHeader = () => ({
+  headers: {
+    Authorization: `Bearer ${localStorage.getItem('token')}`
+  }
+});
 
 const riskService = {
   // Lấy danh sách rủi ro
   getAllRisks: () => {
-    return axios.get(`${API_URL}/risk`);
+    return api.get('/risk', getAuthHeader());
   },
 
   // Lấy chi tiết rủi ro
   getRiskById: async (id) => {
-    const response = await axios.get(`${API_URL}/risk/${id}`);
+    const response = await api.get(`/risk/${id}`, getAuthHeader());
     return response.data;
   },
 
   // Lấy lịch sử rủi ro
   getRiskHistory: async (id) => {
-    const response = await axios.get(`${API_URL}/risk/${id}/history`);
+    const response = await api.get(`/risk/${id}/history`, getAuthHeader());
     return response.data;
   },
 
   // Thêm rủi ro mới
   createRisk: (riskData) => {
-    return axios.post(`${API_URL}/risk`, riskData);
+    return api.post('/risk', riskData, getAuthHeader());
   },
 
   // Cập nhật thông tin rủi ro
   updateRisk: async (id, riskData) => {
-    const response = await axios.put(`${API_URL}/risk/${id}`, riskData);
+    const response = await api.put(`/risk/${id}`, riskData, getAuthHeader());
     return response.data;
   },
 
   // Xóa rủi ro
   deleteRisk: (id) => {
-    return axios.delete(`${API_URL}/risk/${id}`);
+    return api.delete(`/risk/${id}`, getAuthHeader());
   },
 
   // Lấy danh sách loại rủi ro
   getRiskTypes: () => {
-    return axios.get(`${API_URL}/risk-types`);
+    return api.get('/risk-types', getAuthHeader());
   },
 
   // Lấy danh sách mức độ rủi ro
   getRiskLevels: () => {
-    return axios.get(`${API_URL}/risk-levels`);
+    return api.get('/risk-levels', getAuthHeader());
   },
 
   // Thêm lịch sử thay đổi trạng thái
   addRiskHistory: async (id, previousState, newState, changedBy, comment) => {
-    const response = await axios.post(`${API_URL}/risk/${id}/history`, null, {
+    const response = await api.post(`/risk/${id}/history`, null, {
+      ...getAuthHeader(),
       params: {
         previousState,
         newState,
@@ -57,6 +62,13 @@ const riskService = {
       }
     });
     return response.data;
+  },
+
+  searchRisks: (filter, page = 0, size = 10) => {
+    return api.post('/risk/search', filter, {
+      ...getAuthHeader(),
+      params: { page, size }
+    });
   }
 };
 

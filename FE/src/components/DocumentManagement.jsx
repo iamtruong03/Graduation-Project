@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Paper,
@@ -40,42 +40,11 @@ import {
   Description as FileIcon,
   Search as SearchIcon,
 } from '@mui/icons-material';
-
-const mockDocuments = [
-  {
-    id: 1,
-    name: 'Quy định nội bộ.docx',
-    type: 'file',
-    category: 'Quy định',
-    department: 'Phòng Nhân sự',
-    uploadedBy: 'Nguyễn Văn A',
-    uploadedDate: '01/08/2023',
-    size: '2.5 MB',
-    shared: true,
-  },
-  {
-    id: 2,
-    name: 'Tài liệu dự án',
-    type: 'folder',
-    category: 'Dự án',
-    department: 'Phòng Kỹ thuật',
-    items: 5,
-  },
-  {
-    id: 3,
-    name: 'Báo cáo tài chính Q2-2023.xlsx',
-    type: 'file',
-    category: 'Báo cáo',
-    department: 'Phòng Kế toán',
-    uploadedBy: 'Trần Thị B',
-    uploadedDate: '15/07/2023',
-    size: '1.8 MB',
-    shared: false,
-  },
-];
+import documentService from '../services/documentService';
 
 const DocumentManagement = () => {
-  const [documents, setDocuments] = useState(mockDocuments);
+  const [documents, setDocuments] = useState([]);
+  const [totalPages, setTotalPages] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState('');
@@ -83,6 +52,34 @@ const DocumentManagement = () => {
   const [openShareDialog, setOpenShareDialog] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [currentPath, setCurrentPath] = useState([{ name: 'Tất cả tài liệu', id: 'root' }]);
+  const [page, setPage] = useState(1);
+  const rowsPerPage = 10;
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const fetchDocuments = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const filter = {
+        search: searchTerm,
+        documentTypeId: selectedCategory || undefined,
+        departmentId: selectedDepartment || undefined
+      };
+      const response = await documentService.searchDocuments(filter, page - 1, rowsPerPage);
+      setDocuments(response.data.content);
+      setTotalPages(response.data.totalPages);
+    } catch (err) {
+      setError('Không thể tải danh sách tài liệu');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDocuments();
+    // eslint-disable-next-line
+  }, [searchTerm, selectedCategory, selectedDepartment, page]);
 
   const handleSearch = (event) => {
     setSearchTerm(event.target.value);
@@ -191,50 +188,64 @@ const DocumentManagement = () => {
       </Breadcrumbs>
 
       <List>
-        {documents.map((doc) => (
-          <React.Fragment key={doc.id}>
-            <ListItem
-              button={doc.type === 'folder'}
-              onClick={() => doc.type === 'folder' && handleNavigate(doc)}
-            >
-              <ListItemIcon>
-                {doc.type === 'folder' ? <FolderIcon color="primary" /> : <FileIcon />}
-              </ListItemIcon>
-              <ListItemText
-                primary={doc.name}
-                secondary={
-                  doc.type === 'folder'
-                    ? `${doc.items} mục | ${doc.category} | ${doc.department}`
-                    : `${doc.size} | ${doc.uploadedBy} | ${doc.uploadedDate}`
-                }
-              />
-              <ListItemSecondaryAction>
-                <Stack direction="row" spacing={1}>
-                  {doc.type === 'file' && (
-                    <>
-                      <Tooltip title="Tải xuống">
-                        <IconButton size="small">
-                          <DownloadIcon />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Chia sẻ">
-                        <IconButton size="small" onClick={() => handleShare(doc)}>
-                          <ShareIcon />
-                        </IconButton>
-                      </Tooltip>
-                    </>
-                  )}
-                  <Tooltip title="Xóa">
-                    <IconButton size="small" color="error">
-                      <DeleteIcon />
-                    </IconButton>
-                  </Tooltip>
-                </Stack>
-              </ListItemSecondaryAction>
-            </ListItem>
-            <Divider />
-          </React.Fragment>
-        ))}
+        {loading ? (
+          <ListItem>
+            <ListItemText primary="Đang tải dữ liệu..." />
+          </ListItem>
+        ) : error ? (
+          <ListItem>
+            <ListItemText primary={error} />
+          </ListItem>
+        ) : documents.length === 0 ? (
+          <ListItem>
+            <ListItemText primary="Không tìm thấy tài liệu" />
+          </ListItem>
+        ) : (
+          documents.map((doc) => (
+            <React.Fragment key={doc.id}>
+              <ListItem
+                button={doc.type === 'folder'}
+                onClick={() => doc.type === 'folder' && handleNavigate(doc)}
+              >
+                <ListItemIcon>
+                  {doc.type === 'folder' ? <FolderIcon color="primary" /> : <FileIcon />}
+                </ListItemIcon>
+                <ListItemText
+                  primary={doc.name}
+                  secondary={
+                    doc.type === 'folder'
+                      ? `${doc.items || 0} mục | ${doc.category || ''} | ${doc.departmentName || ''}`
+                      : `${doc.size || ''} | ${doc.uploadedBy || doc.createBy || ''} | ${doc.uploadedDate || doc.createDate || ''}`
+                  }
+                />
+                <ListItemSecondaryAction>
+                  <Stack direction="row" spacing={1}>
+                    {doc.type !== 'folder' && (
+                      <>
+                        <Tooltip title="Tải xuống">
+                          <IconButton size="small">
+                            <DownloadIcon />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Chia sẻ">
+                          <IconButton size="small" onClick={() => handleShare(doc)}>
+                            <ShareIcon />
+                          </IconButton>
+                        </Tooltip>
+                      </>
+                    )}
+                    <Tooltip title="Xóa">
+                      <IconButton size="small" color="error">
+                        <DeleteIcon />
+                      </IconButton>
+                    </Tooltip>
+                  </Stack>
+                </ListItemSecondaryAction>
+              </ListItem>
+              <Divider />
+            </React.Fragment>
+          ))
+        )}
       </List>
 
       {/* Dialog tải lên tài liệu */}

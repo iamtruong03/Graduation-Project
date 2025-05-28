@@ -7,18 +7,6 @@ import com.dev.truongdev.xdevbase.service.IXDevBaseService;
 import java.util.List;
 
 public interface IUserService extends IXDevBaseService<User, UserFilter> {
-//  Long save(UserRegistrationDTO userDTO);
-//  Long getCurrentUserCode();
-//  Long findById(Long id);
-//  Long registerNewUser(UserRegistrationDTO userDTO);
-//  void validateUserData(Long departmentId, Long positionId, String phoneNumber, String email);
-//
-//  // Các phương thức mới cho việc xử lý userId
-//  String getCurrentUserRole(Long userId);
-//  Long getCurrentUserDepartmentId(Long userId);
-//  boolean isUserManager(Long userId);
-//  boolean isUserAdmin(Long userId);
-//  void assignAdminRole(Long userId);
 
   User confirmLogin(String code, String password);
 

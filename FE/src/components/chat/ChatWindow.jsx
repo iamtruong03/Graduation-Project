@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Grid, Paper, Typography, List, ListItem, ListItemText, ListItemAvatar, Avatar, Badge, Divider, IconButton, InputAdornment, TextField } from '@mui/material';
+import { Box, Grid, Paper, Typography, List, ListItem, ListItemText, ListItemAvatar, Avatar, Badge, Divider, IconButton, InputAdornment, TextField, Chip } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
@@ -41,7 +41,43 @@ const ChatWindow = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredUsers, setFilteredUsers] = useState([]);
+  const [unreadCounts, setUnreadCounts] = useState({});
+  const [onlineUsers, setOnlineUsers] = useState(new Set());
+  const [connectionStatus, setConnectionStatus] = useState('disconnected');
 
+  // Initialize chat service
+  useEffect(() => {
+    const initializeChat = async () => {
+      try {
+        setConnectionStatus('connecting');
+        await chatService.connect();
+        setConnectionStatus('connected');
+        
+        // Join chat and send online status
+        chatService.joinChat();
+        chatService.sendUserStatus('ONLINE');
+        
+        // Load unread counts
+        await loadUnreadCounts();
+        
+      } catch (error) {
+        console.error('Lỗi khởi tạo chat:', error);
+        setConnectionStatus('error');
+      }
+    };
+
+    initializeChat();
+
+    // Cleanup on unmount
+    return () => {
+      if (chatService.isWebSocketConnected()) {
+        chatService.sendUserStatus('OFFLINE');
+        chatService.disconnect();
+      }
+    };
+  }, []);
+
+  // Load users list
   useEffect(() => {
     const fetchUsers = async () => {
       try {
@@ -57,64 +93,75 @@ const ChatWindow = () => {
           console.log('Filtered users from /user/list:', filteredUsers);
           setUsers(filteredUsers);
         } else {
-          console.error('Response từ API /user/list không hợp lệ hoặc data không phải là mảng:', response);
+          console.error('Response từ API /user/list không hợp lệ:', response);
           setUsers([]);
         }
       } catch (error) {
-        console.error('Lỗi khi lấy danh sách người dùng từ /user/list:', error);
+        console.error('Lỗi khi lấy danh sách người dùng:', error);
         setUsers([]);
       }
     };
 
     fetchUsers();
   }, []);
-  const [departmentId, setDepartmentId] = useState(null);
-  const [cid, setCid] = useState(null);
 
-  useEffect(() => {
-    const initializeChat = async () => {
-      try {
-        await chatService.connect(); // Đảm bảo kết nối WebSocket thành công
-        
-        const fetchUserInfo = async () => {
-          try {
-            const response = await api.get('/user/current-user');
-            // Kiểm tra cấu trúc response của người dùng hiện tại
-            if (response?.data && response.data.id) { // Giả định user ID nằm trực tiếp trong data
-              // setDepartmentId(response.data.departmentId);
-              // setCid(response.data.cid);
-               console.log('Fetched departmentId and cid from /user/current-user:', response.data.departmentId, response.data.cid);
-               // Có thể lưu departmentId và cid vào localStorage hoặc state nếu cần
-            } else if (response?.data?.data && response.data.data.id) { // Kiểm tra nếu ID nằm trong data.data
-              // setDepartmentId(response.data.data.departmentId);
-              // setCid(response.data.data.cid);
-              console.log('Fetched departmentId and cid from /user/current-user (from data.data):', response.data.data.departmentId, response.data.data.cid);
-              // Có thể lưu departmentId và cid vào localStorage hoặc state nếu cần
-            }
-          } catch (error) {
-            console.error('Lỗi khi lấy thông tin người dùng hiện tại (departmentId, cid): ', error);
-          }
-        };
-    
-        await fetchUserInfo();
-      } catch (error) {
-        console.error('Lỗi khởi tạo chat:', error);
-      }
-    };
-  
-    initializeChat();
-  
-    return () => {
-      if (chatService.stompClient) {
-        chatService.stompClient.disconnect();
-      }
-    };
-  }, []);
-
-  const handleUserSelect = (user) => {
-    setSelectedUser(user);
+  // Load unread message counts
+  const loadUnreadCounts = async () => {
+    try {
+      const totalCount = await chatService.countUnreadMessages();
+      console.log('Total unread messages:', totalCount);
+      
+      // You could also load per-user unread counts here if needed
+      // For now, we'll use the total count
+    } catch (error) {
+      console.error('Error loading unread counts:', error);
+    }
   };
 
+  // Set up WebSocket event listeners
+  useEffect(() => {
+    if (connectionStatus !== 'connected') return;
+
+    // Listen for new messages to update unread counts
+    const unsubscribeMessage = chatService.onMessage((messageData) => {
+      // Update unread count for the sender
+      if (messageData.senderId !== localStorage.getItem('code')) {
+        setUnreadCounts(prev => ({
+          ...prev,
+          [messageData.senderId]: (prev[messageData.senderId] || 0) + 1
+        }));
+      }
+    });
+
+    // Listen for user status updates
+    const unsubscribeStatus = chatService.onUserStatus((statusData) => {
+      console.log('User status update:', statusData);
+      
+      if (statusData.action === 'ONLINE') {
+        setOnlineUsers(prev => new Set(prev).add(statusData.senderId));
+      } else if (statusData.action === 'OFFLINE') {
+        setOnlineUsers(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(statusData.senderId);
+          return newSet;
+        });
+      }
+    });
+
+    // Listen for errors
+    const unsubscribeError = chatService.onError((errorData) => {
+      console.error('Chat error:', errorData);
+      // You could show a toast notification here
+    });
+
+    return () => {
+      unsubscribeMessage();
+      unsubscribeStatus();
+      unsubscribeError();
+    };
+  }, [connectionStatus]);
+
+  // Filter users based on search term
   useEffect(() => {
     const filtered = users.filter(user => 
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -123,6 +170,53 @@ const ChatWindow = () => {
     );
     setFilteredUsers(filtered);
   }, [searchTerm, users]);
+
+  const handleUserSelect = (user) => {
+    setSelectedUser(user);
+    
+    // Clear unread count for this user
+    setUnreadCounts(prev => ({
+      ...prev,
+      [user.id.toString()]: 0
+    }));
+  };
+
+  const handleMessageSent = () => {
+    // Refresh unread counts or perform other actions after sending message
+    // This callback is called from MessageInput after successfully sending a message
+  };
+
+  const ConnectionStatus = () => {
+    const getStatusColor = () => {
+      switch (connectionStatus) {
+        case 'connected': return '#44b700';
+        case 'connecting': return '#ff9800';
+        case 'error': return '#f44336';
+        default: return '#9e9e9e';
+      }
+    };
+
+    const getStatusText = () => {
+      switch (connectionStatus) {
+        case 'connected': return 'Đã kết nối';
+        case 'connecting': return 'Đang kết nối...';
+        case 'error': return 'Lỗi kết nối';
+        default: return 'Ngắt kết nối';
+      }
+    };
+
+    return (
+      <Chip
+        size="small"
+        label={getStatusText()}
+        sx={{
+          backgroundColor: getStatusColor(),
+          color: 'white',
+          fontSize: '0.75rem'
+        }}
+      />
+    );
+  };
 
   return (
     <Box sx={{ height: 'calc(100vh - 100px)', p: 2 }}>
@@ -136,9 +230,12 @@ const ChatWindow = () => {
             boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
           }}>
             <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-              <Typography variant="h6" sx={{ mb: 2 }}>
-                Trò chuyện ({users?.length || 0})
-              </Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6">
+                  Trò chuyện ({users?.length || 0})
+                </Typography>
+                <ConnectionStatus />
+              </Box>
               <TextField
                 fullWidth
                 size="small"
@@ -181,25 +278,56 @@ const ChatWindow = () => {
                       }}
                     >
                       <ListItemAvatar>
-                        <Avatar 
-                          sx={{ 
-                            bgcolor: user.role === 'ROLE_ADMIN' ? 'primary.main' : 'secondary.main',
-                            width: 45,
-                            height: 45
+                        <Badge
+                          overlap="circular"
+                          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                          variant="dot"
+                          invisible={!onlineUsers.has(user.id.toString())}
+                          sx={{
+                            '& .MuiBadge-badge': {
+                              backgroundColor: '#44b700',
+                              width: 12,
+                              height: 12,
+                              borderRadius: '50%',
+                              border: '2px solid white'
+                            }
                           }}
                         >
-                          {user.name ? user.name.charAt(0).toUpperCase() : '?'}
-                        </Avatar>
+                          <Avatar 
+                            sx={{ 
+                              bgcolor: user.role === 'ROLE_ADMIN' ? 'primary.main' : 'secondary.main',
+                              width: 45,
+                              height: 45
+                            }}
+                          >
+                            {user.name ? user.name.charAt(0).toUpperCase() : '?'}
+                          </Avatar>
+                        </Badge>
                       </ListItemAvatar>
                       <ListItemText 
                         primary={
-                          <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
-                            {user.name}
-                          </Typography>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
+                              {user.name}
+                            </Typography>
+                            {unreadCounts[user.id.toString()] > 0 && (
+                              <Chip
+                                size="small"
+                                label={unreadCounts[user.id.toString()]}
+                                color="error"
+                                sx={{ fontSize: '0.75rem', height: 20, minWidth: 20 }}
+                              />
+                            )}
+                          </Box>
                         }
                         secondary={
                           <Box component="span" sx={{ display: 'block', color: 'text.secondary', fontSize: '0.875rem' }}>
                             {user.code}
+                            {onlineUsers.has(user.id.toString()) && (
+                              <Typography component="span" sx={{ fontSize: '0.75rem', color: '#44b700', ml: 1 }}>
+                                • Online
+                              </Typography>
+                            )}
                             {user.email && <Box component="span" sx={{ display: 'block', fontSize: '0.75rem' }}>{user.email}</Box>}
                           </Box>
                         }
@@ -241,18 +369,39 @@ const ChatWindow = () => {
                   alignItems: 'center',
                   gap: 2
                 }}>
-                  <Avatar 
-                    sx={{ 
-                      width: 48, 
-                      height: 48,
-                      bgcolor: selectedUser.role === 'ROLE_ADMIN' ? 'primary.main' : 'secondary.main'
+                  <Badge
+                    overlap="circular"
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                    variant="dot"
+                    invisible={!onlineUsers.has(selectedUser.id.toString())}
+                    sx={{
+                      '& .MuiBadge-badge': {
+                        backgroundColor: '#44b700',
+                        width: 12,
+                        height: 12,
+                        borderRadius: '50%',
+                        border: '2px solid white'
+                      }
                     }}
                   >
-                    {selectedUser.name.charAt(0).toUpperCase()}
-                  </Avatar>
+                    <Avatar 
+                      sx={{ 
+                        width: 48, 
+                        height: 48,
+                        bgcolor: selectedUser.role === 'ROLE_ADMIN' ? 'primary.main' : 'secondary.main'
+                      }}
+                    >
+                      {selectedUser.name.charAt(0).toUpperCase()}
+                    </Avatar>
+                  </Badge>
                   <Box>
                     <Typography variant="h6" sx={{ fontWeight: 500 }}>
                       {selectedUser.name}
+                      {onlineUsers.has(selectedUser.id.toString()) && (
+                        <Typography component="span" sx={{ fontSize: '0.875rem', color: '#44b700', ml: 1 }}>
+                          • Online
+                        </Typography>
+                      )}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
                       {selectedUser.email}
@@ -260,17 +409,12 @@ const ChatWindow = () => {
                   </Box>
                 </Box>
                 <Box sx={{ flexGrow: 1, overflow: 'auto', p: 2, bgcolor: '#f8f9fa' }}>
-                  <MessageList 
-                    selectedUser={selectedUser}
-                    departmentId={departmentId}
-                    cid={cid}
-                  />
+                  <MessageList selectedUser={selectedUser} />
                 </Box>
                 <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider', bgcolor: 'white' }}>
                   <MessageInput 
                     selectedUser={selectedUser}
-                    departmentId={departmentId}
-                    cid={cid}
+                    onMessageSent={handleMessageSent}
                   />
                 </Box>
               </>
@@ -284,11 +428,12 @@ const ChatWindow = () => {
                 color: 'text.secondary'
               }}>
                 <Typography variant="h6" sx={{ mb: 1 }}>
-                  Chào mừng đến với Trò chuyện
+                  Chào mừng đến với Trò chuyện Realtime
                 </Typography>
-                <Typography variant="body1">
+                <Typography variant="body1" sx={{ mb: 2 }}>
                   Chọn một người dùng để bắt đầu cuộc trò chuyện
                 </Typography>
+                <ConnectionStatus />
               </Box>
             )}
           </Paper>

@@ -10,17 +10,36 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 @EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
+    /**
+     * Cấu hình message broker để xử lý tin nhắn
+     * @param config Message broker registry
+     */
     @Override
-    public void registerStompEndpoints(StompEndpointRegistry registry) {
-        registry.addEndpoint("/ws")
-                .setAllowedOriginPatterns("*")
-                .withSockJS();
+    public void configureMessageBroker(MessageBrokerRegistry config) {
+        // Bật simple broker cho các destination bắt đầu với "/topic" hoặc "/queue"
+        config.enableSimpleBroker("/topic", "/queue");
+        
+        // Thiết lập prefix cho các message mapping ở controller
+        config.setApplicationDestinationPrefixes("/app");
+        
+        // Thiết lập prefix cho user-specific destinations
+        config.setUserDestinationPrefix("/user");
     }
 
+    /**
+     * Đăng ký STOMP endpoints
+     * @param registry STOMP endpoint registry
+     */
     @Override
-    public void configureMessageBroker(MessageBrokerRegistry registry) {
-        registry.setApplicationDestinationPrefixes("/app");
-        registry.enableSimpleBroker("/user", "/topic");
-        registry.setUserDestinationPrefix("/user");
+    public void registerStompEndpoints(StompEndpointRegistry registry) {
+        // Endpoint cho WebSocket connection
+        registry.addEndpoint("/ws")
+                .setAllowedOriginPatterns("*") // Cho phép tất cả origin (chỉ cho development)
+                .withSockJS(); // Fallback cho các browser không support WebSocket
+        
+        // Endpoint cho chat messaging
+        registry.addEndpoint("/chat")
+                .setAllowedOriginPatterns("*")
+                .withSockJS();
     }
 }

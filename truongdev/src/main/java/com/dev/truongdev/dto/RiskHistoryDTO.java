@@ -14,4 +14,6 @@ public class RiskHistoryDTO {
     private String comment;
     private String changedByName;
     private String stateName;
+    private String previousStateName;
+    private String newStateName;
 } 

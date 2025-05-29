@@ -5,6 +5,7 @@ import com.dev.truongdev.dto.TaskHistoryDTO;
 import com.dev.truongdev.entity.Task;
 import com.dev.truongdev.payload.filter.TaskFilter;
 import com.dev.truongdev.service.ITaskService;
+import com.dev.truongdev.service.IExcelExportService;
 import com.dev.truongdev.utils.ApiResponse;
 import com.dev.truongdev.xdevbase.api.XDevBaseAPI;
 import com.dev.truongdev.xdevbase.service.IXDevBaseService;
@@ -13,9 +14,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.ByteArrayOutputStream;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @RestController
@@ -25,6 +31,7 @@ import java.util.List;
 public class TaskAPI extends XDevBaseAPI<Task, TaskFilter> {
 
     final ITaskService taskService;
+    final IExcelExportService excelExportService;
 
     @SuppressWarnings("unchecked")
     public IXDevBaseService<Task, TaskFilter> getService() {
@@ -120,6 +127,39 @@ public class TaskAPI extends XDevBaseAPI<Task, TaskFilter> {
             return ApiResponse.ok(taskService.getPendingApprovalTasks(uid, filter, pageable));
         } catch (Exception e) {
             return ApiResponse.error(e.getMessage());
+        }
+    }
+
+    /**
+     * Export danh sách công việc ra file Excel.
+     * @param uid ID người dùng yêu cầu
+     * @param departmentId ID phòng ban
+     * @param filter Bộ lọc tìm kiếm
+     * @return File Excel chứa danh sách công việc
+     */
+    @GetMapping("/export")
+    public ResponseEntity<byte[]> exportTasks(
+            @RequestAttribute String uid,
+            @RequestParam Long departmentId,
+            TaskFilter filter) {
+        try {
+            ByteArrayOutputStream outputStream = excelExportService.exportTasks(departmentId, uid, filter);
+            
+            // Tạo tên file với timestamp
+            String fileName = "DanhSachCongViec_" + 
+                java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) + 
+                ".xlsx";
+            
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, 
+                           "attachment; filename*=UTF-8''" + URLEncoder.encode(fileName, StandardCharsets.UTF_8))
+                    .header(HttpHeaders.CONTENT_TYPE, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                    .body(outputStream.toByteArray());
+                    
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                    .body(("{\"error\":\"" + e.getMessage() + "\"}").getBytes());
         }
     }
 

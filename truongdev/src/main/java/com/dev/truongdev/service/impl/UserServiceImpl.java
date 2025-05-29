@@ -25,6 +25,10 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
+/**
+ * Service implementation quản lý người dùng (User).
+ * Xử lý CRUD operations, xác thực người dùng, quản lý quyền truy cập theo phòng ban.
+ */
 @Service
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class UserServiceImpl extends XDevBaseServiceImpl<User, UserFilter, UserRepo> 
@@ -44,6 +48,15 @@ public class UserServiceImpl extends XDevBaseServiceImpl<User, UserFilter, UserR
     this.taskRepo = taskRepo;
   }
 
+  /**
+   * Thiết lập thông tin cơ bản cho entity User.
+   * - Gán người tạo và người cập nhật
+   * - Đặt trạng thái ACTIVE
+   * - Gán role mặc định là ROLE_USER
+   * 
+   * @param e Entity User cần thiết lập
+   * @param uid ID người thực hiện
+   */
   public void setBaseEntity (User e, String uid){
     e.setCreateBy(Optional.ofNullable(e.getCreateBy()).orElse(uid));
     e.setUpdateBy(uid);
@@ -51,6 +64,17 @@ public class UserServiceImpl extends XDevBaseServiceImpl<User, UserFilter, UserR
     e.setRole("ROLE_USER");
   }
 
+  /**
+   * Tạo mới người dùng với kiểm tra trùng lặp mã.
+   * - Kiểm tra mã người dùng đã tồn tại
+   * - Mã hóa mật khẩu
+   * - Thiết lập thông tin cơ bản
+   * 
+   * @param uid ID người tạo
+   * @param e Thông tin người dùng
+   * @return User đã được tạo
+   * @throws RuntimeException nếu mã người dùng đã tồn tại
+   */
   @Override
   @Transactional
   public User create(String uid, User e){
@@ -62,6 +86,15 @@ public class UserServiceImpl extends XDevBaseServiceImpl<User, UserFilter, UserR
     return userRepo.save(e);
   }
 
+  /**
+   * Cập nhật mật khẩu người dùng với xác thực mật khẩu cũ.
+   * - Xác thực mật khẩu hiện tại
+   * - Mã hóa và lưu mật khẩu mới
+   * 
+   * @param uid ID người dùng
+   * @param updatePasswordRequest Thông tin cập nhật mật khẩu
+   * @throws RuntimeException nếu mật khẩu cũ không đúng
+   */
   @Override
   public void updatePassword(String uid, UpdatePasswordRequest updatePasswordRequest) {
     User result = userRepo.findById(Long.valueOf(uid))
@@ -77,6 +110,17 @@ public class UserServiceImpl extends XDevBaseServiceImpl<User, UserFilter, UserR
     userRepo.save(result);
   }
 
+  /**
+   * Xác thực đăng nhập người dùng.
+   * - Kiểm tra tồn tại người dùng
+   * - So sánh mật khẩu
+   * - Kiểm tra trạng thái tài khoản
+   * 
+   * @param code Mã người dùng
+   * @param password Mật khẩu
+   * @return User nếu đăng nhập thành công
+   * @throws RuntimeException nếu thông tin không đúng hoặc tài khoản bị khóa
+   */
   @Override
   public User confirmLogin(String code, String password) {
     User user = userRepo.findByCode(code)
@@ -93,7 +137,14 @@ public class UserServiceImpl extends XDevBaseServiceImpl<User, UserFilter, UserR
     return user;
   }
 
-  // user trong phòng ban
+  /**
+   * Lấy danh sách người dùng trong cùng phòng ban.
+   * - Admin: xem tất cả người dùng
+   * - Người dùng thường: chỉ xem người dùng cùng phòng ban
+   * 
+   * @param uid ID người dùng yêu cầu
+   * @return Danh sách người dùng trong phòng ban
+   */
   @Override
   public List<User> listUserDep(String uid){
     User user = userRepo.findById(Long.valueOf(uid))
@@ -106,7 +157,14 @@ public class UserServiceImpl extends XDevBaseServiceImpl<User, UserFilter, UserR
     return userRepo.findByDepartmentIdAndStatus(user.getDepartmentId(), AppConstants.STATUS_ACTIVE);
   }
 
-  // user con và user phòng ban chính nó
+  /**
+   * Lấy danh sách người dùng trong phòng ban và các phòng ban con.
+   * - Admin: xem tất cả người dùng
+   * - Người dùng thường: xem người dùng trong phòng ban và phòng ban con
+   * 
+   * @param uid ID người dùng yêu cầu
+   * @return Danh sách người dùng trong phòng ban và phòng ban con
+   */
   @Override
   public List<User> listUserChildDep(String uid){
     User user = userRepo.findById(Long.valueOf(uid))
@@ -126,6 +184,17 @@ public class UserServiceImpl extends XDevBaseServiceImpl<User, UserFilter, UserR
 
   }
 
+  /**
+   * Tìm kiếm người dùng với phân quyền theo phòng ban.
+   * - Admin: tìm kiếm toàn bộ hệ thống
+   * - Người dùng thường: tìm kiếm trong phòng ban và phòng ban con
+   * 
+   * @param did ID phòng ban
+   * @param uid ID người dùng yêu cầu
+   * @param filter Bộ lọc tìm kiếm
+   * @param pageable Thông tin phân trang
+   * @return Danh sách người dùng phù hợp
+   */
   @Override
   public Page<User> searchAll(Long did, String uid, UserFilter filter, Pageable pageable){
     User user = userRepo.findById(Long.valueOf(uid))
@@ -164,7 +233,14 @@ public class UserServiceImpl extends XDevBaseServiceImpl<User, UserFilter, UserR
     }
   }
 
-  // user phòng ban cha
+  /**
+   * Lấy danh sách người dùng trong phòng ban cha.
+   * - Admin: xem tất cả người dùng
+   * - Người dùng thường: xem người dùng trong phòng ban cha
+   * 
+   * @param uid ID người dùng yêu cầu
+   * @return Danh sách người dùng trong phòng ban cha
+   */
   @Override
   public List<User> listUserParentDep(String uid){
     User user = userRepo.findById(Long.valueOf(uid))
@@ -178,7 +254,14 @@ public class UserServiceImpl extends XDevBaseServiceImpl<User, UserFilter, UserR
     return userRepo.findByDepartmentIdAndStatus(department.getParentId(), AppConstants.STATUS_ACTIVE);
   }
 
-  // list truong phong ban con
+  /**
+   * Lấy danh sách trưởng phòng các phòng ban con.
+   * - Admin: xem tất cả trưởng phòng
+   * - Người dùng thường: xem trưởng phòng các phòng ban con
+   * 
+   * @param uid ID người dùng yêu cầu
+   * @return Danh sách trưởng phòng các phòng ban con
+   */
   @Override
   public List<User> listHeadChildDep(String uid){
     User user = userRepo.findById(Long.valueOf(uid))
@@ -199,6 +282,11 @@ public class UserServiceImpl extends XDevBaseServiceImpl<User, UserFilter, UserR
 
   }
 
+  /**
+   * Lấy tên hiển thị của người dùng theo ID.
+   * @param userId ID người dùng
+   * @return Tên người dùng hoặc ID nếu không tìm thấy
+   */
   @Override
   public String getUserDisplayName(String userId) {
     User user = userRepo.findById(Long.valueOf(userId))
@@ -206,6 +294,17 @@ public class UserServiceImpl extends XDevBaseServiceImpl<User, UserFilter, UserR
     return user != null ? user.getName() : userId;
   }
 
+  /**
+   * Xóa người dùng với kiểm tra ràng buộc nghiệp vụ.
+   * Không cho phép xóa nếu người dùng đang:
+   * - Quản lý dự án đang thực hiện
+   * - Phụ trách dự án đang thực hiện  
+   * - Được giao công việc đang thực hiện
+   * 
+   * @param uid ID người thực hiện xóa
+   * @param id ID người dùng cần xóa
+   * @throws RuntimeException nếu có ràng buộc nghiệp vụ
+   */
   @Override
   public void delete(String uid, Long id) {
     // Kiểm tra user có phải người quản lý dự án đang thực hiện không

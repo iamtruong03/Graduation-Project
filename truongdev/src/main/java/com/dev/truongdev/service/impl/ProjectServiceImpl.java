@@ -59,6 +59,12 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
         this.userService = userService;
     }
 
+    /**
+     * Lấy thông tin dự án theo ID.
+     * @param id ID của dự án
+     * @return Thông tin dự án dưới dạng ProjectDTO
+     * @throws RuntimeException nếu không tìm thấy dự án
+     */
     @Override
     public ProjectDTO getProjectById(Long id) {
         validateId(id);
@@ -67,6 +73,15 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
         return convertToDTO(project);
     }
 
+    /**
+     * Tạo mới một dự án và khởi tạo quy trình phê duyệt.
+     * - Đặt trạng thái ban đầu là CHỜ DUYỆT
+     * - Xác định người phê duyệt phù hợp theo phòng ban
+     * - Ghi lịch sử tạo dự án
+     * @param uid ID người tạo dự án
+     * @param projectDTO Thông tin dự án
+     * @return Dự án vừa tạo dưới dạng ProjectDTO
+     */
     @Override
     @Transactional
     public ProjectDTO createProject(String uid, ProjectDTO projectDTO) {
@@ -94,6 +109,13 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
         return convertToDTO(savedProject);
     }
 
+    /**
+     * Gửi dự án đi phê duyệt, chỉ định người phê duyệt.
+     * @param uid ID người gửi phê duyệt
+     * @param id ID dự án
+     * @param approverIds Danh sách ID người phê duyệt (lấy phần tử đầu)
+     * @return Dự án sau khi cập nhật
+     */
     @Override
     @Transactional
     public ProjectDTO submitForApproval(String uid, Long id, List<Long> approverIds) {
@@ -114,6 +136,13 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
         return convertToDTO(savedProject);
     }
 
+    /**
+     * Phê duyệt dự án, chuyển trạng thái sang ĐÃ DUYỆT và tự động sang ĐANG THỰC HIỆN.
+     * @param uid ID người phê duyệt
+     * @param id ID dự án
+     * @param approvedBy Thông tin người phê duyệt
+     * @return Dự án sau khi phê duyệt
+     */
     @Override
     @Transactional
     public ProjectDTO approveProject(String uid, Long id, String approvedBy) {
@@ -137,6 +166,13 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
         return convertToDTO(savedProject);
     }
 
+    /**
+     * Từ chối dự án, chuyển trạng thái sang ĐÃ TỪ CHỐI.
+     * @param uid ID người từ chối
+     * @param id ID dự án
+     * @param reason Lý do từ chối
+     * @return Dự án sau khi bị từ chối
+     */
     @Override
     @Transactional
     public ProjectDTO rejectProject(String uid, Long id, String reason) {
@@ -158,6 +194,15 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
         return convertToDTO(savedProject);
     }
 
+    /**
+     * Cập nhật trạng thái dự án, kiểm tra hợp lệ và ghi lịch sử.
+     * @param uid ID người thay đổi
+     * @param id ID dự án
+     * @param newState Trạng thái mới
+     * @param changedBy Người thay đổi
+     * @param comment Ghi chú thay đổi
+     * @return Dự án sau khi cập nhật
+     */
     @Override
     @Transactional
     public ProjectDTO updateProjectState(String uid, Long id, Integer newState, String changedBy, String comment) {
@@ -181,6 +226,10 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
         return convertToDTO(savedProject);
     }
 
+    /**
+     * Kiểm tra và cập nhật trạng thái hoàn thành của dự án dựa vào các task.
+     * @param projectId ID dự án cần kiểm tra
+     */
     @Override
     @Transactional
     public void checkAndUpdateProjectCompletion(Long projectId) {
@@ -197,11 +246,16 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
         if (areAllTasksCompleted(tasks)) {
             handleCompletedProject(project);
         } else if (isOverdue(project)) {
-            updateProjectState(AppConstants.SYSTEM, projectId, AppConstants.STATUS_OVERDUE,
+            updateProjectState(AppConstants.SYSTEM, project.getId(), AppConstants.STATUS_OVERDUE,
                 AppConstants.SYSTEM, "Tự động cập nhật trạng thái quá hạn do đã vượt thời hạn dự án");
         }
     }
 
+    /**
+     * Xóa mềm dự án (chuyển trạng thái sang INACTIVE), chỉ cho phép khi dự án ở trạng thái CHỜ DUYỆT hoặc ĐÃ TỪ CHỐI.
+     * @param uid ID người thực hiện xóa
+     * @param id ID dự án cần xóa
+     */
     @Override
     public void changeStatus(String uid, Long id) {
         validateId(id);
@@ -220,6 +274,13 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
         createProjectHistory(id, project.getState(), project.getState(), uid, "Xóa dự án");
     }
 
+    /**
+     * Lấy danh sách dự án đang chờ phê duyệt của một người.
+     * @param approverId ID người phê duyệt
+     * @param filter Bộ lọc tìm kiếm
+     * @param pageable Thông tin phân trang
+     * @return Danh sách dự án chờ phê duyệt
+     */
     @Override
     public Page<Project> getPendingApprovalProjects(String approverId, ProjectFilter filter, Pageable pageable) {
         validateUserId(approverId);
@@ -232,6 +293,14 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
         );
     }
 
+    /**
+     * Tìm kiếm dự án theo phòng ban, kiểm soát truy cập theo quyền.
+     * @param departmentId ID phòng ban
+     * @param uid ID người dùng
+     * @param filter Bộ lọc tìm kiếm
+     * @param pageable Thông tin phân trang
+     * @return Danh sách dự án phù hợp
+     */
     @Override
     public Page<Project> searchAll(Long departmentId, String uid, ProjectFilter filter, Pageable pageable) {
         validateDepartmentId(departmentId);

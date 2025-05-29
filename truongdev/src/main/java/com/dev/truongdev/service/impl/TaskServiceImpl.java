@@ -30,6 +30,10 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+/**
+ * Service implementation quản lý công việc (Task).
+ * Xử lý CRUD operations, chuyển đổi trạng thái và quy trình phê duyệt công việc.
+ */
 @Service
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskRepo>
@@ -51,6 +55,12 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
         this.departmentService = departmentService;
     }
 
+    /**
+     * Lấy thông tin công việc theo ID.
+     * @param id ID của công việc
+     * @return TaskDTO chứa thông tin công việc
+     * @throws RuntimeException nếu không tìm thấy công việc
+     */
     @Override
     public TaskDTO getTaskById(Long id) {
         validateId(id);
@@ -59,6 +69,16 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
         return convertToDTO(task);
     }
 
+    /**
+     * Cập nhật thông tin công việc, chỉ cho phép khi đang ở trạng thái ĐANG THỰC HIỆN.
+     * - Kiểm tra trạng thái công việc
+     * - Cập nhật thông tin
+     * - Ghi lịch sử thay đổi
+     * 
+     * @param id ID công việc cần cập nhật
+     * @param taskDTO Thông tin công việc mới
+     * @return TaskDTO sau khi cập nhật
+     */
     @Override
     @Transactional
     public TaskDTO updateTask(Long id, TaskDTO taskDTO) {
@@ -82,6 +102,16 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
         return convertToDTO(task);
     }
 
+    /**
+     * Tạo mới một công việc và khởi tạo quy trình phê duyệt.
+     * - Đặt trạng thái ban đầu là CHỜ DUYỆT
+     * - Xác định người phê duyệt phù hợp theo phòng ban
+     * - Ghi lịch sử tạo công việc
+     * 
+     * @param uid ID người tạo công việc
+     * @param taskDTO Thông tin công việc
+     * @return TaskDTO vừa tạo
+     */
     @Override
     @Transactional
     public TaskDTO createTask(String uid, TaskDTO taskDTO) {
@@ -106,6 +136,13 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
         return convertToDTO(savedTask);
     }
 
+    /**
+     * Gửi công việc đi phê duyệt, chỉ định người phê duyệt.
+     * @param uid ID người gửi phê duyệt
+     * @param id ID công việc
+     * @param approverIds Danh sách ID người phê duyệt (lấy phần tử đầu)
+     * @return TaskDTO sau khi cập nhật
+     */
     @Override
     @Transactional
     public TaskDTO submitForApproval(String uid, Long id, List<Long> approverIds) {
@@ -126,6 +163,13 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
         return convertToDTO(savedTask);
     }
 
+    /**
+     * Phê duyệt công việc, chuyển trạng thái sang ĐÃ DUYỆT và tự động sang ĐANG THỰC HIỆN.
+     * @param uid ID người phê duyệt
+     * @param id ID công việc
+     * @param approvedBy Thông tin người phê duyệt
+     * @return TaskDTO sau khi phê duyệt
+     */
     @Override
     @Transactional
     public TaskDTO approveTask(String uid, Long id, String approvedBy) {
@@ -148,6 +192,13 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
         return convertToDTO(savedTask);
     }
 
+    /**
+     * Từ chối công việc, chuyển trạng thái sang ĐÃ TỪ CHỐI.
+     * @param uid ID người từ chối
+     * @param id ID công việc
+     * @param reason Lý do từ chối
+     * @return TaskDTO sau khi bị từ chối
+     */
     @Override
     @Transactional
     public TaskDTO rejectTask(String uid, Long id, String reason) {
@@ -168,6 +219,11 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
         return convertToDTO(savedTask);
     }
 
+    /**
+     * Kiểm tra và cập nhật trạng thái hoàn thành công việc dựa vào thời hạn.
+     * Nếu công việc đang thực hiện và đã quá hạn thì chuyển sang QUÁ HẠN.
+     * @param taskId ID công việc cần kiểm tra
+     */
     @Override
     @Transactional
     public void checkAndUpdateTaskCompletion(Long taskId) {
@@ -185,6 +241,11 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
         }
     }
 
+    /**
+     * Xóa mềm công việc (chuyển trạng thái sang INACTIVE), chỉ cho phép khi công việc ở trạng thái CHỜ DUYỆT hoặc ĐÃ TỪ CHỐI.
+     * @param uid ID người thực hiện xóa
+     * @param id ID công việc cần xóa
+     */
     @Override
     public void changeStatus(String uid, Long id) {
         validateId(id);
@@ -203,6 +264,13 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
         addTaskHistory(id, task.getState(), task.getState(), uid, "Xóa task");
     }
 
+    /**
+     * Lấy danh sách công việc đang chờ phê duyệt của một người.
+     * @param approverId ID người phê duyệt
+     * @param filter Bộ lọc tìm kiếm
+     * @param pageable Thông tin phân trang
+     * @return Danh sách công việc chờ phê duyệt
+     */
     @Override
     public Page<Task> getPendingApprovalTasks(String approverId, TaskFilter filter, Pageable pageable) {
         validateUserId(approverId);
@@ -215,6 +283,17 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
         );
     }
 
+    /**
+     * Tìm kiếm công việc theo phòng ban, kiểm soát truy cập theo quyền.
+     * - Admin và trưởng phòng ban gốc có thể xem tất cả công việc
+     * - Người dùng khác chỉ xem được công việc trong phòng ban và phòng ban con
+     * 
+     * @param departmentId ID phòng ban
+     * @param uid ID người dùng
+     * @param filter Bộ lọc tìm kiếm
+     * @param pageable Thông tin phân trang
+     * @return Danh sách công việc phù hợp
+     */
     @Override
     public Page<Task> searchAll(Long departmentId, String uid, TaskFilter filter, Pageable pageable) {
         validateDepartmentId(departmentId);
@@ -240,6 +319,11 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
     }
 
     // Private helper methods
+
+    /**
+     * Kiểm tra tính hợp lệ của dữ liệu TaskDTO.
+     * @throws IllegalArgumentException nếu dữ liệu không hợp lệ
+     */
     private void validateTaskDTO(TaskDTO taskDTO) {
         if (taskDTO == null) {
             throw new IllegalArgumentException("Task data cannot be null");
@@ -249,24 +333,40 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
         }
     }
 
+    /**
+     * Kiểm tra ID có hợp lệ (dương và không null).
+     * @throws IllegalArgumentException nếu ID không hợp lệ
+     */
     private void validateId(Long id) {
         if (id == null || id <= 0) {
             throw new IllegalArgumentException("Invalid ID");
         }
     }
 
+    /**
+     * Kiểm tra User ID không rỗng.
+     * @throws IllegalArgumentException nếu User ID rỗng
+     */
     private void validateUserId(String uid) {
         if (!StringUtils.hasText(uid)) {
             throw new IllegalArgumentException("User ID cannot be empty");
         }
     }
 
+    /**
+     * Kiểm tra Department ID có hợp lệ.
+     * @throws IllegalArgumentException nếu Department ID không hợp lệ
+     */
     private void validateDepartmentId(Long departmentId) {
         if (departmentId == null || departmentId <= 0) {
             throw new IllegalArgumentException("Invalid department ID");
         }
     }
 
+    /**
+     * Kiểm tra việc gửi phê duyệt công việc.
+     * Xác nhận danh sách người phê duyệt và trạng thái công việc.
+     */
     private void validateSubmitForApproval(String uid, Long id, List<Long> approverIds) {
         if (approverIds == null || approverIds.isEmpty()) {
             throw new RuntimeException("Phải chỉ định người phê duyệt");
@@ -275,6 +375,10 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
         validateId(id);
     }
 
+    /**
+     * Kiểm tra quyền phê duyệt công việc.
+     * Xác nhận trạng thái công việc và quyền của người phê duyệt.
+     */
     private void validateApproval(String uid, Long id) {
         validateUserId(uid);
         validateId(id);
@@ -290,6 +394,10 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
         }
     }
 
+    /**
+     * Kiểm tra quyền từ chối công việc.
+     * Xác nhận trạng thái công việc và quyền của người từ chối.
+     */
     private void validateRejection(String uid, Long id) {
         validateUserId(uid);
         validateId(id);
@@ -305,6 +413,14 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
         }
     }
 
+    /**
+     * Xác định người phê duyệt phù hợp dựa vào cấu trúc phòng ban.
+     * - Admin: tự phê duyệt
+     * - Phòng ban con: tự phê duyệt
+     * - Cùng phòng ban: trưởng phòng ban cha phê duyệt
+     * 
+     * @return Mảng String [approverId, approverName]
+     */
     private String[] determineApprover(String uid, User currentUser, Long departmentId) {
         String approverId;
         String approverName;
@@ -343,6 +459,13 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
         return new String[]{approverId, approverName};
     }
 
+    /**
+     * Xử lý thay đổi trạng thái và ghi lịch sử.
+     * @param id ID công việc
+     * @param previousState Trạng thái trước
+     * @param newState Trạng thái mới
+     * @param taskDTO Thông tin công việc
+     */
     private void handleStateChange(Long id, Integer previousState, Integer newState, TaskDTO taskDTO) {
         if (!Objects.equals(previousState, newState)) {
             String stateChangeComment = String.format(
@@ -362,14 +485,26 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
         }
     }
 
+    /**
+     * Kiểm tra công việc có quá hạn không.
+     * @return true nếu ngày hết hạn đã qua
+     */
     private boolean isOverdue(Task task) {
         return task.getDueDate() != null && new Date().after(task.getDueDate());
     }
 
+    /**
+     * Kiểm tra công việc có thể xóa dựa vào trạng thái.
+     * @return true nếu công việc ở trạng thái CHỜ DUYỆT hoặc ĐÃ TỪ CHỐI
+     */
     private boolean canDelete(Integer state) {
         return state == AppConstants.STATUS_PENDING || state == AppConstants.STATUS_REJECTED;
     }
 
+    /**
+     * Kiểm tra người dùng có quyền truy cập đầy đủ công việc.
+     * True cho admin và người dùng phòng ban gốc.
+     */
     private boolean hasFullAccess(User user, Long departmentId) {
         return user.getRole().equals("ROLE_ADMIN") || 
                departmentRepo.findById(departmentId)
@@ -377,6 +512,10 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
                    .orElse(false);
     }
 
+    /**
+     * Lấy danh sách ID phòng ban bao gồm phòng ban gốc và tất cả phòng ban con.
+     * @return Danh sách ID phòng ban
+     */
     private List<Long> getDepartmentAndSubDepartmentIds(Long departmentId) {
         List<Long> departmentIds = new java.util.ArrayList<>();
         departmentIds.add(departmentId);
@@ -388,6 +527,14 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
         return departmentIds;
     }
 
+    /**
+     * Cập nhật trạng thái công việc với kiểm tra và ghi lịch sử.
+     * @param uid ID người thay đổi
+     * @param id ID công việc
+     * @param newState Trạng thái mới
+     * @param changedBy Người thay đổi
+     * @param comment Ghi chú thay đổi
+     */
     private void updateTaskState(String uid, Long id, Integer newState, String changedBy, String comment) {
         Task task = taskRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy task"));
@@ -406,12 +553,20 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
         addTaskHistory(id, previousState, newState, changedBy, comment);
     }
 
+    /**
+     * Kiểm tra một phòng ban có phải là phòng ban con của phòng ban khác.
+     * @return true nếu departmentId là phòng ban con của parentId
+     */
     private boolean isSubDepartment(Long departmentId, Long parentId) {
         List<Department> subDepartments = departmentService.getAllSubDepartments(parentId);
         return subDepartments.stream()
             .anyMatch(dept -> dept.getId().equals(departmentId));
     }
 
+    /**
+     * Chuyển đổi Task entity thành TaskDTO.
+     * Bao gồm tên trạng thái, tên người được giao và tên người phê duyệt.
+     */
     private TaskDTO convertToDTO(Task task) {
         TaskDTO dto = new TaskDTO();
         dto.setId(task.getId());
@@ -434,6 +589,10 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
         return dto;
     }
 
+    /**
+     * Chuyển đổi TaskHistory entity thành TaskHistoryDTO.
+     * Bao gồm tên người thay đổi và tên trạng thái.
+     */
     private TaskHistoryDTO convertHistoryToDTO(TaskHistory history) {
         TaskHistoryDTO dto = new TaskHistoryDTO();
         dto.setId(history.getId());

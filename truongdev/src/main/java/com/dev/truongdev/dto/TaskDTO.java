@@ -19,6 +19,7 @@ public class TaskDTO {
     private String approverId;
     private String updateBy;
     private String description;
+    private String comment;
     
     // Additional fields for UI display
     private String departmentName;

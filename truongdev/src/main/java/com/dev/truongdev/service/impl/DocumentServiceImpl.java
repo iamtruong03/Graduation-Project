@@ -29,6 +29,10 @@ import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Service implementation quản lý tài liệu (Document).
+ * Xử lý upload, download, quản lý tài liệu với kiểm soát truy cập theo phòng ban.
+ */
 @Service
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class DocumentServiceImpl extends XDevBaseServiceImpl<Document, DocumentFilter, DocumentRepo>
@@ -57,6 +61,10 @@ public class DocumentServiceImpl extends XDevBaseServiceImpl<Document, DocumentF
         initializeUploadDirectory();
     }
 
+    /**
+     * Khởi tạo thư mục upload để lưu trữ tài liệu.
+     * Tạo thư mục nếu chưa tồn tại.
+     */
     private void initializeUploadDirectory() {
         try {
             Files.createDirectories(uploadDir);
@@ -65,6 +73,12 @@ public class DocumentServiceImpl extends XDevBaseServiceImpl<Document, DocumentF
         }
     }
 
+    /**
+     * Lấy thông tin tài liệu theo ID.
+     * @param id ID của tài liệu
+     * @return DocumentDTO chứa thông tin tài liệu
+     * @throws RuntimeException nếu không tìm thấy tài liệu
+     */
     @Override
     public DocumentDTO getDocumentById(Long id) {
         Document document = documentRepo.findById(id)
@@ -72,6 +86,16 @@ public class DocumentServiceImpl extends XDevBaseServiceImpl<Document, DocumentF
         return convertToDTO(document);
     }
 
+    /**
+     * Cập nhật thông tin tài liệu (không bao gồm file).
+     * - Kiểm tra tồn tại phòng ban và dự án
+     * - Cập nhật metadata của tài liệu
+     * 
+     * @param id ID tài liệu cần cập nhật
+     * @param documentDTO Thông tin tài liệu mới
+     * @return DocumentDTO sau khi cập nhật
+     * @throws RuntimeException nếu không tìm thấy tài liệu hoặc tham chiếu
+     */
     @Override
     @Transactional
     public DocumentDTO updateDocument(Long id, DocumentDTO documentDTO) {
@@ -98,6 +122,17 @@ public class DocumentServiceImpl extends XDevBaseServiceImpl<Document, DocumentF
         return convertToDTO(document);
     }
 
+    /**
+     * Upload tài liệu mới lên hệ thống.
+     * - Tạo tên file duy nhất
+     * - Lưu file vào thư mục upload
+     * - Tạo bản ghi tài liệu trong database
+     * 
+     * @param file File cần upload
+     * @param documentDTO Thông tin metadata của tài liệu
+     * @return DocumentDTO của tài liệu vừa upload
+     * @throws RuntimeException nếu upload thất bại
+     */
     @Override
     @Transactional
     public DocumentDTO uploadDocument(MultipartFile file, DocumentDTO documentDTO) {
@@ -127,6 +162,15 @@ public class DocumentServiceImpl extends XDevBaseServiceImpl<Document, DocumentF
         }
     }
 
+    /**
+     * Download tài liệu từ hệ thống.
+     * - Tìm thông tin tài liệu trong database
+     * - Đọc file từ đường dẫn lưu trữ
+     * 
+     * @param id ID tài liệu cần download
+     * @return Byte array của file
+     * @throws RuntimeException nếu không tìm thấy tài liệu hoặc file
+     */
     @Override
     public byte[] downloadDocument(Long id) {
         Document document = documentRepo.findById(id)
@@ -142,6 +186,15 @@ public class DocumentServiceImpl extends XDevBaseServiceImpl<Document, DocumentF
         }
     }
 
+    /**
+     * Xóa tài liệu khỏi hệ thống.
+     * - Xóa file vật lý trong thư mục upload
+     * - Xóa bản ghi trong database
+     * 
+     * @param uid ID người thực hiện xóa
+     * @param id ID tài liệu cần xóa
+     * @throws RuntimeException nếu xóa file thất bại
+     */
     @Override
     @Transactional
     public void delete(String uid, Long id) {
@@ -159,6 +212,17 @@ public class DocumentServiceImpl extends XDevBaseServiceImpl<Document, DocumentF
         }
     }
 
+    /**
+     * Tìm kiếm tài liệu với kiểm soát truy cập theo phòng ban.
+     * - Admin và trưởng phòng ban gốc: xem tất cả tài liệu
+     * - Người dùng khác: chỉ xem tài liệu trong phòng ban và phòng ban con
+     * 
+     * @param departmentId ID phòng ban
+     * @param uid ID người dùng
+     * @param filter Bộ lọc tìm kiếm
+     * @param pageable Thông tin phân trang
+     * @return Danh sách tài liệu phù hợp
+     */
     @Override
     public Page<Document> searchAll(Long departmentId, String uid, DocumentFilter filter, Pageable pageable) {
         User user = userService.getById(uid, Long.valueOf(uid));
@@ -198,6 +262,13 @@ public class DocumentServiceImpl extends XDevBaseServiceImpl<Document, DocumentF
         );
     }
 
+    /**
+     * Chuyển đổi Document entity thành DocumentDTO.
+     * Bao gồm tên phòng ban và tên dự án.
+     * 
+     * @param document Document entity
+     * @return DocumentDTO với thông tin đầy đủ
+     */
     private DocumentDTO convertToDTO(Document document) {
         DocumentDTO dto = new DocumentDTO();
         BeanUtils.copyProperties(document, dto);

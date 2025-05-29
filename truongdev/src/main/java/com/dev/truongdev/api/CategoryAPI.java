@@ -16,43 +16,37 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/categories")
 @RequiredArgsConstructor
-@FieldDefaults(level = AccessLevel.PRIVATE)
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class CategoryAPI extends XDevBaseAPI<Category, CategoryFilter> {
 
-    final ICategoryService categoryService;
+    ICategoryService categoryService;
 
+    @Override
     @SuppressWarnings("unchecked")
-    public IXDevBaseService<Category, CategoryFilter> getService() {
-        return categoryService;
+    public <S extends IXDevBaseService<Category, CategoryFilter>> S getService() {
+        return (S) categoryService;
     }
 
-    @GetMapping("/{id}/details")
-    public ResponseEntity<ApiResponse<CategoryDTO>> getCategoryById(@PathVariable Long id) {
+  
+    @GetMapping("/{id}/dto")
+    public ResponseEntity<ApiResponse<CategoryDTO>> getCategoryDTO(@PathVariable Long id) {
         try {
-            return ApiResponse.ok(categoryService.getCategoryById(id));
+            CategoryDTO dto = categoryService.getCategoryById(id);
+            return ApiResponse.ok(dto);
         } catch (Exception e) {
             return ApiResponse.error(e.getMessage());
         }
     }
 
-    @PutMapping("/{id}/update")
-    public ResponseEntity<ApiResponse<CategoryDTO>> updateCategory(
+    @PutMapping("/{id}/dto")
+    public ResponseEntity<ApiResponse<CategoryDTO>> updateCategoryDTO(
             @PathVariable Long id,
             @RequestBody CategoryDTO categoryDTO) {
         try {
-            return ApiResponse.ok(categoryService.updateCategory(id, categoryDTO));
+            CategoryDTO updated = categoryService.updateCategory(id, categoryDTO);
+            return ApiResponse.ok(updated);
         } catch (Exception e) {
             return ApiResponse.error(e.getMessage());
         }
     }
-
-    @DeleteMapping("/{id}/delete")
-    public ResponseEntity<ApiResponse<Void>> deleteCategory(@PathVariable Long id) {
-        try {
-            categoryService.deleteCategory(id);
-            return ApiResponse.ok(null);
-        } catch (Exception e) {
-            return ApiResponse.error(e.getMessage());
-        }
-    }
-} 
+}

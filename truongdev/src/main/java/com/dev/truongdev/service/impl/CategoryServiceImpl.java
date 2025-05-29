@@ -17,13 +17,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@FieldDefaults(level = AccessLevel.PRIVATE)
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class CategoryServiceImpl extends XDevBaseServiceImpl<Category, CategoryFilter, CategoryRepo>
         implements ICategoryService {
 
-    final CategoryRepo categoryRepo;
-    final ICategoryTypeService categoryTypeService;
-    final IUserService userService;
+    CategoryRepo categoryRepo;
+    ICategoryTypeService categoryTypeService;
+    IUserService userService;
 
     public CategoryServiceImpl(CategoryRepo repo, ICategoryTypeService categoryTypeService, IUserService userService) {
         super(repo);
@@ -35,7 +35,7 @@ public class CategoryServiceImpl extends XDevBaseServiceImpl<Category, CategoryF
     @Override
     public CategoryDTO getCategoryById(Long id) {
         Category category = categoryRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Category not found"));
+                .orElseThrow(() -> new RuntimeException("Category not found with id: " + id));
         return convertToDTO(category);
     }
 
@@ -43,7 +43,12 @@ public class CategoryServiceImpl extends XDevBaseServiceImpl<Category, CategoryF
     @Transactional
     public CategoryDTO updateCategory(Long id, CategoryDTO categoryDTO) {
         Category category = categoryRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Category not found"));
+                .orElseThrow(() -> new RuntimeException("Category not found with id: " + id));
+        
+        // Validate category type exists
+        if (categoryDTO.getCategoryTypeId() != null) {
+            categoryTypeService.getCategoryTypeById(categoryDTO.getCategoryTypeId());
+        }
         
         category.setName(categoryDTO.getName());
         category.setDescription(categoryDTO.getDescription());
@@ -74,12 +79,10 @@ public class CategoryServiceImpl extends XDevBaseServiceImpl<Category, CategoryF
         CategoryDTO dto = new CategoryDTO();
         BeanUtils.copyProperties(category, dto);
         
-        // Set additional display names if needed
         if (category.getCategoryTypeId() != null) {
             try {
                 dto.setCategoryTypeName(categoryTypeService.getCategoryTypeById(category.getCategoryTypeId()).getName());
             } catch (Exception e) {
-                // Handle if category type not found
                 dto.setCategoryTypeName("Unknown");
             }
         }

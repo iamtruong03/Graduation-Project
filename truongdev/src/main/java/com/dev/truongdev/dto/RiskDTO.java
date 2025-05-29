@@ -16,6 +16,7 @@ public class RiskDTO {
     private String reflectorId;
     private Date reflectionDay;
     private String updateBy;
+    private String comment;
     
     // Additional fields for UI display
     private String riskTypeName;

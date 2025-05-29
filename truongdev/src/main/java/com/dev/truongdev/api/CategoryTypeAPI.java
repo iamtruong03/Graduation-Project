@@ -16,41 +16,34 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/category-types")
 @RequiredArgsConstructor
-@FieldDefaults(level = AccessLevel.PRIVATE)
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class CategoryTypeAPI extends XDevBaseAPI<CategoryType, CategoryTypeFilter> {
 
-    final ICategoryTypeService categoryTypeService;
+    ICategoryTypeService categoryTypeService;
 
+    @Override
     @SuppressWarnings("unchecked")
-    public IXDevBaseService<CategoryType, CategoryTypeFilter> getService() {
-        return categoryTypeService;
+    public <S extends IXDevBaseService<CategoryType, CategoryTypeFilter>> S getService() {
+        return (S) categoryTypeService;
     }
 
-    @GetMapping("/{id}/details")
-        public ResponseEntity<ApiResponse<CategoryTypeDTO>> getCategoryTypeById(@PathVariable Long id) {
+    @GetMapping("/{id}/dto")
+    public ResponseEntity<ApiResponse<CategoryTypeDTO>> getCategoryTypeDTO(@PathVariable Long id) {
         try {
-            return ApiResponse.ok(categoryTypeService.getCategoryTypeById(id));
+            CategoryTypeDTO dto = categoryTypeService.getCategoryTypeById(id);
+            return ApiResponse.ok(dto);
         } catch (Exception e) {
             return ApiResponse.error(e.getMessage());
         }
     }
 
-    @PutMapping("/{id}/update")
-    public ResponseEntity<ApiResponse<CategoryTypeDTO>> updateCategoryType(
+    @PutMapping("/{id}/dto")
+    public ResponseEntity<ApiResponse<CategoryTypeDTO>> updateCategoryTypeDTO(
             @PathVariable Long id,
             @RequestBody CategoryTypeDTO categoryTypeDTO) {
         try {
-            return ApiResponse.ok(categoryTypeService.updateCategoryType(id, categoryTypeDTO));
-        } catch (Exception e) {
-            return ApiResponse.error(e.getMessage());
-        }
-    }
-
-    @DeleteMapping("/{id}/delete")
-    public ResponseEntity<ApiResponse<Void>> deleteCategoryType(@PathVariable Long id) {
-        try {
-            categoryTypeService.deleteCategoryType(id);
-            return ApiResponse.ok(null);
+            CategoryTypeDTO updated = categoryTypeService.updateCategoryType(id, categoryTypeDTO);
+            return ApiResponse.ok(updated);
         } catch (Exception e) {
             return ApiResponse.error(e.getMessage());
         }

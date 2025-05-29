@@ -15,11 +15,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@FieldDefaults(level = AccessLevel.PRIVATE)
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class CategoryTypeServiceImpl extends XDevBaseServiceImpl<CategoryType, CategoryTypeFilter, CategoryTypeRepo>
         implements ICategoryTypeService {
 
-    final CategoryTypeRepo categoryTypeRepo;
+    CategoryTypeRepo categoryTypeRepo;
 
     public CategoryTypeServiceImpl(CategoryTypeRepo repo) {
         super(repo);
@@ -29,7 +29,7 @@ public class CategoryTypeServiceImpl extends XDevBaseServiceImpl<CategoryType, C
     @Override
     public CategoryTypeDTO getCategoryTypeById(Long id) {
         CategoryType categoryType = categoryTypeRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Category type not found"));
+                .orElseThrow(() -> new RuntimeException("Category type not found with id: " + id));
         return convertToDTO(categoryType);
     }
 
@@ -37,7 +37,13 @@ public class CategoryTypeServiceImpl extends XDevBaseServiceImpl<CategoryType, C
     @Transactional
     public CategoryTypeDTO updateCategoryType(Long id, CategoryTypeDTO categoryTypeDTO) {
         CategoryType categoryType = categoryTypeRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Category type not found"));
+                .orElseThrow(() -> new RuntimeException("Category type not found with id: " + id));
+        
+        // Validate unique code if changed
+        if (!categoryType.getCode().equals(categoryTypeDTO.getCode()) && 
+            categoryTypeRepo.existsByCode(categoryTypeDTO.getCode())) {
+            throw new RuntimeException("Category type code already exists: " + categoryTypeDTO.getCode());
+        }
         
         categoryType.setName(categoryTypeDTO.getName());
         categoryType.setCode(categoryTypeDTO.getCode());

@@ -88,15 +88,6 @@ public class ProjectAPI extends XDevBaseAPI<Project, ProjectFilter> {
         }
     }
 
-    @GetMapping("/{id}/details")
-    public ResponseEntity<ApiResponse<ProjectDTO>> getProjectById(@PathVariable Long id) {
-        try {
-            return ApiResponse.ok(projectService.getProjectById(id));
-        } catch (Exception e) {
-            return ApiResponse.error(e.getMessage());
-        }
-    }
-
     @PutMapping("/{id}/update")
     public ResponseEntity<ApiResponse<ProjectDTO>> updateProject(
             @RequestAttribute String uid,

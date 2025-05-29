@@ -85,15 +85,6 @@ public class TaskAPI extends XDevBaseAPI<Task, TaskFilter> {
         }
     }
 
-    @GetMapping("/{id}/details")
-    public ResponseEntity<ApiResponse<TaskDTO>> getTaskById(@PathVariable Long id) {
-        try {
-            return ApiResponse.ok(taskService.getTaskById(id));
-        } catch (Exception e) {
-            return ApiResponse.error(e.getMessage());
-        }
-    }
-
     @PutMapping("/{id}/update")
     public ResponseEntity<ApiResponse<TaskDTO>> updateTask(
             @RequestAttribute String uid,

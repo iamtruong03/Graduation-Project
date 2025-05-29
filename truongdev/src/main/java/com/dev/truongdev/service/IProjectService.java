@@ -15,7 +15,6 @@ public interface IProjectService extends IXDevBaseService<Project, ProjectFilter
     ProjectDTO approveProject(String uid, Long id, String approvedBy);
     ProjectDTO updateProjectState(String uid, Long id, Integer newState, String changedBy, String comment);
     void checkAndUpdateProjectCompletion(Long projectId);
-    ProjectDTO getProjectById(Long id);
     ProjectDTO updateProject(Long id, ProjectDTO projectDTO);
     List<ProjectHistoryDTO> getProjectHistory(Long projectId);
     void addProjectHistory(Long projectId, Integer previousState, Integer newState, String changedBy, String comment);

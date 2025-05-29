@@ -71,20 +71,6 @@ public class RiskServiceImpl extends XDevBaseServiceImpl<Risk, RiskFilter, RiskR
     }
 
     /**
-     * Lấy thông tin rủi ro theo ID.
-     * @param id ID của rủi ro
-     * @return RiskDTO chứa thông tin rủi ro
-     * @throws RuntimeException nếu không tìm thấy rủi ro
-     */
-    @Override
-    public RiskDTO getRiskById(Long id) {
-        validateId(id);
-        Risk risk = riskRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Risk not found with id: " + id));
-        return convertToDTO(risk);
-    }
-
-    /**
      * Cập nhật thông tin rủi ro với kiểm tra trạng thái và quyền.
      * - Kiểm tra tính hợp lệ của dữ liệu
      * - Xác thực chuyển đổi trạng thái
@@ -165,7 +151,6 @@ public class RiskServiceImpl extends XDevBaseServiceImpl<Risk, RiskFilter, RiskR
             
         risk.setApproverId(approverIds.get(0).toString());
         risk.setUpdateBy(uid);
-        risk.setModifiedDate(new Date());
         
         Risk savedRisk = riskRepo.save(risk);
         
@@ -192,7 +177,6 @@ public class RiskServiceImpl extends XDevBaseServiceImpl<Risk, RiskFilter, RiskR
         
         risk.setState(AppConstants.STATUS_APPROVED);
         risk.setUpdateBy(uid);
-        risk.setModifiedDate(new Date());
         
         Risk savedRisk = riskRepo.save(risk);
         
@@ -221,7 +205,6 @@ public class RiskServiceImpl extends XDevBaseServiceImpl<Risk, RiskFilter, RiskR
         
         risk.setState(AppConstants.STATUS_REJECTED);
         risk.setUpdateBy(uid);
-        risk.setModifiedDate(new Date());
         
         Risk savedRisk = riskRepo.save(risk);
         
@@ -270,7 +253,6 @@ public class RiskServiceImpl extends XDevBaseServiceImpl<Risk, RiskFilter, RiskR
 
         risk.setStatus(AppConstants.STATUS_INACTIVE);
         risk.setUpdateBy(uid);
-        risk.setModifiedDate(new Date());
         riskRepo.save(risk);
         
         addRiskHistory(id, risk.getState(), risk.getState(), uid, "Xóa risk");
@@ -378,7 +360,6 @@ public class RiskServiceImpl extends XDevBaseServiceImpl<Risk, RiskFilter, RiskR
         Integer previousState = risk.getState();
         risk.setState(newState);
         risk.setUpdateBy(uid);
-        risk.setModifiedDate(new Date());
         
         riskRepo.save(risk);
         

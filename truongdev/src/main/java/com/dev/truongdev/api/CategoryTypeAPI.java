@@ -27,25 +27,4 @@ public class CategoryTypeAPI extends XDevBaseAPI<CategoryType, CategoryTypeFilte
         return (S) categoryTypeService;
     }
 
-    @GetMapping("/{id}/dto")
-    public ResponseEntity<ApiResponse<CategoryTypeDTO>> getCategoryTypeDTO(@PathVariable Long id) {
-        try {
-            CategoryTypeDTO dto = categoryTypeService.getCategoryTypeById(id);
-            return ApiResponse.ok(dto);
-        } catch (Exception e) {
-            return ApiResponse.error(e.getMessage());
-        }
-    }
-
-    @PutMapping("/{id}/dto")
-    public ResponseEntity<ApiResponse<CategoryTypeDTO>> updateCategoryTypeDTO(
-            @PathVariable Long id,
-            @RequestBody CategoryTypeDTO categoryTypeDTO) {
-        try {
-            CategoryTypeDTO updated = categoryTypeService.updateCategoryType(id, categoryTypeDTO);
-            return ApiResponse.ok(updated);
-        } catch (Exception e) {
-            return ApiResponse.error(e.getMessage());
-        }
-    }
 } 

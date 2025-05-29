@@ -27,44 +27,11 @@ public class CategoryTypeServiceImpl extends XDevBaseServiceImpl<CategoryType, C
     }
 
     @Override
-    public CategoryTypeDTO getCategoryTypeById(Long id) {
-        CategoryType categoryType = categoryTypeRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Category type not found with id: " + id));
-        return convertToDTO(categoryType);
-    }
-
-    @Override
-    @Transactional
-    public CategoryTypeDTO updateCategoryType(Long id, CategoryTypeDTO categoryTypeDTO) {
-        CategoryType categoryType = categoryTypeRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Category type not found with id: " + id));
-        
-        // Validate unique code if changed
-        if (!categoryType.getCode().equals(categoryTypeDTO.getCode()) && 
-            categoryTypeRepo.existsByCode(categoryTypeDTO.getCode())) {
-            throw new RuntimeException("Category type code already exists: " + categoryTypeDTO.getCode());
-        }
-        
-        categoryType.setName(categoryTypeDTO.getName());
-        categoryType.setCode(categoryTypeDTO.getCode());
-        categoryType.setDescription(categoryTypeDTO.getDescription());
-        
-        categoryType = categoryTypeRepo.save(categoryType);
-        return convertToDTO(categoryType);
-    }
-
-    @Override
     public Page<CategoryType> searchAll(Long departmentId, String uid, CategoryTypeFilter filter, Pageable pageable) {
         return categoryTypeRepo.searchByCodeOrName(
             1, // STATUS_ACTIVE
             filter.getSearch(),
             pageable
         );
-    }
-
-    private CategoryTypeDTO convertToDTO(CategoryType categoryType) {
-        CategoryTypeDTO dto = new CategoryTypeDTO();
-        BeanUtils.copyProperties(categoryType, dto);
-        return dto;
     }
 } 

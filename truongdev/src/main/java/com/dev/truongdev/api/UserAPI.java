@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -31,7 +32,7 @@ public class UserAPI extends XDevBaseAPI<User, UserFilter> {
     return userService;
   }
 
-  @GetMapping("/update-password")
+  @PostMapping("/update-password")
   ResponseEntity<ApiResponse<String>> updatePassword(
       @RequestAttribute String uid,
       @RequestBody UpdatePasswordRequest updatePasswordRequest

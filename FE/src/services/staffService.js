@@ -24,7 +24,7 @@ const staffService = {
 
   // Cập nhật thông tin nhân viên
   updateStaff: (id, staffData) => {
-    return api.put(`/user/${id}`, staffData, getAuthHeader());
+    return api.put(`/user/update/${id}`, staffData, getAuthHeader());
   },
 
   // Xóa nhân viên

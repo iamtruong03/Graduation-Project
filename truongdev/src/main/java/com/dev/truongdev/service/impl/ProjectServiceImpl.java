@@ -60,20 +60,6 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
     }
 
     /**
-     * Lấy thông tin dự án theo ID.
-     * @param id ID của dự án
-     * @return Thông tin dự án dưới dạng ProjectDTO
-     * @throws RuntimeException nếu không tìm thấy dự án
-     */
-    @Override
-    public ProjectDTO getProjectById(Long id) {
-        validateId(id);
-        Project project = projectRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Project not found"));
-        return convertToDTO(project);
-    }
-
-    /**
      * Tạo mới một dự án và khởi tạo quy trình phê duyệt.
      * - Đặt trạng thái ban đầu là CHỜ DUYỆT
      * - Xác định người phê duyệt phù hợp theo phòng ban
@@ -126,7 +112,6 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
             
         project.setApproverId(approverIds.get(0).toString());
         project.setUpdateBy(uid);
-        project.setModifiedDate(new Date());
         
         Project savedProject = projectRepo.save(project);
         
@@ -154,7 +139,6 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
         project.setState(AppConstants.STATUS_APPROVED);
         project.setIsApproved(true);
         project.setUpdateBy(uid);
-        project.setModifiedDate(new Date());
         
         Project savedProject = projectRepo.save(project);
         
@@ -184,7 +168,6 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
         project.setState(AppConstants.STATUS_REJECTED);
         project.setIsApproved(false);
         project.setUpdateBy(uid);
-        project.setModifiedDate(new Date());
         
         Project savedProject = projectRepo.save(project);
         
@@ -217,7 +200,6 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
         Integer previousState = project.getState();
         project.setState(newState);
         project.setUpdateBy(changedBy);
-        project.setModifiedDate(new Date());
         
         Project savedProject = projectRepo.save(project);
         
@@ -268,7 +250,6 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
 
         project.setStatus(AppConstants.STATUS_INACTIVE);
         project.setUpdateBy(uid);
-        project.setModifiedDate(new Date());
         projectRepo.save(project);
         
         createProjectHistory(id, project.getState(), project.getState(), uid, "Xóa dự án");

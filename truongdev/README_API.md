@@ -44,26 +44,32 @@ Authorization: Bearer {accessToken}
 ## 📋 Business Logic & States
 
 ### Project States
-- `1`: Chờ duyệt (PENDING)
-- `2`: Đã duyệt (APPROVED) 
-- `4`: Đang thực hiện (IN_PROGRESS)
-- `5`: Hoàn thành (COMPLETE)
-- `6`: Quá hạn (OVERDUE)
-- `3`: Từ chối (REJECTED)
+| Mã | Trạng thái |
+|-----|------------|
+| `1` | Chờ duyệt (PENDING) |
+| `2` | Đã duyệt (APPROVED) |
+| `4` | Đang thực hiện (IN_PROGRESS) |
+| `5` | Hoàn thành (COMPLETE) |
+| `6` | Quá hạn (OVERDUE) |
+| `3` | Từ chối (REJECTED) |
 
 ### Risk States
-- `0`: Identified
-- `1`: Analyzing
-- `2`: Monitored  
-- `3`: Resolved
-- `4`: Closed
+| Mã | Trạng thái |
+|-----|------------|
+| `0` | Identified |
+| `1` | Analyzing |
+| `2` | Monitored |
+| `3` | Resolved |
+| `4` | Closed |
 
 ### Task States
-- `0`: Chưa bắt đầu
-- `1`: Đang thực hiện
-- `2`: Tạm dừng
-- `3`: Hoàn thành
-- `4`: Đã hủy
+| Mã | Trạng thái |
+|-----|------------|
+| `0` | Chưa bắt đầu |
+| `1` | Đang thực hiện |
+| `2` | Tạm dừng |
+| `3` | Hoàn thành |
+| `4` | Đã hủy |
 
 ---
 
@@ -639,4 +645,5 @@ POST /api/tasks/{id}/approve
 3. **File Upload**: Max size 10MB cho documents
 4. **Date Format**: `yyyy-MM-dd` hoặc `yyyy-MM-dd'T'HH:mm:ss'Z'`
 5. **Timezone**: Asia/Ho_Chi_Minh (UTC+7)
-6. **Encoding**: UTF-8 cho tiếng Việt 
+6. **Encoding**: UTF-8 cho tiếng Việt
+        

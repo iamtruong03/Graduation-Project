@@ -17,6 +17,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
+import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
@@ -292,6 +293,16 @@ public class UserServiceImpl extends XDevBaseServiceImpl<User, UserFilter, UserR
     User user = userRepo.findById(Long.valueOf(userId))
             .orElse(null);
     return user != null ? user.getName() : userId;
+  }
+
+  @Override
+  @Transactional
+  public User update(String uid, User e , Long id){
+    User data = userRepo.findById(id)
+        .orElseThrow(() -> new RuntimeException("data_not_found"));
+    BeanUtils.copyProperties(e, data, "id", "createBy", "version", "createDate", "modifiedDate");
+    data.setUpdateBy(uid);
+    return userRepo.save(data);
   }
 
   /**

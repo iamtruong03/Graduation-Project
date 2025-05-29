@@ -26,27 +26,4 @@ public class CategoryAPI extends XDevBaseAPI<Category, CategoryFilter> {
     public <S extends IXDevBaseService<Category, CategoryFilter>> S getService() {
         return (S) categoryService;
     }
-
-  
-    @GetMapping("/{id}/dto")
-    public ResponseEntity<ApiResponse<CategoryDTO>> getCategoryDTO(@PathVariable Long id) {
-        try {
-            CategoryDTO dto = categoryService.getCategoryById(id);
-            return ApiResponse.ok(dto);
-        } catch (Exception e) {
-            return ApiResponse.error(e.getMessage());
-        }
-    }
-
-    @PutMapping("/{id}/dto")
-    public ResponseEntity<ApiResponse<CategoryDTO>> updateCategoryDTO(
-            @PathVariable Long id,
-            @RequestBody CategoryDTO categoryDTO) {
-        try {
-            CategoryDTO updated = categoryService.updateCategory(id, categoryDTO);
-            return ApiResponse.ok(updated);
-        } catch (Exception e) {
-            return ApiResponse.error(e.getMessage());
-        }
-    }
 }

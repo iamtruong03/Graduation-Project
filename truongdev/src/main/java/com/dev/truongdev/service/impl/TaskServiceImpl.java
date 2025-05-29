@@ -63,20 +63,6 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
     }
 
     /**
-     * Lấy thông tin công việc theo ID.
-     * @param id ID của công việc
-     * @return TaskDTO chứa thông tin công việc
-     * @throws RuntimeException nếu không tìm thấy công việc
-     */
-    @Override
-    public TaskDTO getTaskById(Long id) {
-        validateId(id);
-        Task task = taskRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Task not found"));
-        return convertToDTO(task);
-    }
-
-    /**
      * Cập nhật thông tin công việc, chỉ cho phép khi đang ở trạng thái ĐANG THỰC HIỆN.
      * - Kiểm tra trạng thái công việc
      * - Cập nhật thông tin
@@ -123,7 +109,6 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
     @Transactional
     public TaskDTO createTask(String uid, TaskDTO taskDTO) {
         validateTaskDTO(taskDTO);
-        validateUserId(uid);
 
         Task task = new Task();
         BeanUtils.copyProperties(taskDTO, task);
@@ -160,7 +145,6 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
             
         task.setApproverId(approverIds.get(0).toString());
         task.setUpdateBy(uid);
-        task.setModifiedDate(new Date());
         
         Task savedTask = taskRepo.save(task);
         
@@ -187,7 +171,6 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
         
         task.setState(AppConstants.STATUS_APPROVED);
         task.setUpdateBy(uid);
-        task.setModifiedDate(new Date());
         
         Task savedTask = taskRepo.save(task);
         
@@ -216,7 +199,6 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
         
         task.setState(AppConstants.STATUS_REJECTED);
         task.setUpdateBy(uid);
-        task.setModifiedDate(new Date());
         
         Task savedTask = taskRepo.save(task);
         
@@ -265,7 +247,6 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
 
         task.setStatus(AppConstants.STATUS_INACTIVE);
         task.setUpdateBy(uid);
-        task.setModifiedDate(new Date());
         taskRepo.save(task);
         
         addTaskHistory(id, task.getState(), task.getState(), uid, "Xóa task");
@@ -280,7 +261,6 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
      */
     @Override
     public Page<Task> getPendingApprovalTasks(String approverId, TaskFilter filter, Pageable pageable) {
-        validateUserId(approverId);
         return taskRepo.findPendingApprovalTasks(
             AppConstants.STATUS_ACTIVE,
             AppConstants.STATUS_PENDING,
@@ -303,8 +283,6 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
      */
     @Override
     public Page<Task> searchAll(Long departmentId, String uid, TaskFilter filter, Pageable pageable) {
-        validateDepartmentId(departmentId);
-        validateUserId(uid);
         
         User user = userService.getById(uid, Long.valueOf(uid));
 
@@ -373,26 +351,6 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
     }
 
     /**
-     * Kiểm tra User ID không rỗng.
-     * @throws IllegalArgumentException nếu User ID rỗng
-     */
-    private void validateUserId(String uid) {
-        if (!StringUtils.hasText(uid)) {
-            throw new IllegalArgumentException("User ID cannot be empty");
-        }
-    }
-
-    /**
-     * Kiểm tra Department ID có hợp lệ.
-     * @throws IllegalArgumentException nếu Department ID không hợp lệ
-     */
-    private void validateDepartmentId(Long departmentId) {
-        if (departmentId == null || departmentId <= 0) {
-            throw new IllegalArgumentException("Invalid department ID");
-        }
-    }
-
-    /**
      * Kiểm tra việc gửi phê duyệt công việc.
      * Xác nhận danh sách người phê duyệt và trạng thái công việc.
      */
@@ -400,7 +358,6 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
         if (approverIds == null || approverIds.isEmpty()) {
             throw new RuntimeException("Phải chỉ định người phê duyệt");
         }
-        validateUserId(uid);
         validateId(id);
     }
 
@@ -409,7 +366,6 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
      * Xác nhận trạng thái công việc và quyền của người phê duyệt.
      */
     private void validateApproval(String uid, Long id) {
-        validateUserId(uid);
         validateId(id);
         Task task = taskRepo.findById(id)
             .orElseThrow(() -> new RuntimeException("Không tìm thấy task"));
@@ -428,7 +384,6 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
      * Xác nhận trạng thái công việc và quyền của người từ chối.
      */
     private void validateRejection(String uid, Long id) {
-        validateUserId(uid);
         validateId(id);
         Task task = taskRepo.findById(id)
             .orElseThrow(() -> new RuntimeException("Không tìm thấy task"));
@@ -571,7 +526,6 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
         Integer previousState = task.getState();
         task.setState(newState);
         task.setUpdateBy(changedBy);
-        task.setModifiedDate(new Date());
         
         if (newState == AppConstants.STATUS_COMPLETE) {
             task.setCompletedDate(new Date());

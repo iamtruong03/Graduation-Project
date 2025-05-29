@@ -86,15 +86,6 @@ public class RiskAPI extends XDevBaseAPI<Risk, RiskFilter> {
         }
     }
 
-    @GetMapping("/{id}/details")
-    public ResponseEntity<ApiResponse<RiskDTO>> getRiskById(@PathVariable Long id) {
-        try {
-            return ApiResponse.ok(riskService.getRiskById(id));
-        } catch (Exception e) {
-            return ApiResponse.error(e.getMessage());
-        }
-    }
-
     @PutMapping("/{id}/update")
     public ResponseEntity<ApiResponse<RiskDTO>> updateRisk(
             @RequestAttribute String uid,

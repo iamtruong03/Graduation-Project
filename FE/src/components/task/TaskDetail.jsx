@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import taskService from '../../services/taskService';
+import TaskHistory from './TaskHistory';
 import {
   Box,
   Paper,
@@ -19,16 +20,6 @@ import {
   TextField
 } from '@mui/material';
 import {
-  Timeline,
-  TimelineItem,
-  TimelineSeparator,
-  TimelineConnector,
-  TimelineContent,
-  TimelineDot,
-  TimelineOppositeContent
-} from '@mui/lab';
-import {
-  History as HistoryIcon,
   Assignment as AssignmentIcon,
   Flag as FlagIcon,
   Business as BusinessIcon,
@@ -486,40 +477,7 @@ const TaskDetail = () => {
 
           {/* Sidebar - Lịch sử trạng thái */}
           <Grid item xs={12} md={4}>
-            <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>
-              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
-                <HistoryIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />
-                Lịch sử trạng thái
-              </Typography>
-              <Timeline>
-                {taskHistory.map((history, index) => (
-                  <TimelineItem key={history.id}>
-                    <TimelineOppositeContent color="text.secondary">
-                      <Typography variant="caption">
-                        {new Date(history.changedAt).toLocaleDateString()}
-                      </Typography>
-                    </TimelineOppositeContent>
-                    <TimelineSeparator>
-                      <TimelineDot variant="outlined" color={getStatusColor(history.stateName)} />
-                      {index < taskHistory.length - 1 && <TimelineConnector />}
-                    </TimelineSeparator>
-                    <TimelineContent>
-                      <Typography variant="body2" component="span">
-                        {history.stateName}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary" display="block">
-                        bởi {history.changedByName}
-                      </Typography>
-                      {history.comment && (
-                        <Typography variant="caption" color="text.secondary" display="block">
-                          {history.comment}
-                        </Typography>
-                      )}
-                    </TimelineContent>
-                  </TimelineItem>
-                ))}
-              </Timeline>
-            </Paper>
+            <TaskHistory history={taskHistory} />
           </Grid>
         </Grid>
       </Paper>

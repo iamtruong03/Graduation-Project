@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Box,
@@ -41,6 +41,8 @@ import {
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import vi from 'date-fns/locale/vi';
+import riskService from '../../services/riskService';
+import RiskHistory from './RiskHistory';
 
 const mockRisk = {
   id: 1,
@@ -131,6 +133,7 @@ const RiskDetail = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const [risk, setRisk] = useState(mockRisk);
+  const [riskHistory, setRiskHistory] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
   const [editedRisk, setEditedRisk] = useState(null);
   const [openActionDialog, setOpenActionDialog] = useState(false);
@@ -143,6 +146,26 @@ const RiskDetail = () => {
     priority: 'MEDIUM',
     status: 'NEW'
   });
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [riskData, historyData] = await Promise.all([
+          riskService.getRiskById(id),
+          riskService.getRiskHistory(id)
+        ]);
+        setRisk(riskData || mockRisk);
+        setRiskHistory(historyData || []);
+      } catch (error) {
+        console.error('Error fetching risk data:', error);
+        // Use mock data as fallback
+        setRisk(mockRisk);
+        setRiskHistory([]);
+      }
+    };
+
+    fetchData();
+  }, [id]);
 
   const formatDate = (dateString) => {
     try {
@@ -616,143 +639,149 @@ const RiskDetail = () => {
             </Paper>
           </Grid>
 
-          {/* Hành động phòng ngừa */}
+          {/* Sidebar */}
           <Grid item xs={12} md={4}>
-            <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <Typography variant="h6" sx={{ color: 'primary.main', fontWeight: 600 }}>
-                  Hành động phòng ngừa
-                </Typography>
-                <Button
-                  variant="contained"
-                  size="small"
-                  startIcon={<AddIcon />}
-                  onClick={() => {
-                    setSelectedAction(null);
-                    setOpenActionDialog(true);
-                  }}
-                  sx={{
-                    backgroundColor: '#2e7d32',
-                    '&:hover': {
-                      backgroundColor: '#1b5e20'
-                    }
-                  }}
-                >
-                  THÊM
-                </Button>
-              </Box>
-
-              <Stack spacing={2}>
-                {risk.preventiveActions.map((action) => (
-                  <Paper
-                    key={action.id}
-                    elevation={0}
+            <Stack spacing={3}>
+              {/* Hành động phòng ngừa */}
+              <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                  <Typography variant="h6" sx={{ color: 'primary.main', fontWeight: 600 }}>
+                    Hành động phòng ngừa
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    startIcon={<AddIcon />}
+                    onClick={() => {
+                      setSelectedAction(null);
+                      setOpenActionDialog(true);
+                    }}
                     sx={{
-                      p: 2,
-                      borderRadius: 1,
-                      bgcolor: '#f8f9fa',
-                      border: '1px solid #e0e0e0',
+                      backgroundColor: '#2e7d32',
                       '&:hover': {
-                        bgcolor: '#f5f5f5',
-                        borderColor: '#bdbdbd'
+                        backgroundColor: '#1b5e20'
                       }
                     }}
                   >
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
-                      <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#2196f3' }}>
-                        {action.name}
-                      </Typography>
-                      <Stack direction="row" spacing={1}>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleEditAction(action)}
-                          sx={{ 
-                            color: 'primary.main',
-                            p: 0.5,
-                            '&:hover': {
-                              bgcolor: 'rgba(33, 150, 243, 0.08)'
-                            }
-                          }}
-                        >
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleDeleteAction(action.id)}
-                          sx={{ 
-                            color: 'error.main',
-                            p: 0.5,
-                            '&:hover': {
-                              bgcolor: 'rgba(244, 67, 54, 0.08)'
-                            }
-                          }}
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
+                    THÊM
+                  </Button>
+                </Box>
+
+                <Stack spacing={2}>
+                  {risk.preventiveActions.map((action) => (
+                    <Paper
+                      key={action.id}
+                      elevation={0}
+                      sx={{
+                        p: 2,
+                        borderRadius: 1,
+                        bgcolor: '#f8f9fa',
+                        border: '1px solid #e0e0e0',
+                        '&:hover': {
+                          bgcolor: '#f5f5f5',
+                          borderColor: '#bdbdbd'
+                        }
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#2196f3' }}>
+                          {action.name}
+                        </Typography>
+                        <Stack direction="row" spacing={1}>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleEditAction(action)}
+                            sx={{ 
+                              color: 'primary.main',
+                              p: 0.5,
+                              '&:hover': {
+                                bgcolor: 'rgba(33, 150, 243, 0.08)'
+                              }
+                            }}
+                          >
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleDeleteAction(action.id)}
+                            sx={{ 
+                              color: 'error.main',
+                              p: 0.5,
+                              '&:hover': {
+                                bgcolor: 'rgba(244, 67, 54, 0.08)'
+                              }
+                            }}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Stack>
+                      </Box>
+
+                      <Stack spacing={1}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Typography variant="body2" color="text.secondary" sx={{ minWidth: 85 }}>
+                            Thực hiện:
+                          </Typography>
+                          <Typography variant="body2">
+                            {action.assignee}
+                          </Typography>
+                        </Box>
+
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Typography variant="body2" color="text.secondary" sx={{ minWidth: 85 }}>
+                            Thời gian:
+                          </Typography>
+                          <Typography variant="body2">
+                            {formatDate(action.startDate)} - {formatDate(action.endDate)}
+                          </Typography>
+                        </Box>
+
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Typography variant="body2" color="text.secondary" sx={{ minWidth: 85 }}>
+                            Trạng thái:
+                          </Typography>
+                          <Chip
+                            label={action.status}
+                            size="small"
+                            sx={{
+                              height: '24px',
+                              fontSize: '0.75rem',
+                              bgcolor: getStatusColor(action.status),
+                              color: 'white',
+                              '& .MuiChip-label': {
+                                px: 1
+                              }
+                            }}
+                          />
+                        </Box>
+
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Typography variant="body2" color="text.secondary" sx={{ minWidth: 85 }}>
+                            Độ ưu tiên:
+                          </Typography>
+                          <Chip
+                            label={action.priority}
+                            size="small"
+                            sx={{
+                              height: '24px',
+                              fontSize: '0.75rem',
+                              bgcolor: getPriorityColor(action.priority),
+                              color: 'white',
+                              '& .MuiChip-label': {
+                                px: 1
+                              }
+                            }}
+                          />
+                        </Box>
                       </Stack>
-                    </Box>
+                    </Paper>
+                  ))}
+                </Stack>
+              </Paper>
 
-                    <Stack spacing={1}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography variant="body2" color="text.secondary" sx={{ minWidth: 85 }}>
-                          Thực hiện:
-                        </Typography>
-                        <Typography variant="body2">
-                          {action.assignee}
-                        </Typography>
-                      </Box>
-
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography variant="body2" color="text.secondary" sx={{ minWidth: 85 }}>
-                          Thời gian:
-                        </Typography>
-                        <Typography variant="body2">
-                          {formatDate(action.startDate)} - {formatDate(action.endDate)}
-                        </Typography>
-                      </Box>
-
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography variant="body2" color="text.secondary" sx={{ minWidth: 85 }}>
-                          Trạng thái:
-                        </Typography>
-                        <Chip
-                          label={action.status}
-                          size="small"
-                          sx={{
-                            height: '24px',
-                            fontSize: '0.75rem',
-                            bgcolor: getStatusColor(action.status),
-                            color: 'white',
-                            '& .MuiChip-label': {
-                              px: 1
-                            }
-                          }}
-                        />
-                      </Box>
-
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography variant="body2" color="text.secondary" sx={{ minWidth: 85 }}>
-                          Độ ưu tiên:
-                        </Typography>
-                        <Chip
-                          label={action.priority}
-                          size="small"
-                          sx={{
-                            height: '24px',
-                            fontSize: '0.75rem',
-                            bgcolor: getPriorityColor(action.priority),
-                            color: 'white',
-                            '& .MuiChip-label': {
-                              px: 1
-                            }
-                          }}
-                        />
-                      </Box>
-                    </Stack>
-                  </Paper>
-                ))}
-              </Stack>
-            </Paper>
+              {/* Lịch sử xử lý */}
+              <RiskHistory history={riskHistory} />
+            </Stack>
           </Grid>
         </Grid>
       </Paper>

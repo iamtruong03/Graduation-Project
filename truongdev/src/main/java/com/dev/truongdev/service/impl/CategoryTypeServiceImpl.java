@@ -54,14 +54,6 @@ public class CategoryTypeServiceImpl extends XDevBaseServiceImpl<CategoryType, C
     }
 
     @Override
-    public void deleteCategoryType(Long id) {
-        if (!categoryTypeRepo.existsById(id)) {
-            throw new RuntimeException("Category type not found");
-        }
-        categoryTypeRepo.deleteById(id);
-    }
-
-    @Override
     public Page<CategoryType> searchAll(Long departmentId, String uid, CategoryTypeFilter filter, Pageable pageable) {
         return categoryTypeRepo.searchByCodeOrName(
             1, // STATUS_ACTIVE

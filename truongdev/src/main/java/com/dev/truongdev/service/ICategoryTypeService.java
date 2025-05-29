@@ -11,6 +11,5 @@ public interface ICategoryTypeService extends IXDevBaseService<CategoryType, Cat
 
     CategoryTypeDTO updateCategoryType(Long id, CategoryTypeDTO categoryTypeDTO);
 
-    void deleteCategoryType(Long id);
 }
  

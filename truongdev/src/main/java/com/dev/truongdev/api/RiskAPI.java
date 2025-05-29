@@ -133,18 +133,18 @@ public class RiskAPI extends XDevBaseAPI<Risk, RiskFilter> {
 
     /**
      * Export danh sách rủi ro ra file Excel.
-     * @param uid ID người dùng yêu cầu
-     * @param departmentId ID phòng ban
+     * @param did ID phòng ban (từ JWT token)
+     * @param uid ID người dùng yêu cầu (từ JWT token)
      * @param filter Bộ lọc tìm kiếm
      * @return File Excel chứa danh sách rủi ro
      */
     @GetMapping("/export")
     public ResponseEntity<byte[]> exportRisks(
+            @RequestAttribute Long did,
             @RequestAttribute String uid,
-            @RequestParam Long departmentId,
             RiskFilter filter) {
         try {
-            ByteArrayOutputStream outputStream = excelExportService.exportRisks(departmentId, uid, filter);
+            ByteArrayOutputStream outputStream = excelExportService.exportRisks(did, uid, filter);
             
             // Tạo tên file với timestamp
             String fileName = "DanhSachRuiRo_" + 

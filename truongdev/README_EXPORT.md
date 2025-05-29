@@ -10,14 +10,17 @@ Hệ thống cung cấp 3 API endpoints để export dữ liệu ra file Excel:
 
 ### 1. Export Dự án
 ```
-GET /api/projects/export?departmentId={id}&[filter_params]
+GET /api/projects/export?[filter_params]
 ```
 
 **Parameters:**
-- `departmentId` (required): ID phòng ban
 - `search` (optional): Từ khóa tìm kiếm theo mã hoặc tên dự án
 - `state` (optional): Trạng thái dự án (1=Chờ duyệt, 2=Đã duyệt, 4=Đang thực hiện, 5=Hoàn thành, 6=Quá hạn)
 - `managerId` (optional): ID người quản lý
+
+**Authentication:**
+- `did` (Department ID): Tự động extract từ JWT token
+- `uid` (User ID): Tự động extract từ JWT token
 
 **Response:** File Excel với tên `DanhSachDuAn_yyyyMMdd_HHmmss.xlsx`
 
@@ -26,15 +29,18 @@ GET /api/projects/export?departmentId={id}&[filter_params]
 
 ### 2. Export Rủi ro
 ```
-GET /api/risks/export?departmentId={id}&[filter_params]
+GET /api/risks/export?[filter_params]
 ```
 
 **Parameters:**
-- `departmentId` (required): ID phòng ban
 - `search` (optional): Từ khóa tìm kiếm theo mã hoặc tên rủi ro
 - `state` (optional): Trạng thái rủi ro
 - `projectId` (optional): ID dự án liên quan
 - `reflectorId` (optional): ID người phản ánh
+
+**Authentication:**
+- `did` (Department ID): Tự động extract từ JWT token
+- `uid` (User ID): Tự động extract từ JWT token
 
 **Response:** File Excel với tên `DanhSachRuiRo_yyyyMMdd_HHmmss.xlsx`
 
@@ -43,16 +49,19 @@ GET /api/risks/export?departmentId={id}&[filter_params]
 
 ### 3. Export Công việc
 ```
-GET /api/tasks/export?departmentId={id}&[filter_params]
+GET /api/tasks/export?[filter_params]
 ```
 
 **Parameters:**
-- `departmentId` (required): ID phòng ban
 - `search` (optional): Từ khóa tìm kiếm theo mã hoặc tên công việc
 - `state` (optional): Trạng thái công việc
 - `projectId` (optional): ID dự án liên quan
 - `assigneeId` (optional): ID người được giao
 - `priorityId` (optional): Độ ưu tiên
+
+**Authentication:**
+- `did` (Department ID): Tự động extract từ JWT token
+- `uid` (User ID): Tự động extract từ JWT token
 
 **Response:** File Excel với tên `DanhSachCongViec_yyyyMMdd_HHmmss.xlsx`
 
@@ -85,12 +94,12 @@ Tất cả API yêu cầu:
 ```javascript
 // Export dự án
 function exportProjects() {
-    window.open(`/api/projects/export?departmentId=1&search=test`, '_blank');
+    window.open(`/api/projects/export?search=test`, '_blank');
 }
 
 // Export với fetch API
 async function exportRisks() {
-    const response = await fetch('/api/risks/export?departmentId=1', {
+    const response = await fetch('/api/risks/export', {
         headers: {
             'Authorization': `Bearer ${token}`
         }
@@ -112,12 +121,12 @@ async function exportRisks() {
 # Export dự án
 curl -H "Authorization: Bearer YOUR_TOKEN" \
      -o "projects.xlsx" \
-     "http://localhost:8080/api/projects/export?departmentId=1"
+     "http://localhost:8080/api/projects/export"
 
 # Export rủi ro với filter
 curl -H "Authorization: Bearer YOUR_TOKEN" \
      -o "risks.xlsx" \
-     "http://localhost:8080/api/risks/export?departmentId=1&state=1&search=security"
+     "http://localhost:8080/api/risks/export?state=1&search=security"
 ```
 
 ## Notes

@@ -11,6 +11,8 @@ import com.dev.truongdev.xdevbase.service.IXDevBaseService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -29,6 +31,53 @@ public class TaskAPI extends XDevBaseAPI<Task, TaskFilter> {
         return taskService;
     }
 
+    @PostMapping("/create")
+    public ResponseEntity<ApiResponse<TaskDTO>> createTask(
+            @RequestAttribute String uid,
+            @RequestBody TaskDTO taskDTO) {
+        try {
+            return ApiResponse.ok(taskService.createTask(uid, taskDTO));
+        } catch (Exception e) {
+            return ApiResponse.error(e.getMessage());
+        }
+    }
+
+    @PostMapping("/{id}/submit-approval")
+    public ResponseEntity<ApiResponse<TaskDTO>> submitForApproval(
+            @RequestAttribute String uid,
+            @PathVariable Long id,
+            @RequestBody List<Long> approverIds) {
+        try {
+            return ApiResponse.ok(taskService.submitForApproval(uid, id, approverIds));
+        } catch (Exception e) {
+            return ApiResponse.error(e.getMessage());
+        }
+    }
+
+    @PostMapping("/{id}/approve")
+    public ResponseEntity<ApiResponse<TaskDTO>> approveTask(
+            @RequestAttribute String uid,
+            @PathVariable Long id,
+            @RequestParam String approvedBy) {
+        try {
+            return ApiResponse.ok(taskService.approveTask(uid, id, approvedBy));
+        } catch (Exception e) {
+            return ApiResponse.error(e.getMessage());
+        }
+    }
+
+    @PostMapping("/{id}/reject")
+    public ResponseEntity<ApiResponse<TaskDTO>> rejectTask(
+            @RequestAttribute String uid,
+            @PathVariable Long id,
+            @RequestParam String reason) {
+        try {
+            return ApiResponse.ok(taskService.rejectTask(uid, id, reason));
+        } catch (Exception e) {
+            return ApiResponse.error(e.getMessage());
+        }
+    }
+
     @GetMapping("/{id}/details")
     public ResponseEntity<ApiResponse<TaskDTO>> getTaskById(@PathVariable Long id) {
         try {
@@ -40,9 +89,11 @@ public class TaskAPI extends XDevBaseAPI<Task, TaskFilter> {
 
     @PutMapping("/{id}/update")
     public ResponseEntity<ApiResponse<TaskDTO>> updateTask(
+            @RequestAttribute String uid,
             @PathVariable Long id,
             @RequestBody TaskDTO taskDTO) {
         try {
+            taskDTO.setUpdateBy(uid);
             return ApiResponse.ok(taskService.updateTask(id, taskDTO));
         } catch (Exception e) {
             return ApiResponse.error(e.getMessage());
@@ -50,7 +101,9 @@ public class TaskAPI extends XDevBaseAPI<Task, TaskFilter> {
     }
 
     @GetMapping("/{id}/history")
-    public ResponseEntity<ApiResponse<List<TaskHistoryDTO>>> getTaskHistory(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<List<TaskHistoryDTO>>> getTaskHistory(
+            @RequestAttribute String uid,
+            @PathVariable Long id) {
         try {
             return ApiResponse.ok(taskService.getTaskHistory(id));
         } catch (Exception e) {
@@ -58,18 +111,17 @@ public class TaskAPI extends XDevBaseAPI<Task, TaskFilter> {
         }
     }
 
-    @PostMapping("/{id}/history")
-    public ResponseEntity<ApiResponse<Void>> addTaskHistory(
-            @PathVariable Long id,
-            @RequestParam Integer previousState,
-            @RequestParam Integer newState,
-            @RequestParam String changedBy,
-            @RequestParam(required = false) String comment) {
+    @GetMapping("/pending-approval")
+    public ResponseEntity<ApiResponse<Page<Task>>> getPendingApprovalTasks(
+            @RequestAttribute String uid,
+            TaskFilter filter,
+            Pageable pageable) {
         try {
-            taskService.addTaskHistory(id, previousState, newState, changedBy, comment);
-            return ApiResponse.ok(null);
+            return ApiResponse.ok(taskService.getPendingApprovalTasks(uid, filter, pageable));
         } catch (Exception e) {
             return ApiResponse.error(e.getMessage());
         }
     }
+
+    // Không cần endpoint addTaskHistory vì đã được xử lý internal trong service
 } 

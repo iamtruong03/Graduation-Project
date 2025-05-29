@@ -25,22 +25,27 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.UUID;
 
 @Service
-@FieldDefaults(level = AccessLevel.PRIVATE)
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class DocumentServiceImpl extends XDevBaseServiceImpl<Document, DocumentFilter, DocumentRepo>
         implements IDocumentService {
 
-    final DocumentRepo documentRepo;
-    final IDepartmentService departmentService;
-    final IProjectService projectService;
-    final DepartmentRepo departmentRepo;
-    final IUserService userService;
-    final String uploadDir = "uploads/documents";
+    DocumentRepo documentRepo;
+    IDepartmentService departmentService;
+    IProjectService projectService;
+    DepartmentRepo departmentRepo;
+    IUserService userService;
+    Path uploadDir;
 
-    public DocumentServiceImpl(DocumentRepo repo, IDepartmentService departmentService, IProjectService projectService, DepartmentRepo departmentRepo, IUserService userService) {
+    public DocumentServiceImpl(DocumentRepo repo, 
+                             IDepartmentService departmentService, 
+                             IProjectService projectService, 
+                             DepartmentRepo departmentRepo, 
+                             IUserService userService) {
         super(repo);
         this.documentRepo = repo;
         this.departmentService = departmentService;
@@ -48,18 +53,22 @@ public class DocumentServiceImpl extends XDevBaseServiceImpl<Document, DocumentF
         this.departmentRepo = departmentRepo;
         this.userService = userService;
         
-        // Create upload directory if it doesn't exist
+        this.uploadDir = Paths.get("uploads", "documents");
+        initializeUploadDirectory();
+    }
+
+    private void initializeUploadDirectory() {
         try {
-            Files.createDirectories(Paths.get(uploadDir));
+            Files.createDirectories(uploadDir);
         } catch (IOException e) {
-            throw new RuntimeException("Could not create upload directory!", e);
+            throw new RuntimeException("Could not create upload directory: " + uploadDir, e);
         }
     }
 
     @Override
     public DocumentDTO getDocumentById(Long id) {
         Document document = documentRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Document not found"));
+                .orElseThrow(() -> new RuntimeException("Document not found with id: " + id));
         return convertToDTO(document);
     }
 
@@ -67,7 +76,17 @@ public class DocumentServiceImpl extends XDevBaseServiceImpl<Document, DocumentF
     @Transactional
     public DocumentDTO updateDocument(Long id, DocumentDTO documentDTO) {
         Document document = documentRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Document not found"));
+                .orElseThrow(() -> new RuntimeException("Document not found with id: " + id));
+        
+        // Validate references exist
+        if (documentDTO.getDepartmentId() != null) {
+            departmentRepo.findById(documentDTO.getDepartmentId())
+                .orElseThrow(() -> new RuntimeException("Department not found with id: " + documentDTO.getDepartmentId()));
+        }
+        
+        if (documentDTO.getProjectId() != null) {
+            projectService.getById("system", documentDTO.getProjectId());
+        }
         
         document.setName(documentDTO.getName());
         document.setDescription(documentDTO.getDescription());
@@ -83,14 +102,20 @@ public class DocumentServiceImpl extends XDevBaseServiceImpl<Document, DocumentF
     @Transactional
     public DocumentDTO uploadDocument(MultipartFile file, DocumentDTO documentDTO) {
         try {
-            String fileName = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
-            Path filePath = Paths.get(uploadDir, fileName);
-            Files.copy(file.getInputStream(), filePath);
+            // Generate unique filename
+            String originalFilename = file.getOriginalFilename();
+            String fileExtension = originalFilename.substring(originalFilename.lastIndexOf("."));
+            String fileName = UUID.randomUUID().toString() + fileExtension;
+            
+            // Save file
+            Path targetLocation = uploadDir.resolve(fileName);
+            Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
 
+            // Create document record
             Document document = new Document();
-            document.setName(documentDTO.getName());
+            document.setName(documentDTO.getName() != null ? documentDTO.getName() : originalFilename);
             document.setDescription(documentDTO.getDescription());
-            document.setFilePath(filePath.toString());
+            document.setFilePath(targetLocation.toString());
             document.setDocumentTypeId(documentDTO.getDocumentTypeId());
             document.setDepartmentId(documentDTO.getDepartmentId());
             document.setProjectId(documentDTO.getProjectId());
@@ -98,85 +123,97 @@ public class DocumentServiceImpl extends XDevBaseServiceImpl<Document, DocumentF
             document = documentRepo.save(document);
             return convertToDTO(document);
         } catch (IOException e) {
-            throw new RuntimeException("Failed to store file", e);
+            throw new RuntimeException("Failed to store file: " + file.getOriginalFilename(), e);
         }
     }
 
     @Override
     public byte[] downloadDocument(Long id) {
         Document document = documentRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Document not found"));
+                .orElseThrow(() -> new RuntimeException("Document not found with id: " + id));
         try {
-            Path path = Paths.get(document.getFilePath());
-            return Files.readAllBytes(path);
+            Path filePath = Paths.get(document.getFilePath());
+            if (!Files.exists(filePath)) {
+                throw new RuntimeException("File not found: " + document.getFilePath());
+            }
+            return Files.readAllBytes(filePath);
         } catch (IOException e) {
-            throw new RuntimeException("Could not read file", e);
+            throw new RuntimeException("Could not read file: " + document.getFilePath(), e);
         }
     }
 
     @Override
-    public void deleteDocument(Long id) {
+    @Transactional
+    public void delete(String uid, Long id) {
         Document document = documentRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Document not found"));
+                .orElseThrow(() -> new RuntimeException("Document not found with id: " + id));
         try {
-            Files.deleteIfExists(Paths.get(document.getFilePath()));
+            // Delete file first
+            Path filePath = Paths.get(document.getFilePath());
+            Files.deleteIfExists(filePath);
+            
+            // Then delete database record
             documentRepo.deleteById(id);
         } catch (IOException e) {
-            throw new RuntimeException("Could not delete file", e);
+            throw new RuntimeException("Could not delete file: " + document.getFilePath(), e);
         }
     }
 
     @Override
     public Page<Document> searchAll(Long departmentId, String uid, DocumentFilter filter, Pageable pageable) {
-        // Lấy user
         User user = userService.getById(uid, Long.valueOf(uid));
 
-        Page<Document> page;
+        // Check if user is admin or from root department
+        boolean hasFullAccess = user.getRole().equals("ROLE_ADMIN") || 
+                              departmentRepo.findById(departmentId)
+                                  .map(dept -> dept.getParentId() == null)
+                                  .orElse(false);
 
-        // Kiểm tra quyền admin hoặc phòng ban gốc
-        if (user.getRole().equals("ROLE_ADMIN") ||
-            (departmentRepo.findById(departmentId).get().getParentId() == null)) {
-            // Tìm kiếm toàn bộ document
-            page = documentRepo.searchByCodeOrName(
+        if (hasFullAccess) {
+            return documentRepo.searchByCodeOrName(
                 1, // STATUS_ACTIVE
                 filter.getSearch(),
                 pageable
             );
-        } else {
-            // Tìm kiếm trong phòng ban và phòng ban con
-            Department department = departmentRepo.findById(departmentId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy phòng ban"));
+        } 
 
-            List<Long> departmentIds = new java.util.ArrayList<>();
-            departmentIds.add(departmentId);
-            departmentIds.addAll(
-                ((java.util.List<Department>) departmentService.getAllSubDepartments(departmentId))
-                    .stream()
-                    .map(dept -> dept.getId())
-                    .collect(java.util.stream.Collectors.toList())
-            );
+        // Get department and its sub-departments
+        Department department = departmentRepo.findById(departmentId)
+            .orElseThrow(() -> new RuntimeException("Department not found with id: " + departmentId));
 
-            page = documentRepo.searchByCodeOrNameAndDepartments(
-                1, // STATUS_ACTIVE
-                filter.getSearch(),
-                departmentIds,
-                pageable
-            );
-        }
-        return page;
-        // Nếu muốn trả về Page<DocumentDTO> thì cần map như page.map(this::convertToDTO)
+        List<Long> departmentIds = new java.util.ArrayList<>();
+        departmentIds.add(departmentId);
+        departmentIds.addAll(
+            ((List<Department>) departmentService.getAllSubDepartments(departmentId))
+                .stream()
+                .map(Department::getId)
+                .toList()
+        );
+
+        return documentRepo.searchByCodeOrNameAndDepartments(
+            1, // STATUS_ACTIVE
+            filter.getSearch(),
+            departmentIds,
+            pageable
+        );
     }
 
     private DocumentDTO convertToDTO(Document document) {
         DocumentDTO dto = new DocumentDTO();
         BeanUtils.copyProperties(document, dto);
         
-        // Set additional display names if needed
         if (document.getDepartmentId() != null) {
-            // Add department name
+            departmentRepo.findById(document.getDepartmentId()).ifPresent(department -> 
+                dto.setDepartmentName(department.getName())
+            );
         }
+        
         if (document.getProjectId() != null) {
-            // Add project name
+            try {
+                dto.setProjectName(projectService.getById("system", document.getProjectId()).getName());
+            } catch (Exception e) {
+                dto.setProjectName("Unknown");
+            }
         }
         
         return dto;

@@ -5,6 +5,8 @@ import com.dev.truongdev.entity.User;
 import com.dev.truongdev.payload.filter.DepartmentFilter;
 import com.dev.truongdev.repo.DepartmentRepo;
 import com.dev.truongdev.repo.UserRepo;
+import com.dev.truongdev.repo.ProjectRepo;
+import com.dev.truongdev.repo.TaskRepo;
 import com.dev.truongdev.service.IDepartmentService;
 import com.dev.truongdev.utils.AppConstants;
 import com.dev.truongdev.xdevbase.service.impl.XDevBaseServiceImpl;
@@ -26,11 +28,60 @@ public class DepartmentServiceImpl extends
 
   final DepartmentRepo departmentRepo;
   final UserRepo userRepo;
+  final ProjectRepo projectRepo;
+  final TaskRepo taskRepo;
 
-  public DepartmentServiceImpl(DepartmentRepo repo, UserRepo userRepo) {
+  public DepartmentServiceImpl(DepartmentRepo repo, UserRepo userRepo, 
+                             ProjectRepo projectRepo, TaskRepo taskRepo) {
     super(repo);
     this.departmentRepo = repo;
     this.userRepo = userRepo;
+    this.projectRepo = projectRepo;
+    this.taskRepo = taskRepo;
+  }
+
+  @Override
+  public void delete(String uid, Long id) {
+    // Kiểm tra phòng ban có dự án đang thực hiện không
+    boolean hasActiveProjects = projectRepo.existsByDepartmentIdAndState(
+        id,
+        AppConstants.STATUS_IN_PROGRESS
+    );
+    if (hasActiveProjects) {
+      throw new RuntimeException("Không thể xóa phòng ban đang có dự án đang thực hiện");
+    }
+
+    // Kiểm tra phòng ban có task đang thực hiện không
+    boolean hasActiveTasks = taskRepo.existsByDepartmentIdAndState(
+        id,
+        AppConstants.STATUS_IN_PROGRESS
+    );
+    if (hasActiveTasks) {
+      throw new RuntimeException("Không thể xóa phòng ban đang có task đang thực hiện");
+    }
+
+    // Kiểm tra các phòng ban con
+    List<Department> subDepartments = getAllSubDepartments(id);
+    for (Department subDept : subDepartments) {
+      hasActiveProjects = projectRepo.existsByDepartmentIdAndState(
+          subDept.getId(),
+          AppConstants.STATUS_IN_PROGRESS
+      );
+      if (hasActiveProjects) {
+        throw new RuntimeException("Không thể xóa phòng ban có phòng ban con đang có dự án đang thực hiện");
+      }
+
+      hasActiveTasks = taskRepo.existsByDepartmentIdAndState(
+          subDept.getId(),
+          AppConstants.STATUS_IN_PROGRESS
+      );
+      if (hasActiveTasks) {
+        throw new RuntimeException("Không thể xóa phòng ban có phòng ban con đang có task đang thực hiện");
+      }
+    }
+
+    // Nếu không có ràng buộc thì thực hiện xóa
+    super.delete(uid, id);
   }
 
   // lấy phòng ban con, cháu, chắt

@@ -482,4 +482,24 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
         return subDepartments.stream()
             .anyMatch(dept -> dept.getId().equals(departmentId));
     }
+
+    @Override
+    public void changeStatus(String uid, Long id) {
+        Project project = projectRepo.findById(id)
+            .orElseThrow(() -> new RuntimeException("Không tìm thấy dự án"));
+            
+        // Chỉ cho phép xóa mềm ở trạng thái chờ duyệt hoặc từ chối
+        if (project.getState() != AppConstants.STATUS_PENDING && 
+            project.getState() != AppConstants.STATUS_REJECTED) {
+            throw new RuntimeException("Chỉ có thể xóa dự án ở trạng thái chờ duyệt hoặc từ chối");
+        }
+
+        project.setStatus(AppConstants.STATUS_INACTIVE);
+        project.setUpdateBy(uid);
+        project.setModifiedDate(new Date());
+        projectRepo.save(project);
+        
+        // Log history
+        createProjectHistory(id, project.getState(), project.getState(), uid, "Xóa dự án");
+    }
 }

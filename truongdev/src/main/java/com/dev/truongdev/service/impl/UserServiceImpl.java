@@ -4,6 +4,8 @@ import com.dev.truongdev.entity.User;
 import com.dev.truongdev.payload.filter.UserFilter;
 import com.dev.truongdev.payload.request.UpdatePasswordRequest;
 import com.dev.truongdev.repo.UserRepo;
+import com.dev.truongdev.repo.ProjectRepo;
+import com.dev.truongdev.repo.TaskRepo;
 import com.dev.truongdev.entity.Department;
 import com.dev.truongdev.service.IUserService;
 import com.dev.truongdev.utils.AppConstants;
@@ -30,12 +32,16 @@ public class UserServiceImpl extends XDevBaseServiceImpl<User, UserFilter, UserR
 
   final UserRepo userRepo;
   final DepartmentServiceImpl departmentService;
+  final ProjectRepo projectRepo;
+  final TaskRepo taskRepo;
 
-  public UserServiceImpl(UserRepo repo, DepartmentServiceImpl departmentService) {
+  public UserServiceImpl(UserRepo repo, DepartmentServiceImpl departmentService, 
+                        ProjectRepo projectRepo, TaskRepo taskRepo) {
     super(repo);
     this.userRepo = repo;
     this.departmentService = departmentService;
-
+    this.projectRepo = projectRepo;
+    this.taskRepo = taskRepo;
   }
 
   public void setBaseEntity (User e, String uid){
@@ -198,5 +204,38 @@ public class UserServiceImpl extends XDevBaseServiceImpl<User, UserFilter, UserR
     User user = userRepo.findById(Long.valueOf(userId))
             .orElse(null);
     return user != null ? user.getName() : userId;
+  }
+
+  @Override
+  public void delete(String uid, Long id) {
+    // Kiểm tra user có phải người quản lý dự án đang thực hiện không
+    boolean hasActiveProjects = projectRepo.existsByManagerIdAndState(
+        id.toString(), 
+        AppConstants.STATUS_IN_PROGRESS
+    );
+    if (hasActiveProjects) {
+      throw new RuntimeException("Không thể xóa người dùng đang quản lý dự án đang thực hiện");
+    }
+
+    // Kiểm tra user có phải người phụ trách dự án đang thực hiện không
+    hasActiveProjects = projectRepo.existsByResponsibleIdsContainingAndState(
+        id.toString(),
+        AppConstants.STATUS_IN_PROGRESS
+    );
+    if (hasActiveProjects) {
+      throw new RuntimeException("Không thể xóa người dùng đang phụ trách dự án đang thực hiện");
+    }
+
+    // Kiểm tra user có phải người được giao task đang thực hiện không
+    boolean hasActiveTasks = taskRepo.existsByAssigneeIdAndState(
+        id.toString(),
+        AppConstants.STATUS_IN_PROGRESS
+    );
+    if (hasActiveTasks) {
+      throw new RuntimeException("Không thể xóa người dùng đang được giao task đang thực hiện");
+    }
+
+    // Nếu không có ràng buộc thì thực hiện xóa
+    super.delete(uid, id);
   }
 }

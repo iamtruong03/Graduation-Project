@@ -53,4 +53,13 @@ public interface ProjectRepo extends XDevBaseRepo<Project> {
     );
 
     List<Project> findByDepartmentId(Long departmentId);
+
+    // Check if department has active projects
+    boolean existsByDepartmentIdAndState(Long departmentId, Integer state);
+
+    // Check if user is managing active projects
+    boolean existsByManagerIdAndState(String managerId, Integer state);
+
+    // Check if user is responsible for active projects
+    boolean existsByResponsibleIdsContainingAndState(String userId, Integer state);
 }

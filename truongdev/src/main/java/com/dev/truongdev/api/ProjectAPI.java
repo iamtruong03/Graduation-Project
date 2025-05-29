@@ -69,24 +69,46 @@ public class ProjectAPI extends XDevBaseAPI<Project, ProjectFilter> {
         }
     }
 
+    @PostMapping("/{id}/reject")
+    public ResponseEntity<ApiResponse<ProjectDTO>> rejectProject(
+            @RequestAttribute String uid,
+            @PathVariable Long id,
+            @RequestParam String reason) {
+        try {
+            return ApiResponse.ok(projectService.rejectProject(uid, id, reason));
+        } catch (Exception e) {
+            return ApiResponse.error(e.getMessage());
+        }
+    }
+
+    @GetMapping("/{id}/details")
+    public ResponseEntity<ApiResponse<ProjectDTO>> getProjectById(@PathVariable Long id) {
+        try {
+            return ApiResponse.ok(projectService.getProjectById(id));
+        } catch (Exception e) {
+            return ApiResponse.error(e.getMessage());
+        }
+    }
+
+    @PutMapping("/{id}/update")
+    public ResponseEntity<ApiResponse<ProjectDTO>> updateProject(
+            @RequestAttribute String uid,
+            @PathVariable Long id,
+            @RequestBody ProjectDTO projectDTO) {
+        try {
+            projectDTO.setUpdateBy(uid);
+            return ApiResponse.ok(projectService.updateProject(id, projectDTO));
+        } catch (Exception e) {
+            return ApiResponse.error(e.getMessage());
+        }
+    }
+
     @GetMapping("/{id}/history")
     public ResponseEntity<ApiResponse<List<ProjectHistoryDTO>>> getProjectHistory(
             @RequestAttribute String uid,
             @PathVariable Long id) {
         try {
-            List<ProjectHistory> histories = projectHistoryRepo.findByProjectIdOrderByChangedAtDesc(id);
-            List<ProjectHistoryDTO> dtos = histories.stream().map(history -> {
-                ProjectHistoryDTO dto = new ProjectHistoryDTO();
-                dto.setId(history.getId());
-                dto.setProjectId(history.getProjectId());
-                dto.setPreviousState(history.getPreviousState());
-                dto.setNewState(history.getNewState());
-                dto.setChangedBy(history.getChangedBy());
-                dto.setChangedAt(history.getChangedAt());
-                dto.setComment(history.getComment());
-                return dto;
-            }).toList();
-            return ApiResponse.ok(dtos);
+            return ApiResponse.ok(projectService.getProjectHistory(id));
         } catch (Exception e) {
             return ApiResponse.error(e.getMessage());
         }
@@ -113,6 +135,17 @@ public class ProjectAPI extends XDevBaseAPI<Project, ProjectFilter> {
             Pageable pageable) {
         try {
             return ApiResponse.ok(projectService.getPendingApprovalProjects(uid, filter, pageable));
+        } catch (Exception e) {
+            return ApiResponse.error(e.getMessage());
+        }
+    }
+
+    @PostMapping("/{id}/check-completion")
+    public ResponseEntity<ApiResponse<Void>> checkAndUpdateProjectCompletion(
+            @PathVariable Long id) {
+        try {
+            projectService.checkAndUpdateProjectCompletion(id);
+            return ApiResponse.ok(null, "Project completion status checked and updated successfully");
         } catch (Exception e) {
             return ApiResponse.error(e.getMessage());
         }

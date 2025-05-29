@@ -1,5 +1,6 @@
 package com.dev.truongdev.repo;
 
+import com.dev.truongdev.entity.Department;
 import com.dev.truongdev.entity.Project;
 import com.dev.truongdev.xdevbase.repo.XDevBaseRepo;
 import org.springframework.data.domain.Page;
@@ -12,6 +13,8 @@ import java.util.List;
 
 @Repository
 public interface ProjectRepo extends XDevBaseRepo<Project> {
+
+    List<Project> findByDepartmentIn(List<Department> departments);
     
     @Query("SELECT p FROM Project p " +
             "WHERE p.status = :status " +

@@ -37,4 +37,8 @@ public interface TaskRepo extends XDevBaseRepo<Task> {
             @Param("departmentIds") List<Long> departmentIds,
             Pageable pageable
     );
+
+    List<Task> findByAssigneeId(Long assigneeId);
+    List<Task> findByDepartmentId(Long departmentId);
+
 }

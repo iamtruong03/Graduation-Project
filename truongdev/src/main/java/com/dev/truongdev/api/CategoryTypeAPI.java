@@ -27,7 +27,7 @@ public class CategoryTypeAPI extends XDevBaseAPI<CategoryType, CategoryTypeFilte
     }
 
     @GetMapping("/{id}/details")
-    public ResponseEntity<ApiResponse<CategoryTypeDTO>> getCategoryTypeById(@PathVariable Long id) {
+        public ResponseEntity<ApiResponse<CategoryTypeDTO>> getCategoryTypeById(@PathVariable Long id) {
         try {
             return ApiResponse.ok(categoryTypeService.getCategoryTypeById(id));
         } catch (Exception e) {

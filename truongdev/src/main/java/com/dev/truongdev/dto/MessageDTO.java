@@ -17,8 +17,6 @@ public class MessageDTO {
     // Display fields for UI
     private String senderName;
     private String receiverName;
-    private String senderAvatar;
-    private String receiverAvatar;
     private String timeAgo; // "5 phút trước", "1 giờ trước"
     
     // For WebSocket messaging

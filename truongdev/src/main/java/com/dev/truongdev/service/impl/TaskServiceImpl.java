@@ -9,6 +9,7 @@ import com.dev.truongdev.entity.User;
 import com.dev.truongdev.repo.DepartmentRepo;
 import com.dev.truongdev.repo.TaskHistoryRepo;
 import com.dev.truongdev.repo.TaskRepo;
+import com.dev.truongdev.repo.UserRepo;
 import com.dev.truongdev.service.IDepartmentService;
 import com.dev.truongdev.service.ITaskService;
 import com.dev.truongdev.service.IUserService;
@@ -35,24 +36,30 @@ import java.util.stream.Collectors;
  * Xử lý CRUD operations, chuyển đổi trạng thái và quy trình phê duyệt công việc.
  */
 @Service
-@FieldDefaults(level = AccessLevel.PRIVATE)
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskRepo>
         implements ITaskService {
 
-    final TaskRepo taskRepo;
-    final TaskHistoryRepo taskHistoryRepository;
-    final IUserService userService;
-    final DepartmentRepo departmentRepo;
-    final IDepartmentService<Department, ?> departmentService;
+    TaskRepo taskRepo;
+    TaskHistoryRepo taskHistoryRepo;
+    IUserService userService;
+    DepartmentRepo departmentRepo;
+    IDepartmentService<Department, ?> departmentService;
+    UserRepo userRepo;
 
-    public TaskServiceImpl(TaskRepo repo, TaskHistoryRepo historyRepo, IUserService userService, 
-            DepartmentRepo departmentRepo, IDepartmentService<Department, ?> departmentService) {
+    public TaskServiceImpl(TaskRepo repo, 
+                          TaskHistoryRepo historyRepo, 
+                          IUserService userService, 
+                          DepartmentRepo departmentRepo, 
+                          IDepartmentService<Department, ?> departmentService,
+                          UserRepo userRepo) {
         super(repo);
         this.taskRepo = repo;
-        this.taskHistoryRepository = historyRepo;
+        this.taskHistoryRepo = historyRepo;
         this.userService = userService;
         this.departmentRepo = departmentRepo;
         this.departmentService = departmentService;
+        this.userRepo = userRepo;
     }
 
     /**
@@ -316,6 +323,28 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
             departmentIds,
             pageable
         );
+    }
+
+    @Override
+    public void addTaskHistory(Long taskId, Integer previousState, Integer newState, String changedBy, String comment) {
+        TaskHistory history = TaskHistory.builder()
+            .taskId(taskId)
+            .previousState(previousState)
+            .newState(newState)
+            .changedBy(changedBy)
+            .changedAt(new Date())
+            .comment(comment)
+            .build();
+        taskHistoryRepo.save(history);
+    }
+
+    @Override
+    public List<TaskHistoryDTO> getTaskHistory(Long taskId) {
+        validateId(taskId);
+        List<TaskHistory> histories = taskHistoryRepo.findByTaskIdOrderByChangedAtDesc(taskId);
+        return histories.stream()
+            .map(this::convertHistoryToDTO)
+            .collect(Collectors.toList());
     }
 
     // Private helper methods
@@ -603,8 +632,12 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
         dto.setChangedAt(history.getChangedAt());
         dto.setComment(history.getComment());
         
-        dto.setChangedByName(userService.getUserDisplayName(history.getChangedBy()));
+        dto.setPreviousStateName(StateNameUtils.getTaskStateName(history.getPreviousState()));
         dto.setStateName(StateNameUtils.getTaskStateName(history.getNewState()));
+        
+        if (history.getChangedBy() != null) {
+            dto.setChangedByName(userService.getUserDisplayName(history.getChangedBy()));
+        }
         
         return dto;
     }

@@ -36,14 +36,21 @@ public class MessageAPI extends XDevBaseAPI<Message, MessageFilter> {
     }
 
     @PostMapping("/send")
-    public ResponseEntity<ApiResponse<Message>> sendMessage(
+    public ResponseEntity<ApiResponse<MessageDTO>> sendMessage(
             @RequestAttribute String uid,
             @RequestBody Map<String, Object> payload) {
         try {
             Long receiverId = Long.parseLong(payload.get("receiverId").toString());
             String content = payload.get("content").toString();
             
-            Message message = messageService.sendMessage(uid, receiverId, content);
+            // Chuyển đổi sang MessageDTO
+            MessageDTO messageDTO = new MessageDTO();
+            messageDTO.setSenderId(uid);
+            messageDTO.setReceiverId(String.valueOf(receiverId));
+            messageDTO.setContent(content);
+            messageDTO.setMessageType("TEXT");
+            
+            MessageDTO message = messageService.sendMessage(messageDTO);
             return ApiResponse.ok(message);
         } catch (Exception e) {
             return ApiResponse.error(e.getMessage());
@@ -51,11 +58,14 @@ public class MessageAPI extends XDevBaseAPI<Message, MessageFilter> {
     }
 
     @GetMapping("/history/{userId}")
-    public ResponseEntity<ApiResponse<List<Message>>> getMessageHistory(
+    public ResponseEntity<ApiResponse<Page<MessageDTO>>> getMessageHistory(
             @RequestAttribute String uid,
-            @PathVariable Long userId) {
+            @PathVariable Long userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
         try {
-            List<Message> messages = messageService.getMessagesBetweenUsers(uid, userId);
+            Pageable pageable = PageRequest.of(page, size, Sort.by("timestamp").descending());
+            Page<MessageDTO> messages = messageService.getConversation(uid, String.valueOf(userId), pageable);
             return ApiResponse.ok(messages);
         } catch (Exception e) {
             return ApiResponse.error(e.getMessage());
@@ -63,11 +73,10 @@ public class MessageAPI extends XDevBaseAPI<Message, MessageFilter> {
     }
 
     @GetMapping("/unread")
-    public ResponseEntity<ApiResponse<List<Message>>> getUnreadMessages(
+    public ResponseEntity<ApiResponse<List<MessageDTO>>> getUnreadMessages(
             @RequestAttribute String uid) {
         try {
-            Long currentUserId = Long.parseLong(uid);
-            List<Message> unreadMessages = messageService.getUnreadMessages(uid, currentUserId);
+            List<MessageDTO> unreadMessages = messageService.getUnreadMessages(uid);
             return ApiResponse.ok(unreadMessages);
         } catch (Exception e) {
             return ApiResponse.error(e.getMessage());
@@ -79,7 +88,9 @@ public class MessageAPI extends XDevBaseAPI<Message, MessageFilter> {
             @RequestAttribute String uid,
             @PathVariable Long messageId) {
         try {
-            messageService.markMessageAsRead(uid, messageId);
+            // Lấy thông tin tin nhắn để có receiverId
+            Message message = messageService.getById(uid, messageId);
+            messageService.markMessagesAsRead(message.getSenderId(), message.getReceiverId());
             return ApiResponse.ok("Message marked as read");
         } catch (Exception e) {
             return ApiResponse.error(e.getMessage());
@@ -87,12 +98,11 @@ public class MessageAPI extends XDevBaseAPI<Message, MessageFilter> {
     }
 
     @GetMapping("/recent-users")
-    public ResponseEntity<ApiResponse<List<Long>>> getRecentChatUsers(
+    public ResponseEntity<ApiResponse<List<MessageDTO>>> getRecentChatUsers(
             @RequestAttribute String uid) {
         try {
-            Long currentUserId = Long.parseLong(uid);
-            List<Long> recentUserIds = messageService.getRecentChatUsers(uid, currentUserId);
-            return ApiResponse.ok(recentUserIds);
+            List<MessageDTO> recentConversations = messageService.getRecentConversations(uid);
+            return ApiResponse.ok(recentConversations);
         } catch (Exception e) {
             return ApiResponse.error(e.getMessage());
         }

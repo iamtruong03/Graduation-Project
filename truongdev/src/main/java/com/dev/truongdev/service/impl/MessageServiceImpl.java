@@ -2,10 +2,9 @@ package com.dev.truongdev.service.impl;
 
 import com.dev.truongdev.dto.MessageDTO;
 import com.dev.truongdev.entity.Message;
-import com.dev.truongdev.entity.User;
 import com.dev.truongdev.payload.filter.MessageFilter;
 import com.dev.truongdev.repo.MessageRepo;
-import com.dev.truongdev.repository.UserRepository;
+import com.dev.truongdev.repo.UserRepo;
 import com.dev.truongdev.service.IMessageService;
 import com.dev.truongdev.xdevbase.service.impl.XDevBaseServiceImpl;
 import lombok.AccessLevel;
@@ -29,61 +28,15 @@ public class MessageServiceImpl
     implements IMessageService {
 
     final MessageRepo repo;
-    final UserRepository userRepository;
+    final UserRepo userRepo;
 
-    public MessageServiceImpl(MessageRepo repo, UserRepository userRepository) {
+    public MessageServiceImpl(MessageRepo repo, UserRepo userRepo) {
         super(repo);
         this.repo = repo;
-        this.userRepository = userRepository;
-    }
-
-    // Existing methods from original service
-    @Override
-    @Transactional
-    public Message sendMessage(String uid, Long receiverId, String content) {
-        Long senderId = Long.parseLong(uid);
-        Message message = Message.builder()
-            .senderId(String.valueOf(senderId))
-            .receiverId(String.valueOf(receiverId))
-            .content(content)
-            .timestamp(new Date())
-            .isRead(false)
-            .messageType("TEXT")
-            .build();
-
-        return create(uid, message);
-    }
-
-    @Override
-    public List<Message> getMessagesBetweenUsers(String uid, Long userId) {
-        return repo.findMessagesBetweenUsers(Long.parseLong(uid), userId);
-    }
-
-    @Override
-    public List<Message> getUnreadMessages(String uid, Long currentUserId) {
-        return repo.findByReceiverIdAndIsReadFalseOrderByTimestampDesc(currentUserId);
-    }
-
-    @Override
-    @Transactional
-    public void markMessageAsRead(String uid, Long messageId) {
-        Message message = getById(uid, messageId);
-        message.setIsRead(true);
-        update(uid, message, messageId);
-    }
-
-    @Override
-    public List<Long> getRecentChatUsers(String uid, Long userId) {
-        return repo.findRecentChatUsers(userId);
+        this.userRepo = userRepo;
     }
 
     // New WebSocket methods
-
-    /**
-     * Gửi tin nhắn mới qua WebSocket
-     * @param messageDTO Thông tin tin nhắn cần gửi
-     * @return Tin nhắn đã được lưu và convert sang DTO
-     */
     @Override
     public MessageDTO sendMessage(MessageDTO messageDTO) {
         // Tạo entity Message từ DTO
@@ -229,14 +182,12 @@ public class MessageServiceImpl
         dto.setDepartmentId(message.getDepartmentId());
         
         // Lấy thông tin người gửi và người nhận
-        userRepository.findById(message.getSenderId()).ifPresent(sender -> {
-            dto.setSenderName(sender.getFullName());
-            dto.setSenderAvatar(sender.getAvatar());
+        userRepo.findById(Long.parseLong(message.getSenderId())).ifPresent(sender -> {
+            dto.setSenderName(sender.getName());
         });
         
-        userRepository.findById(message.getReceiverId()).ifPresent(receiver -> {
-            dto.setReceiverName(receiver.getFullName());
-            dto.setReceiverAvatar(receiver.getAvatar());
+        userRepo.findById(Long.parseLong(message.getReceiverId())).ifPresent(receiver -> {
+            dto.setReceiverName(receiver.getName());
         });
         
         // Tạo chat room ID

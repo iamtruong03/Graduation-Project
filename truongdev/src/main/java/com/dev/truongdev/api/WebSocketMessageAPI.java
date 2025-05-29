@@ -2,7 +2,9 @@ package com.dev.truongdev.api;
 
 import com.dev.truongdev.dto.MessageDTO;
 import com.dev.truongdev.service.IMessageService;
+import com.dev.truongdev.utils.JwtTokenUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.handler.annotation.SendTo;
@@ -18,20 +20,26 @@ public class WebSocketMessageAPI {
 
     private final IMessageService messageService;
     private final SimpMessagingTemplate messagingTemplate;
+    private final JwtTokenUtil jwtTokenUtil;
 
     /**
      * Xử lý gửi tin nhắn qua WebSocket
      * @param messageDTO Tin nhắn cần gửi
-     * @param headerAccessor Header accessor để lấy thông tin session
-     * @param principal Principal để lấy thông tin user
+     * @param token JWT token để lấy thông tin user
      * @return Tin nhắn đã được lưu
      */
     @MessageMapping("/chat.sendMessage")
     public void sendMessage(@Payload MessageDTO messageDTO, 
-                           SimpMessageHeaderAccessor headerAccessor,
-                           Principal principal) {
+                           @Header("Authorization") String token) {
         try {
-            // Thiết lập action cho WebSocket message
+            // Lấy uid từ JWT token
+            String uid = jwtTokenUtil.extractSubject(token.replace("Bearer ", ""));
+            if (uid == null) {
+                throw new IllegalArgumentException("Invalid token");
+            }
+            
+            // Thiết lập senderId và action
+            messageDTO.setSenderId(uid);
             messageDTO.setAction("SEND");
             
             // Lưu tin nhắn vào database

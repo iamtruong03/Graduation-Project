@@ -303,9 +303,6 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
      */
     @Override
     public Page<Project> searchAll(Long departmentId, String uid, ProjectFilter filter, Pageable pageable) {
-        validateDepartmentId(departmentId);
-        validateUserId(uid);
-        
         User user = userRepo.findById(Long.valueOf(uid))
             .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
 
@@ -324,6 +321,45 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
             departmentIds,
             pageable
         );
+    }
+
+    @Override
+    public ProjectDTO updateProject(Long id, ProjectDTO projectDTO) {
+        validateProjectDTO(projectDTO);
+        validateId(id);
+
+        Project project = projectRepo.findById(id)
+                .orElseThrow(() -> new RuntimeException("Project not found"));
+
+        if (project.getState() != AppConstants.STATUS_IN_PROGRESS) {
+            throw new RuntimeException("Chỉ có thể cập nhật dự án khi đang trong trạng thái thực hiện");
+        }
+
+        Integer previousState = project.getState();
+        
+        BeanUtils.copyProperties(projectDTO, project, "id", "createBy", "createDate", "state");
+        project = projectRepo.save(project);
+        
+        if (!Objects.equals(previousState, project.getState())) {
+            createProjectHistory(id, previousState, project.getState(), 
+                projectDTO.getUpdateBy(), "Cập nhật trạng thái dự án");
+        }
+        
+        return convertToDTO(project);
+    }
+
+    @Override
+    public List<ProjectHistoryDTO> getProjectHistory(Long projectId) {
+        validateId(projectId);
+        List<ProjectHistory> histories = projectHistoryRepo.findByProjectIdOrderByChangedAtDesc(projectId);
+        return histories.stream()
+            .map(this::convertHistoryToDTO)
+            .collect(Collectors.toList());
+    }
+
+    @Override
+    public void addProjectHistory(Long projectId, Integer previousState, Integer newState, String changedBy, String comment) {
+        createProjectHistory(projectId, previousState, newState, changedBy, comment);
     }
 
     // Private helper methods
@@ -435,13 +471,24 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
             return;
         }
         
-        boolean isValidTransition = switch (currentState) {
-            case AppConstants.STATUS_PENDING -> newState == AppConstants.STATUS_APPROVED || newState == AppConstants.STATUS_REJECTED;
-            case AppConstants.STATUS_APPROVED -> newState == AppConstants.STATUS_IN_PROGRESS;
-            case AppConstants.STATUS_IN_PROGRESS -> newState == AppConstants.STATUS_COMPLETE || newState == AppConstants.STATUS_OVERDUE;
-            case AppConstants.STATUS_COMPLETE, AppConstants.STATUS_OVERDUE, AppConstants.STATUS_REJECTED -> false;
-            default -> false;
-        };
+        boolean isValidTransition;
+        if (currentState == null) {
+            isValidTransition = false;
+        } else if (currentState == AppConstants.STATUS_PENDING) {
+            isValidTransition = newState == AppConstants.STATUS_APPROVED || 
+                              newState == AppConstants.STATUS_REJECTED;
+        } else if (currentState == AppConstants.STATUS_APPROVED) {
+            isValidTransition = newState == AppConstants.STATUS_IN_PROGRESS;
+        } else if (currentState == AppConstants.STATUS_IN_PROGRESS) {
+            isValidTransition = newState == AppConstants.STATUS_COMPLETE || 
+                              newState == AppConstants.STATUS_OVERDUE;
+        } else if (currentState == AppConstants.STATUS_COMPLETE || 
+                  currentState == AppConstants.STATUS_OVERDUE || 
+                  currentState == AppConstants.STATUS_REJECTED) {
+            isValidTransition = false;
+        } else {
+            isValidTransition = false;
+        }
 
         if (!isValidTransition) {
             throw new IllegalStateException(

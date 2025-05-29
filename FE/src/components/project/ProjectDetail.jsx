@@ -168,6 +168,22 @@ const ProjectDetail = () => {
     }
   };
 
+  const getPriorityColor = (priority) => {
+    switch (priority) {
+      case 'HIGH':
+      case 'Cao':
+        return '#d32f2f'; // Red
+      case 'MEDIUM':
+      case 'Trung bình':
+        return '#ed6c02'; // Orange
+      case 'LOW':
+      case 'Thấp':
+        return '#2e7d32'; // Green
+      default:
+        return '#757575'; // Grey
+    }
+  };
+
   const handleCloseTaskDialog = () => {
     setOpenTaskDialog(false);
     setNewTask({

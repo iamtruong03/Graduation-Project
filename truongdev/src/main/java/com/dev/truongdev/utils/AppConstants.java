@@ -7,16 +7,14 @@ public class AppConstants {
   public static final String SYSTEM = "system";
   
   // Project status constants
-  public static final Integer STATUS_PENDING = 1;      // Chờ duyệt
-  public static final Integer STATUS_APPROVED = 2;     // Đã duyệt
-  public static final Integer STATUS_REJECTED = 3;     // Từ chối
-  public static final Integer STATUS_IN_PROGRESS = 4;  // Đang thực hiện
-  public static final Integer STATUS_COMPLETE = 5;     // Hoàn thành
-  public static final Integer STATUS_OVERDUE = 6;      // Quá hạn
+  public static final Integer STATUS_PENDING = 0;      // Chờ duyệt
+  public static final Integer STATUS_REJECTED = 1;     // Từ chối
+  public static final Integer STATUS_IN_PROGRESS = 2;  // Đang thực hiện
+  public static final Integer STATUS_COMPLETE = 3;     // Hoàn thành
+  public static final Integer STATUS_OVERDUE = 4;      // Quá hạn
   
   public static final Set<Integer> LIST_STATUS_WORKFLOW = Set.of(
       STATUS_PENDING,
-      STATUS_APPROVED, 
       STATUS_REJECTED,
       STATUS_IN_PROGRESS,
       STATUS_COMPLETE,
@@ -53,7 +51,6 @@ public class AppConstants {
   public static String getProjectStateName(Integer state) {
     if (state == null) return "NULL";
     if (state.equals(STATUS_PENDING)) return "Chờ duyệt";
-    if (state.equals(STATUS_APPROVED)) return "Đã duyệt";
     if (state.equals(STATUS_REJECTED)) return "Từ chối";
     if (state.equals(STATUS_IN_PROGRESS)) return "Đang thực hiện";
     if (state.equals(STATUS_COMPLETE)) return "Hoàn thành";

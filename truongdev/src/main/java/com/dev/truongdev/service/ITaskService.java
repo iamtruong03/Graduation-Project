@@ -17,8 +17,7 @@ public interface ITaskService extends IXDevBaseService<Task, TaskFilter> {
     
     // Add approval flow methods
     TaskDTO createTask(String uid, TaskDTO taskDTO);
-    TaskDTO submitForApproval(String uid, Long id, List<Long> approverIds);
-    TaskDTO approveTask(String uid, Long id, String approvedBy);
+    TaskDTO approveTask(String uid, Long id);
     TaskDTO rejectTask(String uid, Long id, String reason);
     void checkAndUpdateTaskCompletion(Long taskId);
     Page<Task> getPendingApprovalTasks(String approverId, TaskFilter filter, Pageable pageable);

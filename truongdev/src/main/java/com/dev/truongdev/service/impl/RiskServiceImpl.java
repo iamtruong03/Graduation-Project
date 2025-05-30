@@ -113,32 +113,6 @@ public class RiskServiceImpl extends XDevBaseServiceImpl<Risk, RiskFilter, RiskR
     }
 
     /**
-     * Gửi rủi ro đi phê duyệt, chỉ định người phê duyệt.
-     * @param uid ID người gửi phê duyệt
-     * @param id ID rủi ro
-     * @param approverIds Danh sách ID người phê duyệt (lấy phần tử đầu)
-     * @return RiskDTO sau khi cập nhật
-     */
-    @Override
-    @Transactional
-    public RiskDTO submitForApproval(String uid, Long id, List<Long> approverIds) {
-        validateSubmitForApproval(uid, id, approverIds);
-        
-        Risk risk = riskRepo.findById(id)
-            .orElseThrow(() -> new RuntimeException("Không tìm thấy risk"));
-            
-        risk.setApproverId(approverIds.get(0).toString());
-        risk.setUpdateBy(uid);
-        
-        Risk savedRisk = riskRepo.save(risk);
-        
-        addRiskHistory(id, AppConstants.STATUS_PENDING, AppConstants.STATUS_PENDING, 
-            uid, "Đã chỉ định người phê duyệt: " + risk.getApproverId());
-        
-        return convertToDTO(savedRisk);
-    }
-
-    /**
      * Phê duyệt rủi ro, chuyển trạng thái sang ĐÃ DUYỆT và tự động sang ĐANG THEO DÕI.
      * @param uid ID người phê duyệt
      * @param id ID rủi ro
@@ -153,12 +127,12 @@ public class RiskServiceImpl extends XDevBaseServiceImpl<Risk, RiskFilter, RiskR
         Risk risk = riskRepo.findById(id)
             .orElseThrow(() -> new RuntimeException("Không tìm thấy risk"));
         
-        risk.setState(AppConstants.STATUS_APPROVED);
+        risk.setState(AppConstants.STATUS_IN_PROGRESS);
         risk.setUpdateBy(uid);
         
         Risk savedRisk = riskRepo.save(risk);
         
-        addRiskHistory(id, AppConstants.STATUS_PENDING, AppConstants.STATUS_APPROVED, 
+        addRiskHistory(id, AppConstants.STATUS_PENDING, AppConstants.STATUS_IN_PROGRESS,
             uid, "Phê duyệt risk");
 
         updateRiskState(uid, id, AppConstants.STATUS_IN_PROGRESS, uid, "Tự động chuyển sang trạng thái đang theo dõi");
@@ -614,9 +588,9 @@ public class RiskServiceImpl extends XDevBaseServiceImpl<Risk, RiskFilter, RiskR
         
         boolean isValid;
         if (previousState.equals(AppConstants.STATUS_PENDING)) {
-            isValid = newState.equals(AppConstants.STATUS_APPROVED) || 
+            isValid = newState.equals(AppConstants.STATUS_IN_PROGRESS) ||
                      newState.equals(AppConstants.STATUS_REJECTED);
-        } else if (previousState.equals(AppConstants.STATUS_APPROVED)) {
+        } else if (previousState.equals(AppConstants.STATUS_IN_PROGRESS)) {
             isValid = newState.equals(AppConstants.STATUS_IN_PROGRESS);
         } else if (previousState.equals(AppConstants.STATUS_IN_PROGRESS)) {
             isValid = newState.equals(AppConstants.STATUS_COMPLETE) || 

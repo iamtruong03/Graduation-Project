@@ -194,10 +194,10 @@ const StaffManagement = () => {
   return (
     <Box sx={{ p: 4, backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
       <Paper elevation={3} sx={{ p: 3, borderRadius: 2 }}>
-        <Typography 
-          variant="h5" 
-          sx={{ 
-            mb: 4, 
+        <Typography
+          variant="h5"
+          sx={{
+            mb: 4,
             fontWeight: 600,
             color: '#1976d2',
             borderBottom: '2px solid #1976d2',
@@ -207,10 +207,10 @@ const StaffManagement = () => {
           QUẢN LÝ NHÂN SỰ
         </Typography>
 
-        <Stack 
-          direction="row" 
-          spacing={2} 
-          sx={{ 
+        <Stack
+          direction="row"
+          spacing={2}
+          sx={{
             mb: 3,
             flexWrap: 'wrap',
             gap: 2
@@ -222,16 +222,16 @@ const StaffManagement = () => {
             size="small"
             value={searchTerm}
             onChange={handleSearch}
-            sx={{ 
+            sx={{
               width: { xs: '100%', sm: 250 },
               backgroundColor: 'white'
             }}
             placeholder="Tìm theo tên hoặc mã nhân viên"
           />
 
-          <FormControl 
-            size="small" 
-            sx={{ 
+          <FormControl
+            size="small"
+            sx={{
               width: { xs: '100%', sm: 200 },
               backgroundColor: 'white'
             }}
@@ -251,9 +251,9 @@ const StaffManagement = () => {
             </Select>
           </FormControl>
 
-          <FormControl 
-            size="small" 
-            sx={{ 
+          <FormControl
+            size="small"
+            sx={{
               width: { xs: '100%', sm: 200 },
               backgroundColor: 'white'
             }}
@@ -276,7 +276,7 @@ const StaffManagement = () => {
           <Button
             variant="contained"
             onClick={() => navigate('/staff/create')}
-            sx={{ 
+            sx={{
               ml: 'auto',
               backgroundColor: '#1976d2',
               '&:hover': {
@@ -288,9 +288,9 @@ const StaffManagement = () => {
           </Button>
         </Stack>
 
-        <TableContainer 
-          component={Paper} 
-          sx={{ 
+        <TableContainer
+          component={Paper}
+          sx={{
             borderRadius: 1,
             boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
             overflow: 'hidden'
@@ -313,9 +313,9 @@ const StaffManagement = () => {
               {error ? (
                 <TableRow>
                   <TableCell colSpan={10}>
-                    <Alert 
-                      severity="error" 
-                      sx={{ 
+                    <Alert
+                      severity="error"
+                      sx={{
                         mb: 2,
                         '& .MuiAlert-icon': {
                           color: '#d32f2f'
@@ -343,10 +343,10 @@ const StaffManagement = () => {
               ) : (
                 filteredStaff.map((staff, index) => (
                   // Sửa lại thứ tự hiển thị trong TableRow
-                  <TableRow 
+                  <TableRow
                     key={staff.id}
-                    sx={{ 
-                      '&:hover': { 
+                    sx={{
+                      '&:hover': {
                         backgroundColor: '#f5f5f5'
                       }
                     }}
@@ -386,9 +386,9 @@ const StaffManagement = () => {
         </TableContainer>
       </Paper>
 
-      <Box sx={{ 
-        mt: 2, 
-        p: 2, 
+      <Box sx={{
+        mt: 2,
+        p: 2,
         backgroundColor: '#fff',
         borderRadius: 1,
         boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)'

@@ -26,6 +26,8 @@ public class Task extends XDevBaseEntity {
     @Column(name = "state")
     Integer state;
 
+    Integer taskTypeId;
+
     Long riskId;
 
     // Phòng ban phụ trách
@@ -59,4 +61,7 @@ public class Task extends XDevBaseEntity {
     // Người phê duyệt
     @Column(name = "approver_id")
     String approverId;
+
+    @Column(name = "is_approved")
+    Boolean isApproved;
 }

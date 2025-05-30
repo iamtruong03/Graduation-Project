@@ -51,18 +51,6 @@ public class RiskAPI extends XDevBaseAPI<Risk, RiskFilter> {
         }
     }
 
-    @PostMapping("/{id}/submit-approval")
-    public ResponseEntity<ApiResponse<RiskDTO>> submitForApproval(
-            @RequestAttribute String uid,
-            @PathVariable Long id,
-            @RequestBody List<Long> approverIds) {
-        try {
-            return ApiResponse.ok(riskService.submitForApproval(uid, id, approverIds));
-        } catch (Exception e) {
-            return ApiResponse.error(e.getMessage());
-        }
-    }
-
     @PostMapping("/{id}/approve")
     public ResponseEntity<ApiResponse<RiskDTO>> approveRisk(
             @RequestAttribute String uid,

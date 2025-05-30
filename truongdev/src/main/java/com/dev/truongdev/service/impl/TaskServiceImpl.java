@@ -112,9 +112,12 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
 
         Task task = new Task();
         BeanUtils.copyProperties(taskDTO, task);
-        
+
+        task.setStatus(AppConstants.STATUS_ACTIVE);
         task.setState(AppConstants.STATUS_PENDING);
         task.setCreateBy(uid);
+        task.setIsApproved(false);
+        task.setUpdateBy(uid);
 
         User currentUser = userService.getById(uid, Long.valueOf(uid));
         String[] approverInfo = determineApprover(uid, currentUser, task.getDepartmentId());
@@ -128,53 +131,21 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
         return convertToDTO(savedTask);
     }
 
-    /**
-     * Gửi công việc đi phê duyệt, chỉ định người phê duyệt.
-     * @param uid ID người gửi phê duyệt
-     * @param id ID công việc
-     * @param approverIds Danh sách ID người phê duyệt (lấy phần tử đầu)
-     * @return TaskDTO sau khi cập nhật
-     */
     @Override
     @Transactional
-    public TaskDTO submitForApproval(String uid, Long id, List<Long> approverIds) {
-        validateSubmitForApproval(uid, id, approverIds);
-        
-        Task task = taskRepo.findById(id)
-            .orElseThrow(() -> new RuntimeException("Không tìm thấy task"));
-            
-        task.setApproverId(approverIds.get(0).toString());
-        task.setUpdateBy(uid);
-        
-        Task savedTask = taskRepo.save(task);
-        
-        addTaskHistory(id, AppConstants.STATUS_PENDING, AppConstants.STATUS_PENDING, 
-            uid, "Đã chỉ định người phê duyệt: " + task.getApproverId());
-        
-        return convertToDTO(savedTask);
-    }
-
-    /**
-     * Phê duyệt công việc, chuyển trạng thái sang ĐÃ DUYỆT và tự động sang ĐANG THỰC HIỆN.
-     * @param uid ID người phê duyệt
-     * @param id ID công việc
-     * @param approvedBy Thông tin người phê duyệt
-     * @return TaskDTO sau khi phê duyệt
-     */
-    @Override
-    @Transactional
-    public TaskDTO approveTask(String uid, Long id, String approvedBy) {
+    public TaskDTO approveTask(String uid, Long id) {
         validateApproval(uid, id);
         
         Task task = taskRepo.findById(id)
             .orElseThrow(() -> new RuntimeException("Không tìm thấy task"));
         
-        task.setState(AppConstants.STATUS_APPROVED);
+        task.setState(AppConstants.STATUS_IN_PROGRESS);
+        task.setIsApproved(true);
         task.setUpdateBy(uid);
         
         Task savedTask = taskRepo.save(task);
         
-        addTaskHistory(id, AppConstants.STATUS_PENDING, AppConstants.STATUS_APPROVED, 
+        addTaskHistory(id, AppConstants.STATUS_PENDING, AppConstants.STATUS_IN_PROGRESS,
             uid, "Phê duyệt task");
 
         updateTaskState(uid, id, AppConstants.STATUS_IN_PROGRESS, uid, "Tự động chuyển sang trạng thái đang thực hiện");
@@ -198,6 +169,7 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
             .orElseThrow(() -> new RuntimeException("Không tìm thấy task"));
         
         task.setState(AppConstants.STATUS_REJECTED);
+        task.setIsApproved(false);
         task.setUpdateBy(uid);
         
         Task savedTask = taskRepo.save(task);
@@ -252,13 +224,6 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
         addTaskHistory(id, task.getState(), task.getState(), uid, "Xóa task");
     }
 
-    /**
-     * Lấy danh sách công việc đang chờ phê duyệt của một người.
-     * @param approverId ID người phê duyệt
-     * @param filter Bộ lọc tìm kiếm
-     * @param pageable Thông tin phân trang
-     * @return Danh sách công việc chờ phê duyệt
-     */
     @Override
     public Page<Task> getPendingApprovalTasks(String approverId, TaskFilter filter, Pageable pageable) {
         return taskRepo.findPendingApprovalTasks(
@@ -334,9 +299,6 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
     private void validateTaskDTO(TaskDTO taskDTO) {
         if (taskDTO == null) {
             throw new IllegalArgumentException("Task data cannot be null");
-        }
-        if (taskDTO.getState() == null) {
-            throw new IllegalArgumentException("Task state cannot be null");
         }
     }
 

@@ -72,7 +72,6 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
     @Transactional
     public ProjectDTO createProject(String uid, ProjectDTO projectDTO) {
         validateProjectDTO(projectDTO);
-        validateUserId(uid);
 
         Project project = new Project();
         BeanUtils.copyProperties(projectDTO, project);
@@ -96,32 +95,6 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
     }
 
     /**
-     * Gửi dự án đi phê duyệt, chỉ định người phê duyệt.
-     * @param uid ID người gửi phê duyệt
-     * @param id ID dự án
-     * @param approverIds Danh sách ID người phê duyệt (lấy phần tử đầu)
-     * @return Dự án sau khi cập nhật
-     */
-    @Override
-    @Transactional
-    public ProjectDTO submitForApproval(String uid, Long id, List<Long> approverIds) {
-        validateSubmitForApproval(uid, id, approverIds);
-        
-        Project project = projectRepo.findById(id)
-            .orElseThrow(() -> new RuntimeException("Không tìm thấy dự án"));
-            
-        project.setApproverId(approverIds.get(0).toString());
-        project.setUpdateBy(uid);
-        
-        Project savedProject = projectRepo.save(project);
-        
-        createProjectHistory(id, AppConstants.STATUS_PENDING, AppConstants.STATUS_PENDING, 
-            uid, "Đã chỉ định người phê duyệt: " + project.getApproverId());
-        
-        return convertToDTO(savedProject);
-    }
-
-    /**
      * Phê duyệt dự án, chuyển trạng thái sang ĐÃ DUYỆT và tự động sang ĐANG THỰC HIỆN.
      * @param uid ID người phê duyệt
      * @param id ID dự án
@@ -135,16 +108,16 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
         Project project = projectRepo.findById(id)
             .orElseThrow(() -> new RuntimeException("Không tìm thấy dự án"));
         
-        project.setState(AppConstants.STATUS_APPROVED);
+        project.setState(AppConstants.STATUS_IN_PROGRESS);
         project.setIsApproved(true);
         project.setUpdateBy(uid);
         
         Project savedProject = projectRepo.save(project);
         
-        createProjectHistory(id, AppConstants.STATUS_PENDING, AppConstants.STATUS_APPROVED, 
+        createProjectHistory(id, AppConstants.STATUS_PENDING, AppConstants.STATUS_IN_PROGRESS,
             uid, "Phê duyệt dự án");
 
-        updateProjectState(uid, id, AppConstants.STATUS_IN_PROGRESS, uid, "Tự động chuyển sang trạng thái đang thực hiện");
+        updateProjectState(uid, id, AppConstants.STATUS_IN_PROGRESS, "Tự động chuyển sang trạng thái đang thực hiện");
         
         return convertToDTO(savedProject);
     }
@@ -181,29 +154,26 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
      * @param uid ID người thay đổi
      * @param id ID dự án
      * @param newState Trạng thái mới
-     * @param changedBy Người thay đổi
      * @param comment Ghi chú thay đổi
      * @return Dự án sau khi cập nhật
      */
     @Override
     @Transactional
-    public ProjectDTO updateProjectState(String uid, Long id, Integer newState, String changedBy, String comment) {
-        validateId(id);
-        validateUserId(uid);
-        
+    public ProjectDTO updateProjectState(String uid, Long id, Integer newState, String comment) {
+
         Project project = projectRepo.findById(id)
             .orElseThrow(() -> new RuntimeException("Không tìm thấy dự án"));
-            
+
         validateStateTransition(project.getState(), newState);
-            
+
         Integer previousState = project.getState();
         project.setState(newState);
-        project.setUpdateBy(changedBy);
-        
+        project.setUpdateBy(uid);
+
         Project savedProject = projectRepo.save(project);
-        
-        createProjectHistory(id, previousState, newState, changedBy, comment);
-        
+
+        createProjectHistory(id, previousState, newState, uid, comment);
+
         return convertToDTO(savedProject);
     }
 
@@ -214,7 +184,6 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
     @Override
     @Transactional
     public void checkAndUpdateProjectCompletion(Long projectId) {
-        validateId(projectId);
         Project project = projectRepo.findById(projectId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy dự án"));
                 
@@ -227,8 +196,7 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
         if (areAllTasksCompleted(tasks)) {
             handleCompletedProject(project);
         } else if (isOverdue(project)) {
-            updateProjectState(AppConstants.SYSTEM, project.getId(), AppConstants.STATUS_OVERDUE,
-                AppConstants.SYSTEM, "Tự động cập nhật trạng thái quá hạn do đã vượt thời hạn dự án");
+            updateProjectState(AppConstants.SYSTEM, project.getId(), AppConstants.STATUS_OVERDUE, "Tự động cập nhật trạng thái quá hạn do đã vượt thời hạn dự án");
         }
     }
 
@@ -239,7 +207,6 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
      */
     @Override
     public void changeStatus(String uid, Long id) {
-        validateId(id);
         Project project = projectRepo.findById(id)
             .orElseThrow(() -> new RuntimeException("Không tìm thấy dự án"));
             
@@ -263,7 +230,6 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
      */
     @Override
     public Page<Project> getPendingApprovalProjects(String approverId, ProjectFilter filter, Pageable pageable) {
-        validateUserId(approverId);
         return projectRepo.findPendingApprovalProjects(
             AppConstants.STATUS_ACTIVE,
             AppConstants.STATUS_PENDING,
@@ -319,7 +285,6 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
     @Override
     public ProjectDTO updateProject(Long id, ProjectDTO projectDTO) {
         validateProjectDTO(projectDTO);
-        validateId(id);
 
         Project project = projectRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Project not found"));
@@ -343,7 +308,6 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
 
     @Override
     public List<ProjectHistoryDTO> getProjectHistory(Long projectId) {
-        validateId(projectId);
         List<ProjectHistory> histories = projectHistoryRepo.findByProjectIdOrderByChangedAtDesc(projectId);
         return histories.stream()
             .map(this::convertHistoryToDTO)
@@ -365,29 +329,13 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
         }
     }
 
-    private void validateId(Long id) {
-        if (id == null || id <= 0) {
-            throw new IllegalArgumentException("Invalid ID");
-        }
-    }
-
-    private void validateUserId(String uid) {
-        if (!StringUtils.hasText(uid)) {
-            throw new IllegalArgumentException("User ID cannot be empty");
-        }
-    }
-
     private void validateSubmitForApproval(String uid, Long id, List<Long> approverIds) {
         if (approverIds == null || approverIds.isEmpty()) {
             throw new RuntimeException("Phải chỉ định người phê duyệt");
         }
-        validateUserId(uid);
-        validateId(id);
     }
 
     private void validateApproval(String uid, Long id) {
-        validateUserId(uid);
-        validateId(id);
         Project project = projectRepo.findById(id)
             .orElseThrow(() -> new RuntimeException("Không tìm thấy dự án"));
             
@@ -401,8 +349,6 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
     }
 
     private void validateRejection(String uid, Long id) {
-        validateUserId(uid);
-        validateId(id);
         Project project = projectRepo.findById(id)
             .orElseThrow(() -> new RuntimeException("Không tìm thấy dự án"));
             
@@ -462,9 +408,9 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
         if (currentState == null) {
             isValidTransition = false;
         } else if (currentState == AppConstants.STATUS_PENDING) {
-            isValidTransition = newState == AppConstants.STATUS_APPROVED || 
+            isValidTransition = newState == AppConstants.STATUS_IN_PROGRESS ||
                               newState == AppConstants.STATUS_REJECTED;
-        } else if (currentState == AppConstants.STATUS_APPROVED) {
+        } else if (currentState == AppConstants.STATUS_IN_PROGRESS) {
             isValidTransition = newState == AppConstants.STATUS_IN_PROGRESS;
         } else if (currentState == AppConstants.STATUS_IN_PROGRESS) {
             isValidTransition = newState == AppConstants.STATUS_COMPLETE || 
@@ -494,10 +440,10 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
     private void handleCompletedProject(Project project) {
         if (isOverdue(project)) {
             updateProjectState(AppConstants.SYSTEM, project.getId(), AppConstants.STATUS_OVERDUE, 
-                AppConstants.SYSTEM, "Tự động cập nhật trạng thái quá hạn do đã hoàn thành sau thời hạn");
+                 "Tự động cập nhật trạng thái quá hạn do đã hoàn thành sau thời hạn");
         } else {
             updateProjectState(AppConstants.SYSTEM, project.getId(), AppConstants.STATUS_COMPLETE,
-                AppConstants.SYSTEM, "Tự động cập nhật trạng thái hoàn thành");
+                 "Tự động cập nhật trạng thái hoàn thành");
         }
     }
 

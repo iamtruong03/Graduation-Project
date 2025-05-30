@@ -31,16 +31,6 @@ const projectService = {
     return response;
   },
 
-  // Gửi phê duyệt dự án
-  submitForApproval: async (id, approverIds) => {
-    const response = await api.post(
-      `/api/projects/${id}/submit-approval`,
-      approverIds,
-      getAuthHeader()
-    );
-    return response;
-  },
-
   // Phê duyệt dự án
   approveProject: (id, approverId) => {
     return api.post(`/api/projects/${id}/approve`, { approverId }, getAuthHeader());

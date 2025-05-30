@@ -14,27 +14,29 @@ import { format, parseISO } from 'date-fns';
 import vi from 'date-fns/locale/vi';
 
 const getStatusColor = (status) => {
+  if (!status) return 'grey';
+  
   switch (status) {
     case 'Chưa bắt đầu':
     case 'pending':
     case 1:
-      return 'warning'; // Chưa bắt đầu
+      return 'warning';
     case 'Đang thực hiện':
     case 'in_progress':
     case 2:
-      return 'info'; // Đang thực hiện
+      return 'info';
     case 'Hoàn thành':
     case 'completed':
     case 3:
-      return 'success'; // Hoàn thành
+      return 'success';
     case 'Tạm dừng':
     case 'paused':
     case 4:
-      return 'warning'; // Tạm dừng
+      return 'warning';
     case 'Đã hủy':
     case 'cancelled':
     case 5:
-      return 'error'; // Đã hủy
+      return 'error';
     default:
       return 'grey';
   }
@@ -129,7 +131,10 @@ const TaskHistory = ({ history = [], error = null }) => {
                 </Typography>
               </TimelineOppositeContent>
               <TimelineSeparator>
-                <TimelineDot variant="outlined" color={getStatusColor(item.newStatus || item.status)} />
+                <TimelineDot 
+                  variant="outlined" 
+                  color={getStatusColor(item.newStatus || item.status) || 'grey'} 
+                />
                 {index < history.length - 1 && <TimelineConnector />}
               </TimelineSeparator>
               <TimelineContent>

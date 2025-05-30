@@ -50,25 +50,12 @@ public class TaskAPI extends XDevBaseAPI<Task, TaskFilter> {
         }
     }
 
-    @PostMapping("/{id}/submit-approval")
-    public ResponseEntity<ApiResponse<TaskDTO>> submitForApproval(
-            @RequestAttribute String uid,
-            @PathVariable Long id,
-            @RequestBody List<Long> approverIds) {
-        try {
-            return ApiResponse.ok(taskService.submitForApproval(uid, id, approverIds));
-        } catch (Exception e) {
-            return ApiResponse.error(e.getMessage());
-        }
-    }
-
     @PostMapping("/{id}/approve")
     public ResponseEntity<ApiResponse<TaskDTO>> approveTask(
             @RequestAttribute String uid,
-            @PathVariable Long id,
-            @RequestParam String approvedBy) {
+            @PathVariable Long id) {
         try {
-            return ApiResponse.ok(taskService.approveTask(uid, id, approvedBy));
+            return ApiResponse.ok(taskService.approveTask(uid, id));
         } catch (Exception e) {
             return ApiResponse.error(e.getMessage());
         }

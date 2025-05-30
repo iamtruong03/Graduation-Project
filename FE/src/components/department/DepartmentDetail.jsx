@@ -52,6 +52,11 @@ const DepartmentDetail = () => {
   });
   const [formErrors, setFormErrors] = useState({});
 
+  const positionOptions = [
+    { id: 1, name: 'Quản lý' },
+    { id: 2, name: 'Nhân viên' }
+  ];
+
   useEffect(() => {
     if (id) {
       fetchDepartmentDetail();
@@ -429,7 +434,9 @@ const DepartmentDetail = () => {
                       {departmentStaff.map((staff) => (
                         <TableRow key={staff.id}>
                           <TableCell>{staff.name}</TableCell>
-                          <TableCell>{staff.position || 'N/A'}</TableCell>
+                          <TableCell>
+                            {positionOptions.find(p => p.id === staff.positionId)?.name || 'N/A'}
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>

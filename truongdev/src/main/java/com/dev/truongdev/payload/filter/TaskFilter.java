@@ -7,7 +7,6 @@ import lombok.EqualsAndHashCode;
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class TaskFilter extends XDevBaseFilter {
-    private String search;
     private Long departmentId;
     private Long projectId;
     private Integer priorityId;

@@ -207,19 +207,19 @@ const TaskList = () => {
       };
 
       const response = await taskService.exportTasks(filter);
-      
+
       // Tạo blob từ response data
-      const blob = new Blob([response], { 
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+      const blob = new Blob([response], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       });
-      
+
       // Tạo URL để tải file
       const url = window.URL.createObjectURL(blob);
-      
+
       // Tạo thẻ a ẩn để tải file
       const link = document.createElement('a');
       link.href = url;
-      
+
       // Lấy tên file từ header
       const contentDisposition = response.headers?.['content-disposition'];
       let fileName = 'DanhSachCongViec.xlsx';
@@ -229,15 +229,15 @@ const TaskList = () => {
           fileName = decodeURIComponent(fileNameMatch[1]);
         }
       }
-      
+
       link.setAttribute('download', fileName);
       document.body.appendChild(link);
       link.click();
-      
+
       // Cleanup
       link.remove();
       window.URL.revokeObjectURL(url);
-      
+
       setError(null);
     } catch (err) {
       setError('Không thể xuất dữ liệu công việc');
@@ -250,19 +250,19 @@ const TaskList = () => {
   return (
     <Box sx={{ p: 4, backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
       <Paper elevation={3} sx={{ p: 3, borderRadius: 2, backgroundColor: '#fff' }}>
-        <Stack 
-          direction="row" 
-          alignItems="center" 
-          spacing={2} 
-          sx={{ 
+        <Stack
+          direction="row"
+          alignItems="center"
+          spacing={2}
+          sx={{
             mb: 4,
             pb: 2,
             borderBottom: '2px solid #1976d2'
           }}
         >
-          <Typography 
-            variant="h5" 
-            sx={{ 
+          <Typography
+            variant="h5"
+            sx={{
               fontWeight: 600,
               color: '#1976d2',
               flex: 1
@@ -276,7 +276,7 @@ const TaskList = () => {
               variant="contained"
               onClick={() => setOpenPendingDialog(true)}
               startIcon={<AssignmentIcon />}
-              sx={{ 
+              sx={{
                 backgroundColor: '#ff9800',
                 '&:hover': {
                   backgroundColor: '#f57c00'
@@ -293,7 +293,7 @@ const TaskList = () => {
             component={Link}
             to="/task/create"
             startIcon={<AddIcon />}
-            sx={{ 
+            sx={{
               backgroundColor: '#2e7d32',
               '&:hover': {
                 backgroundColor: '#1b5e20'
@@ -305,20 +305,20 @@ const TaskList = () => {
         </Stack>
 
         {error && (
-          <Alert 
-            severity="error" 
+          <Alert
+            severity="error"
             onClose={() => setError(null)}
             sx={{ mb: 3 }}
           >
             {error}
           </Alert>
         )}
-        
+
         <Paper elevation={0} sx={{ p: 2, mb: 3, backgroundColor: '#f8f9fa', borderRadius: 2 }}>
-          <Stack 
-            direction="row" 
-            spacing={2} 
-            sx={{ 
+          <Stack
+            direction="row"
+            spacing={2}
+            sx={{
               flexWrap: 'wrap',
               gap: 2
             }}
@@ -332,15 +332,15 @@ const TaskList = () => {
                 startAdornment: <SearchIcon color="action" sx={{ mr: 1 }} />,
                 sx: { backgroundColor: '#fff' }
               }}
-              sx={{ 
+              sx={{
                 minWidth: 300,
                 flex: 1
               }}
             />
-          
-            <FormControl 
-              size="small" 
-              sx={{ 
+
+            <FormControl
+              size="small"
+              sx={{
                 minWidth: 200,
                 backgroundColor: '#fff'
               }}
@@ -356,10 +356,10 @@ const TaskList = () => {
                 <MenuItem value="project">Công việc dự án</MenuItem>
               </Select>
             </FormControl>
-      
-            <FormControl 
-              size="small" 
-              sx={{ 
+
+            <FormControl
+              size="small"
+              sx={{
                 minWidth: 200,
                 backgroundColor: '#fff'
               }}
@@ -376,10 +376,10 @@ const TaskList = () => {
                 <MenuItem value="completed">Hoàn thành</MenuItem>
               </Select>
             </FormControl>
-      
-            <FormControl 
-              size="small" 
-              sx={{ 
+
+            <FormControl
+              size="small"
+              sx={{
                 minWidth: 200,
                 backgroundColor: '#fff'
               }}
@@ -396,12 +396,12 @@ const TaskList = () => {
                 <MenuItem value="low">Thấp</MenuItem>
               </Select>
             </FormControl>
-      
+
             <Button
               variant="outlined"
               onClick={handleExport}
               startIcon={<FileDownloadIcon />}
-              sx={{ 
+              sx={{
                 borderColor: '#1976d2',
                 color: '#1976d2',
                 '&:hover': {
@@ -415,193 +415,193 @@ const TaskList = () => {
             </Button>
           </Stack>
         </Paper>
-      
-          <TableContainer 
-            component={Paper} 
-            elevation={0}
-            sx={{ 
-              borderRadius: 2,
-              border: '1px solid #e0e0e0'
-            }}
-          >
-            <Table>
-              <TableHead>
-                <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                  <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>STT</TableCell>
-                  <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Mã công việc</TableCell>
-                  <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Tên công việc</TableCell>
-                  <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Loại công việc</TableCell>
-                  <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Dự án/Phòng ban</TableCell>
-                  <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Mức độ ưu tiên</TableCell>
-                  <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Người phụ trách</TableCell>
-                  <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Người thực hiện</TableCell>
-                  <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Ngày cập nhật</TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 600, color: '#1976d2' }}>Thao tác</TableCell>
+
+        <TableContainer
+          component={Paper}
+          elevation={0}
+          sx={{
+            borderRadius: 2,
+            border: '1px solid #e0e0e0'
+          }}
+        >
+          <Table>
+            <TableHead>
+              <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>STT</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Mã công việc</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Tên công việc</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Loại công việc</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Dự án/Phòng ban</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Mức độ ưu tiên</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Người phụ trách</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Người thực hiện</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Ngày cập nhật</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 600, color: '#1976d2' }}>Thao tác</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={10} align="center" sx={{ py: 3 }}>
+                    <CircularProgress size={40} />
+                  </TableCell>
                 </TableRow>
-              </TableHead>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={10} align="center" sx={{ py: 3 }}>
-                      <CircularProgress size={40} />
-                    </TableCell>
-                  </TableRow>
-                ) : tasks.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={10} align="center" sx={{ py: 3 }}>
-                      <Typography color="text.secondary">
-                        Không có dữ liệu
+              ) : tasks.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={10} align="center" sx={{ py: 3 }}>
+                    <Typography color="text.secondary">
+                      Không có dữ liệu
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                tasks.map((row, index) => (
+                  <TableRow
+                    key={row.id}
+                    sx={{
+                      '&:hover': {
+                        backgroundColor: '#f5f5f5'
+                      }
+                    }}
+                  >
+                    <TableCell>{(page - 1) * rowsPerPage + index + 1}</TableCell>
+                    <TableCell>
+                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                        {row.code}
                       </Typography>
                     </TableCell>
-                  </TableRow>
-                ) : (
-                  tasks.map((row, index) => (
-                    <TableRow 
-                      key={row.id}
-                      sx={{ 
-                        '&:hover': { 
-                          backgroundColor: '#f5f5f5'
-                        }
-                      }}
-                    >
-                      <TableCell>{(page - 1) * rowsPerPage + index + 1}</TableCell>
-                      <TableCell>
-                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                          {row.code}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography 
-                          variant="body2" 
-                          sx={{ 
-                            color: '#1976d2',
-                            cursor: 'pointer',
-                            '&:hover': {
-                              textDecoration: 'underline'
-                            }
-                          }}
+                    <TableCell>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          color: '#1976d2',
+                          cursor: 'pointer',
+                          '&:hover': {
+                            textDecoration: 'underline'
+                          }
+                        }}
+                        component={Link}
+                        to={`/task/detail/${row.id}`}
+                      >
+                        {row.name}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2">
+                        {row.taskType === 'project' ? 'Công việc dự án' : 'Công việc phòng ban'}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2">
+                        {row.taskType === 'project' ? row.projectName || row.project : row.departmentName || row.department}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={row.priorityName || row.priority}
+                        size="small"
+                        sx={{
+                          backgroundColor: getPriorityColor(row.priorityName || row.priority),
+                          color: '#fff',
+                          fontWeight: 500,
+                          fontSize: '0.75rem'
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2">
+                        {row.managerName || row.manager}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2">
+                        {row.assigneeName || row.assignee}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2">
+                        {row.updatedAt}
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="center">
+                      <Stack direction="row" spacing={1} justifyContent="center">
+                        <IconButton
+                          size="small"
                           component={Link}
                           to={`/task/detail/${row.id}`}
-                        >
-                          {row.name}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">
-                          {row.taskType === 'project' ? 'Công việc dự án' : 'Công việc phòng ban'}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">
-                          {row.taskType === 'project' ? row.projectName || row.project : row.departmentName || row.department}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          label={row.priorityName || row.priority}
-                          size="small"
                           sx={{
-                            backgroundColor: getPriorityColor(row.priorityName || row.priority),
-                            color: '#fff',
-                            fontWeight: 500,
-                            fontSize: '0.75rem'
+                            color: '#1976d2',
+                            '&:hover': {
+                              backgroundColor: 'rgba(25, 118, 210, 0.04)'
+                            }
                           }}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">
-                          {row.managerName || row.manager}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">
-                          {row.assigneeName || row.assignee}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">
-                          {row.updatedAt}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="center">
-                        <Stack direction="row" spacing={1} justifyContent="center">
+                        >
+                          <VisibilityIcon fontSize="small" />
+                        </IconButton>
+
+                        {row.status === 'pending' && (
                           <IconButton
                             size="small"
-                            component={Link}
-                            to={`/task/detail/${row.id}`}
-                            sx={{ 
+                            onClick={() => handleApprove(row.id)}
+                            sx={{
                               color: '#1976d2',
                               '&:hover': {
                                 backgroundColor: 'rgba(25, 118, 210, 0.04)'
                               }
                             }}
                           >
-                            <VisibilityIcon fontSize="small" />
+                            <ApproveIcon fontSize="small" />
                           </IconButton>
-                          
-                          {row.status === 'pending' && (
-                            <IconButton
-                              size="small"
-                              onClick={() => handleApprove(row.id)}
-                              sx={{ 
-                                color: '#1976d2',
-                                '&:hover': {
-                                  backgroundColor: 'rgba(25, 118, 210, 0.04)'
-                                }
-                              }}
-                            >
-                              <ApproveIcon fontSize="small" />
-                            </IconButton>
-                          )}
-                          
-                          <IconButton
-                            size="small"
-                            onClick={() => handleDelete(row.id)}
-                            sx={{ 
-                              color: '#d32f2f',
-                              '&:hover': {
-                                backgroundColor: 'rgba(211, 47, 47, 0.04)'
-                              }
-                            }}
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </Stack>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-      
-          <Box sx={{ 
-            mt: 3, 
-            p: 2, 
-            backgroundColor: '#f8f9fa',
-            borderRadius: 2,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between'
-          }}>
-            <Typography variant="body2" color="text.secondary">
-              Tổng {tasks.length} công việc
-            </Typography>
-            <Pagination
-              count={totalPages}
-              page={page}
-              onChange={handlePageChange}
-              color="primary"
-              size="medium"
-              showFirstButton
-              showLastButton
-              sx={{
-                '& .MuiPaginationItem-root': {
-                  fontSize: '0.875rem'
-                }
-              }}
-            />
-          </Box>
+                        )}
+
+                        <IconButton
+                          size="small"
+                          onClick={() => handleDelete(row.id)}
+                          sx={{
+                            color: '#d32f2f',
+                            '&:hover': {
+                              backgroundColor: 'rgba(211, 47, 47, 0.04)'
+                            }
+                          }}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Stack>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+
+        <Box sx={{
+          mt: 3,
+          p: 2,
+          backgroundColor: '#f8f9fa',
+          borderRadius: 2,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          <Typography variant="body2" color="text.secondary">
+            Tổng {tasks.length} công việc
+          </Typography>
+          <Pagination
+            count={totalPages}
+            page={page}
+            onChange={handlePageChange}
+            color="primary"
+            size="medium"
+            showFirstButton
+            showLastButton
+            sx={{
+              '& .MuiPaginationItem-root': {
+                fontSize: '0.875rem'
+              }
+            }}
+          />
+        </Box>
 
         {/* Delete Dialog */}
         <Dialog

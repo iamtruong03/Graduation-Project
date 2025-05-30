@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -16,6 +16,8 @@ import {
 } from '@mui/material';
 import { Link, useNavigate } from 'react-router-dom';
 import taskService from '../../services/taskService';
+import staffService from '../../services/staffService';
+import departmentService from '../../services/departmentService';
 
 const TaskCreate = () => {
   const navigate = useNavigate();
@@ -24,17 +26,61 @@ const TaskCreate = () => {
   const [formData, setFormData] = useState({
     code: '',
     name: '',
-    taskType: '',
-    project: '',
-    department: '',
-    manager: '',
-    assignee: '',
-    status: 'not_started',
-    priority: '',
+    taskTypeId: 3,
+    departmentId: '',
+    approverId: '',
+    assigneeId: '',
+    priorityId: 2,
     description: '',
     startDate: '',
-    dueDate: ''
+    dueDate: '',
   });
+  const [assigneeList, setAssigneeList] = useState([]);
+  const [departmentList, setDepartmentList] = useState([]);
+  const [approverList, setApproverList] = useState([]);
+
+  useEffect(() => {
+    fetchApprovers();
+    fetchDepartments();
+  }, []);
+
+  const fetchApprovers = async () => {
+    try {
+      const response = await staffService.getAll();
+      if (response.data) {
+        setApproverList(response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching approvers:', error);
+    }
+  };
+
+  const fetchDepartments = async () => {
+    try {
+      const response = await departmentService.getAll();
+      if (response.data) {
+        setDepartmentList(response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching departments:', error);
+    }
+  };
+
+  const fetchAssigneesByDepartment = async (departmentId) => {
+    if (!departmentId) {
+      setAssigneeList([]);
+      return;
+    }
+    try {
+      const response = await staffService.listUserByDep(departmentId);
+      if (response.data) {
+        setAssigneeList(response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching assignees by department:', error);
+      setAssigneeList([]);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -42,6 +88,14 @@ const TaskCreate = () => {
       ...prev,
       [name]: value
     }));
+
+    if (name === 'departmentId') {
+      fetchAssigneesByDepartment(value);
+      setFormData(prev => ({
+        ...prev,
+        assigneeId: ''
+      }));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -50,12 +104,40 @@ const TaskCreate = () => {
       setLoading(true);
       setError(null);
       
-      const response = await taskService.createTask(formData);
+      if (!formData.departmentId) {
+        setError('Vui lòng chọn Phòng ban.');
+        setLoading(false);
+        return;
+      }
+      if (!formData.assigneeId) {
+        setError('Vui lòng chọn Người thực hiện.');
+        setLoading(false);
+        return;
+      }
+
+      const taskData = {
+        code: formData.code,
+        name: formData.name,
+        taskTypeId: formData.taskTypeId,
+        departmentId: formData.departmentId,
+        approverId: formData.approverId,
+        assigneeId: formData.assigneeId,
+        state: 1,
+        priorityId: formData.priorityId,
+        description: formData.description,
+        startDate: formData.startDate,
+        dueDate: formData.dueDate,
+      };
+
+      const response = await taskService.createTask(taskData);
       if (response) {
         navigate('/task/list');
+      } else {
+        setError('Tạo công việc không thành công. Vui lòng kiểm tra dữ liệu.');
       }
     } catch (err) {
-      setError(err.message || 'Có lỗi xảy ra khi tạo công việc');
+      console.error('Error creating task:', err);
+      setError(err.response?.data?.message || err.message || 'Có lỗi xảy ra khi tạo công việc');
     } finally {
       setLoading(false);
     }
@@ -66,7 +148,7 @@ const TaskCreate = () => {
       <Typography variant="h5" sx={{ mb: 3 }}>TẠO CÔNG VIỆC MỚI</Typography>
       <Paper sx={{ p: 3 }}>
         {error && (
-          <Alert severity="error" sx={{ mb: 3 }}>
+          <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
             {error}
           </Alert>
         )}
@@ -96,62 +178,19 @@ const TaskCreate = () => {
             </Grid>
             <Grid item xs={12} md={6}>
               <FormControl fullWidth size="small" required>
-                <InputLabel>Loại công việc</InputLabel>
-                <Select
-                  name="taskType"
-                  value={formData.taskType}
-                  label="Loại công việc"
-                  onChange={handleChange}
-                >
-                  <MenuItem value="department">Công việc phòng ban</MenuItem>
-                  <MenuItem value="project">Công việc dự án</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            {formData.taskType === 'project' && (
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth size="small" required>
-                  <InputLabel>Dự án</InputLabel>
-                  <Select
-                    name="project"
-                    value={formData.project}
-                    label="Dự án"
-                    onChange={handleChange}
-                  >
-                    <MenuItem value="project1">Dự án A</MenuItem>
-                    <MenuItem value="project2">Dự án B</MenuItem>
-                    <MenuItem value="project3">Dự án C</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-            )}
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth size="small" required>
                 <InputLabel>Phòng ban</InputLabel>
                 <Select
-                  name="department"
-                  value={formData.department}
+                  name="departmentId"
+                  value={formData.departmentId}
                   label="Phòng ban"
                   onChange={handleChange}
                 >
-                  <MenuItem value="dept1">Phòng kế toán</MenuItem>
-                  <MenuItem value="dept2">Phòng hành chính</MenuItem>
-                  <MenuItem value="dept3">Phòng kỹ thuật</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth size="small" required>
-                <InputLabel>Người phụ trách</InputLabel>
-                <Select
-                  name="manager"
-                  value={formData.manager}
-                  label="Người phụ trách"
-                  onChange={handleChange}
-                >
-                  <MenuItem value="manager1">Nguyễn Văn A</MenuItem>
-                  <MenuItem value="manager2">Trần Thị B</MenuItem>
-                  <MenuItem value="manager3">Lê Văn C</MenuItem>
+                  <MenuItem value="">-- Chọn phòng ban --</MenuItem>
+                  {departmentList.map((dept) => (
+                    <MenuItem key={dept.id} value={dept.id}>
+                      {dept.name}
+                    </MenuItem>
+                  ))}
                 </Select>
               </FormControl>
             </Grid>
@@ -159,29 +198,17 @@ const TaskCreate = () => {
               <FormControl fullWidth size="small" required>
                 <InputLabel>Người thực hiện</InputLabel>
                 <Select
-                  name="assignee"
-                  value={formData.assignee}
+                  name="assigneeId"
+                  value={formData.assigneeId}
                   label="Người thực hiện"
                   onChange={handleChange}
                 >
-                  <MenuItem value="assignee1">Trần Thị B</MenuItem>
-                  <MenuItem value="assignee2">Phạm Thị D</MenuItem>
-                  <MenuItem value="assignee3">Hoàng Văn E</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth size="small" required>
-                <InputLabel>Trạng thái</InputLabel>
-                <Select
-                  name="status"
-                  value={formData.status}
-                  label="Trạng thái"
-                  onChange={handleChange}
-                >
-                  <MenuItem value="not_started">Chưa bắt đầu</MenuItem>
-                  <MenuItem value="in_progress">Đang thực hiện</MenuItem>
-                  <MenuItem value="completed">Hoàn thành</MenuItem>
+                  <MenuItem value="">-- Chọn người thực hiện --</MenuItem>
+                  {assigneeList.map((assignee) => (
+                    <MenuItem key={assignee.id} value={assignee.id}>
+                      {assignee.name}
+                    </MenuItem>
+                  ))}
                 </Select>
               </FormControl>
             </Grid>
@@ -189,14 +216,14 @@ const TaskCreate = () => {
               <FormControl fullWidth size="small" required>
                 <InputLabel>Mức độ ưu tiên</InputLabel>
                 <Select
-                  name="priority"
-                  value={formData.priority}
+                  name="priorityId"
+                  value={formData.priorityId}
                   label="Mức độ ưu tiên"
                   onChange={handleChange}
                 >
-                  <MenuItem value="high">Cao</MenuItem>
-                  <MenuItem value="medium">Trung bình</MenuItem>
-                  <MenuItem value="low">Thấp</MenuItem>
+                  <MenuItem value={3}>Cao</MenuItem>
+                  <MenuItem value={2}>Trung bình</MenuItem>
+                  <MenuItem value={1}>Thấp</MenuItem>
                 </Select>
               </FormControl>
             </Grid>

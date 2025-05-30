@@ -12,7 +12,11 @@ import {
   DialogActions,
   Alert,
   Stack,
-  CircularProgress
+  CircularProgress,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from '@mui/material';
 import api from '../../services/api';
 import staffService from '../../services/staffService';
@@ -25,6 +29,8 @@ const MyAccount = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [openPasswordDialog, setOpenPasswordDialog] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [formData, setFormData] = useState(null);
   const [passwordForm, setPasswordForm] = useState({
     password: '',
     newPassword: '',
@@ -32,10 +38,21 @@ const MyAccount = () => {
   });
   const [alert, setAlert] = useState(null);
 
-  const [positions] = useState([
+  const positionOptions = [
     { id: 1, name: 'Quản lý' },
     { id: 2, name: 'Nhân viên' }
-  ]);
+  ];
+
+  const roleOptions = [
+    { id: 1, name: 'Admin' },
+    { id: 2, name: 'User' }
+  ];
+
+  const genderOptions = [
+    { value: 'MALE', label: 'Nam' },
+    { value: 'FEMALE', label: 'Nữ' },
+    { value: 'OTHER', label: 'Khác' }
+  ];
 
   useEffect(() => {
     const fetchCurrentUser = async () => {
@@ -77,7 +94,7 @@ const MyAccount = () => {
             }
           }
 
-          setUser({
+          const userData = {
             id: response.data.id,
             username: response.data.code || '',
             fullName: response.data.name || '',
@@ -92,7 +109,10 @@ const MyAccount = () => {
             address: response.data.address || '',
             startDate: response.data.startDate || '',
             password: response.data.password || '',
-          });
+          };
+
+          setUser(userData);
+          setFormData(userData);
         }
       } catch (error) {
         console.error('Error fetching user data:', error);
@@ -108,6 +128,22 @@ const MyAccount = () => {
     fetchCurrentUser();
   }, []);
 
+  const handleEdit = () => {
+    setIsEditing(true);
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    setFormData(user);
+  };
+
+  const handleInputChange = (field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
   const handleUpdateProfile = async () => {
     try {
       const userId = user.id;
@@ -116,26 +152,28 @@ const MyAccount = () => {
         throw new Error('Không tìm thấy ID người dùng');
       }
       
-      const formattedBirthday = user.birthday ? format(user.birthday, 'yyyy-MM-dd') : null;
+      const formattedBirthday = formData.birthday ? format(formData.birthday, 'yyyy-MM-dd') : null;
       
       const userData = {
-        code: user.username,
-        name: user.fullName,
-        email: user.email,
-        phoneNumber: user.phone,
+        code: formData.username,
+        name: formData.fullName,
+        email: formData.email,
+        phoneNumber: formData.phone,
         birthday: formattedBirthday,
-        gender: user.gender,
-        departmentId: user.departmentId,
-        role: user.role,
-        positionId: user.positionId,
-        address: user.address,
-        startDate: user.startDate,
-        password: user.password,
+        gender: formData.gender,
+        departmentId: formData.departmentId,
+        role: formData.role,
+        positionId: formData.positionId,
+        address: formData.address,
+        startDate: formData.startDate,
+        password: formData.password,
         status: 1
       };
 
       await staffService.updateStaff(userId, userData);
       
+      setUser(formData);
+      setIsEditing(false);
       setAlert({
         type: 'success',
         message: 'Cập nhật thông tin thành công!'
@@ -198,7 +236,35 @@ const MyAccount = () => {
 
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h5" sx={{ mb: 3 }}>THÔNG TIN TÀI KHOẢN</Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h5">THÔNG TIN TÀI KHOẢN</Typography>
+        {!isEditing ? (
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleEdit}
+          >
+            Chỉnh sửa
+          </Button>
+        ) : (
+          <Stack direction="row" spacing={2}>
+            <Button
+              variant="outlined"
+              color="primary"
+              onClick={handleCancel}
+            >
+              Hủy
+            </Button>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleUpdateProfile}
+            >
+              Lưu
+            </Button>
+          </Stack>
+        )}
+      </Box>
       
       {alert && (
         <Alert severity={alert.type} sx={{ mb: 2 }} onClose={() => setAlert(null)}>
@@ -217,16 +283,18 @@ const MyAccount = () => {
               <TextField
                 fullWidth
                 label="Tên đăng nhập"
-                value={user.username}
-                disabled
+                value={formData.username}
+                onChange={(e) => handleInputChange('username', e.target.value)}
+                disabled={!isEditing}
               />
             </Grid>
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
                 label="Họ tên"
-                value={user.fullName}
-                onChange={(e) => setUser({ ...user, fullName: e.target.value })}
+                value={formData.fullName}
+                onChange={(e) => handleInputChange('fullName', e.target.value)}
+                disabled={!isEditing}
               />
             </Grid>
             <Grid item xs={12} md={6}>
@@ -234,27 +302,28 @@ const MyAccount = () => {
                 fullWidth
                 label="Email"
                 type="email"
-                value={user.email}
-                onChange={(e) => setUser({ ...user, email: e.target.value })}
+                value={formData.email}
+                onChange={(e) => handleInputChange('email', e.target.value)}
+                disabled={!isEditing}
               />
             </Grid>
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
                 label="Số điện thoại"
-                value={user.phone}
-                onChange={(e) => setUser({ ...user, phone: e.target.value })}
+                value={formData.phone}
+                onChange={(e) => handleInputChange('phone', e.target.value)}
+                disabled={!isEditing}
               />
             </Grid>
             <Grid item xs={12} md={6}>
               <LocalizationProvider dateAdapter={AdapterDateFns}>
                 <DatePicker
                   label="Ngày sinh"
-                  value={user.birthday}
-                  onChange={(newValue) => {
-                    setUser({ ...user, birthday: newValue });
-                  }}
+                  value={formData.birthday}
+                  onChange={(newValue) => handleInputChange('birthday', newValue)}
                   format="dd/MM/yyyy"
+                  disabled={!isEditing}
                   slotProps={{
                     textField: {
                       fullWidth: true,
@@ -265,18 +334,27 @@ const MyAccount = () => {
               </LocalizationProvider>
             </Grid>
             <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Giới tính"
-                value={user.gender}
-                onChange={(e) => setUser({ ...user, gender: e.target.value })}
-              />
+              <FormControl fullWidth>
+                <InputLabel>Giới tính</InputLabel>
+                <Select
+                  value={formData.gender}
+                  onChange={(e) => handleInputChange('gender', e.target.value)}
+                  label="Giới tính"
+                  disabled={!isEditing}
+                >
+                  {genderOptions.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
             </Grid>
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
                 label="Phòng ban"
-                value={user.department}
+                value={formData.department}
                 disabled
               />
             </Grid>
@@ -284,7 +362,7 @@ const MyAccount = () => {
               <TextField
                 fullWidth
                 label="Vai trò"
-                value={user.role}
+                value={roleOptions.find(r => r.id === Number(formData.role))?.name || '---'}
                 disabled
               />
             </Grid>
@@ -292,7 +370,7 @@ const MyAccount = () => {
               <TextField
                 fullWidth
                 label="Chức vụ"
-                value={positions.find(pos => pos.id === user.positionId)?.name || ''}
+                value={positionOptions.find(p => p.id === formData.positionId)?.name || '---'}
                 disabled
               />
             </Grid>
@@ -300,30 +378,25 @@ const MyAccount = () => {
               <TextField
                 fullWidth
                 label="Địa chỉ"
-                value={user.address}
-                onChange={(e) => setUser({ ...user, address: e.target.value })}
+                value={formData.address}
+                onChange={(e) => handleInputChange('address', e.target.value)}
                 multiline
                 rows={2}
+                disabled={!isEditing}
               />
             </Grid>
           </Grid>
 
-          <Stack direction="row" spacing={2} sx={{ mt: 3 }}>
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={handleUpdateProfile}
-            >
-              Cập nhật thông tin
-            </Button>
+          {!isEditing && (
             <Button
               variant="outlined"
               color="primary"
               onClick={() => setOpenPasswordDialog(true)}
+              sx={{ mt: 3 }}
             >
               Đổi mật khẩu
             </Button>
-          </Stack>
+          )}
         </Paper>
       ) : (
         <Alert severity="error">Không thể tải thông tin người dùng</Alert>

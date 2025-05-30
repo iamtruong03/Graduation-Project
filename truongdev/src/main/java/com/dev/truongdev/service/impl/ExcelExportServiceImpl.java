@@ -3,7 +3,6 @@ package com.dev.truongdev.service.impl;
 import com.dev.truongdev.entity.Project;
 import com.dev.truongdev.entity.Risk;
 import com.dev.truongdev.entity.Task;
-import com.dev.truongdev.entity.User;
 import com.dev.truongdev.payload.filter.ProjectFilter;
 import com.dev.truongdev.payload.filter.RiskFilter;
 import com.dev.truongdev.payload.filter.TaskFilter;
@@ -14,7 +13,6 @@ import com.dev.truongdev.service.IRiskService;
 import com.dev.truongdev.service.ITaskService;
 import com.dev.truongdev.service.IUserService;
 import com.dev.truongdev.utils.StateNameUtils;
-import com.dev.truongdev.utils.AppConstants;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 import org.apache.poi.ss.usermodel.*;
@@ -27,7 +25,6 @@ import org.springframework.stereotype.Service;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.List;
 
 /**
@@ -66,23 +63,19 @@ public class ExcelExportServiceImpl implements IExcelExportService {
         try (Workbook workbook = new XSSFWorkbook()) {
             Sheet sheet = workbook.createSheet("Danh sách Dự án");
             
-            // Tạo header style
-            CellStyle headerStyle = createHeaderStyle(workbook);
-            CellStyle dataStyle = createDataStyle(workbook);
-            CellStyle dateStyle = createDateStyle(workbook);
-            
             // Tạo header row
             Row headerRow = sheet.createRow(0);
-            String[] headers = {"STT", "Mã dự án", "Tên dự án", "Trạng thái", "Ngày bắt đầu", 
+            String[] columns = {"STT", "Mã dự án", "Tên dự án", "Trạng thái", "Ngày bắt đầu", 
                               "Ngày kết thúc", "Người quản lý", "Phòng ban", "Mô tả"};
             
-            for (int i = 0; i < headers.length; i++) {
+            CellStyle headerStyle = getHeaderCellStyle(workbook);
+            for (int i = 0; i < columns.length; i++) {
                 Cell cell = headerRow.createCell(i);
-                cell.setCellValue(headers[i]);
+                cell.setCellValue(columns[i]);
                 cell.setCellStyle(headerStyle);
             }
             
-            // Lấy dữ liệu - get all data without pagination
+            // Lấy dữ liệu
             Pageable pageable = PageRequest.of(0, Integer.MAX_VALUE);
             Page<Project> projectPage = projectService.searchAll(departmentId, uid, filter, pageable);
             List<Project> projects = projectPage.getContent();
@@ -104,7 +97,6 @@ public class ExcelExportServiceImpl implements IExcelExportService {
                 } else {
                     startDateCell.setCellValue("");
                 }
-                startDateCell.setCellStyle(dateStyle);
                 
                 // Ngày kết thúc
                 Cell endDateCell = row.createCell(5);
@@ -113,7 +105,6 @@ public class ExcelExportServiceImpl implements IExcelExportService {
                 } else {
                     endDateCell.setCellValue("");
                 }
-                endDateCell.setCellStyle(dateStyle);
                 
                 // Người quản lý
                 String managerName = "";
@@ -122,23 +113,15 @@ public class ExcelExportServiceImpl implements IExcelExportService {
                 }
                 row.createCell(6).setCellValue(managerName);
                 
-                row.createCell(7).setCellValue(""); // Department name - có thể thêm sau
+                row.createCell(7).setCellValue(""); // Department name
                 row.createCell(8).setCellValue(project.getDescription() != null ? project.getDescription() : "");
-                
-                // Apply data style to all cells
-                for (int i = 0; i < headers.length; i++) {
-                    if (row.getCell(i) != null && i != 4 && i != 5) { // Skip date cells
-                        row.getCell(i).setCellStyle(dataStyle);
-                    }
-                }
             }
             
             // Auto size columns
-            for (int i = 0; i < headers.length; i++) {
+            for (int i = 0; i < columns.length; i++) {
                 sheet.autoSizeColumn(i);
             }
             
-            // Write to ByteArrayOutputStream
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             workbook.write(outputStream);
             return outputStream;
@@ -157,18 +140,15 @@ public class ExcelExportServiceImpl implements IExcelExportService {
         try (Workbook workbook = new XSSFWorkbook()) {
             Sheet sheet = workbook.createSheet("Danh sách Rủi ro");
             
-            CellStyle headerStyle = createHeaderStyle(workbook);
-            CellStyle dataStyle = createDataStyle(workbook);
-            CellStyle dateStyle = createDateStyle(workbook);
-            
             // Tạo header row
             Row headerRow = sheet.createRow(0);
-            String[] headers = {"STT", "Mã rủi ro", "Tên rủi ro", "Trạng thái", "Loại rủi ro", 
+            String[] columns = {"STT", "Mã rủi ro", "Tên rủi ro", "Trạng thái", "Loại rủi ro", 
                               "Mức độ tác động", "Ngày phản ánh", "Người phản ánh", "Dự án", "Mô tả"};
             
-            for (int i = 0; i < headers.length; i++) {
+            CellStyle headerStyle = getHeaderCellStyle(workbook);
+            for (int i = 0; i < columns.length; i++) {
                 Cell cell = headerRow.createCell(i);
-                cell.setCellValue(headers[i]);
+                cell.setCellValue(columns[i]);
                 cell.setCellStyle(headerStyle);
             }
             
@@ -186,8 +166,8 @@ public class ExcelExportServiceImpl implements IExcelExportService {
                 row.createCell(1).setCellValue(risk.getCode() != null ? risk.getCode() : "");
                 row.createCell(2).setCellValue(risk.getName() != null ? risk.getName() : "");
                 row.createCell(3).setCellValue(StateNameUtils.getRiskStateName(risk.getState()));
-                row.createCell(4).setCellValue(""); // Risk type - có thể thêm lookup
-                row.createCell(5).setCellValue(""); // Impact level - có thể thêm lookup
+                row.createCell(4).setCellValue(""); // Risk type
+                row.createCell(5).setCellValue(""); // Impact level
                 
                 // Ngày phản ánh
                 Cell reflectionDateCell = row.createCell(6);
@@ -196,7 +176,6 @@ public class ExcelExportServiceImpl implements IExcelExportService {
                 } else {
                     reflectionDateCell.setCellValue("");
                 }
-                reflectionDateCell.setCellStyle(dateStyle);
                 
                 // Người phản ánh
                 String reflectorName = "";
@@ -205,19 +184,12 @@ public class ExcelExportServiceImpl implements IExcelExportService {
                 }
                 row.createCell(7).setCellValue(reflectorName);
                 
-                row.createCell(8).setCellValue(""); // Project name - có thể thêm lookup
+                row.createCell(8).setCellValue(""); // Project name
                 row.createCell(9).setCellValue(risk.getDescription() != null ? risk.getDescription() : "");
-                
-                // Apply data style
-                for (int i = 0; i < headers.length; i++) {
-                    if (row.getCell(i) != null && i != 6) { // Skip date cell
-                        row.getCell(i).setCellStyle(dataStyle);
-                    }
-                }
             }
             
             // Auto size columns
-            for (int i = 0; i < headers.length; i++) {
+            for (int i = 0; i < columns.length; i++) {
                 sheet.autoSizeColumn(i);
             }
             
@@ -239,18 +211,15 @@ public class ExcelExportServiceImpl implements IExcelExportService {
         try (Workbook workbook = new XSSFWorkbook()) {
             Sheet sheet = workbook.createSheet("Danh sách Công việc");
             
-            CellStyle headerStyle = createHeaderStyle(workbook);
-            CellStyle dataStyle = createDataStyle(workbook);
-            CellStyle dateStyle = createDateStyle(workbook);
-            
             // Tạo header row
             Row headerRow = sheet.createRow(0);
-            String[] headers = {"STT", "Mã công việc", "Tên công việc", "Trạng thái", "Độ ưu tiên", 
+            String[] columns = {"STT", "Mã công việc", "Tên công việc", "Trạng thái", "Độ ưu tiên", 
                               "Ngày bắt đầu", "Ngày hết hạn", "Ngày hoàn thành", "Người được giao", "Dự án"};
             
-            for (int i = 0; i < headers.length; i++) {
+            CellStyle headerStyle = getHeaderCellStyle(workbook);
+            for (int i = 0; i < columns.length; i++) {
                 Cell cell = headerRow.createCell(i);
-                cell.setCellValue(headers[i]);
+                cell.setCellValue(columns[i]);
                 cell.setCellStyle(headerStyle);
             }
             
@@ -268,7 +237,7 @@ public class ExcelExportServiceImpl implements IExcelExportService {
                 row.createCell(1).setCellValue(task.getCode() != null ? task.getCode() : "");
                 row.createCell(2).setCellValue(task.getName() != null ? task.getName() : "");
                 row.createCell(3).setCellValue(StateNameUtils.getTaskStateName(task.getState()));
-                row.createCell(4).setCellValue(""); // Priority - có thể thêm lookup
+                row.createCell(4).setCellValue(""); // Priority
                 
                 // Ngày bắt đầu
                 Cell startDateCell = row.createCell(5);
@@ -277,7 +246,6 @@ public class ExcelExportServiceImpl implements IExcelExportService {
                 } else {
                     startDateCell.setCellValue("");
                 }
-                startDateCell.setCellStyle(dateStyle);
                 
                 // Ngày hết hạn
                 Cell dueDateCell = row.createCell(6);
@@ -286,7 +254,6 @@ public class ExcelExportServiceImpl implements IExcelExportService {
                 } else {
                     dueDateCell.setCellValue("");
                 }
-                dueDateCell.setCellStyle(dateStyle);
                 
                 // Ngày hoàn thành
                 Cell completedDateCell = row.createCell(7);
@@ -295,7 +262,6 @@ public class ExcelExportServiceImpl implements IExcelExportService {
                 } else {
                     completedDateCell.setCellValue("");
                 }
-                completedDateCell.setCellStyle(dateStyle);
                 
                 // Người được giao
                 String assigneeName = "";
@@ -304,18 +270,11 @@ public class ExcelExportServiceImpl implements IExcelExportService {
                 }
                 row.createCell(8).setCellValue(assigneeName);
                 
-                row.createCell(9).setCellValue(""); // Project name - có thể thêm lookup
-                
-                // Apply data style
-                for (int i = 0; i < headers.length; i++) {
-                    if (row.getCell(i) != null && i != 5 && i != 6 && i != 7) { // Skip date cells
-                        row.getCell(i).setCellStyle(dataStyle);
-                    }
-                }
+                row.createCell(9).setCellValue(""); // Project name
             }
             
             // Auto size columns
-            for (int i = 0; i < headers.length; i++) {
+            for (int i = 0; i < columns.length; i++) {
                 sheet.autoSizeColumn(i);
             }
             
@@ -328,46 +287,16 @@ public class ExcelExportServiceImpl implements IExcelExportService {
         }
     }
 
-    /**
-     * Tạo style cho header (tiêu đề cột).
-     */
-    private CellStyle createHeaderStyle(Workbook workbook) {
+    private CellStyle getHeaderCellStyle(Workbook workbook) {
         CellStyle style = workbook.createCellStyle();
         Font font = workbook.createFont();
         font.setBold(true);
-        font.setColor(IndexedColors.WHITE.getIndex());
         style.setFont(font);
-        style.setFillForegroundColor(IndexedColors.DARK_BLUE.getIndex());
-        style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-        style.setBorderTop(BorderStyle.THIN);
-        style.setBorderBottom(BorderStyle.THIN);
-        style.setBorderLeft(BorderStyle.THIN);
-        style.setBorderRight(BorderStyle.THIN);
         style.setAlignment(HorizontalAlignment.CENTER);
-        style.setVerticalAlignment(VerticalAlignment.CENTER);
-        return style;
-    }
-
-    /**
-     * Tạo style cho dữ liệu.
-     */
-    private CellStyle createDataStyle(Workbook workbook) {
-        CellStyle style = workbook.createCellStyle();
-        style.setBorderTop(BorderStyle.THIN);
         style.setBorderBottom(BorderStyle.THIN);
+        style.setBorderTop(BorderStyle.THIN);
         style.setBorderLeft(BorderStyle.THIN);
         style.setBorderRight(BorderStyle.THIN);
-        style.setVerticalAlignment(VerticalAlignment.CENTER);
-        return style;
-    }
-
-    /**
-     * Tạo style cho ngày tháng.
-     */
-    private CellStyle createDateStyle(Workbook workbook) {
-        CellStyle style = createDataStyle(workbook);
-        CreationHelper createHelper = workbook.getCreationHelper();
-        style.setDataFormat(createHelper.createDataFormat().getFormat("dd/mm/yyyy"));
         return style;
     }
 } 

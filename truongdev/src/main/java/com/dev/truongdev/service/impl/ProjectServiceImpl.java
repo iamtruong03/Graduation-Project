@@ -125,12 +125,11 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
      * Phê duyệt dự án, chuyển trạng thái sang ĐÃ DUYỆT và tự động sang ĐANG THỰC HIỆN.
      * @param uid ID người phê duyệt
      * @param id ID dự án
-     * @param approvedBy Thông tin người phê duyệt
      * @return Dự án sau khi phê duyệt
      */
     @Override
     @Transactional
-    public ProjectDTO approveProject(String uid, Long id, String approvedBy) {
+    public ProjectDTO approveProject(String uid, Long id) {
         validateApproval(uid, id);
         
         Project project = projectRepo.findById(id)
@@ -274,20 +273,33 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
         );
     }
 
+    @Override
+    public List<Project> getAll(Long did, String uid) {
+        User user = userRepo.findById(Long.valueOf(uid))
+            .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+
+        if (hasFullAccess(user, did)) {
+            return projectRepo.findByStatus(AppConstants.STATUS_ACTIVE);
+        }
+
+        List<Long> departmentIds = getDepartmentAndSubDepartmentIds(did);
+        return projectRepo.findByStatusAndDepartmentIdIn(AppConstants.STATUS_ACTIVE, departmentIds);
+    }
+
     /**
      * Tìm kiếm dự án theo phòng ban, kiểm soát truy cập theo quyền.
-     * @param departmentId ID phòng ban
+     * @param did ID phòng ban
      * @param uid ID người dùng
      * @param filter Bộ lọc tìm kiếm
      * @param pageable Thông tin phân trang
      * @return Danh sách dự án phù hợp
      */
     @Override
-    public Page<Project> searchAll(Long departmentId, String uid, ProjectFilter filter, Pageable pageable) {
+    public Page<Project> searchAll(Long did, String uid, ProjectFilter filter, Pageable pageable) {
         User user = userRepo.findById(Long.valueOf(uid))
             .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
 
-        if (hasFullAccess(user, departmentId)) {
+        if (hasFullAccess(user, did)) {
             return projectRepo.searchByCodeOrName(
                 AppConstants.STATUS_ACTIVE,
                 filter.getSearch(),
@@ -295,7 +307,7 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
             );
         }
 
-        List<Long> departmentIds = getDepartmentAndSubDepartmentIds(departmentId);
+        List<Long> departmentIds = getDepartmentAndSubDepartmentIds(did);
         return projectRepo.searchByCodeOrNameAndDepartments(
             AppConstants.STATUS_ACTIVE,
             filter.getSearch(),
@@ -318,7 +330,7 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
 
         Integer previousState = project.getState();
         
-        BeanUtils.copyProperties(projectDTO, project, "id", "createBy", "createDate", "state");
+        BeanUtils.copyProperties(projectDTO, project, "id", "createBy", "createDate","modifiedDate");
         project = projectRepo.save(project);
         
         if (!Objects.equals(previousState, project.getState())) {
@@ -365,12 +377,6 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
         }
     }
 
-    private void validateDepartmentId(Long departmentId) {
-        if (departmentId == null || departmentId <= 0) {
-            throw new IllegalArgumentException("Invalid department ID");
-        }
-    }
-
     private void validateSubmitForApproval(String uid, Long id, List<Long> approverIds) {
         if (approverIds == null || approverIds.isEmpty()) {
             throw new RuntimeException("Phải chỉ định người phê duyệt");
@@ -413,7 +419,7 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
         String approverId;
         String approverName;
         
-        if (currentUser.getRole().equals("ROLE_ADMIN")) {
+        if (currentUser.getRole().equals("1")) {
             approverId = uid;
             approverName = userService.getUserDisplayName(uid);
         } else {
@@ -504,7 +510,7 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
     }
 
     private boolean hasFullAccess(User user, Long departmentId) {
-        return user.getRole().equals("ROLE_ADMIN") || 
+        return user.getRole().equals("1") || 
                departmentRepo.findById(departmentId)
                    .map(dept -> dept.getParentId() == null)
                    .orElse(false);

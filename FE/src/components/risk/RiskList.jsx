@@ -26,13 +26,11 @@ import {
   DialogContentText,
   DialogActions,
   Alert,
-  CircularProgress,
-  Badge
+  CircularProgress
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import DeleteIcon from '@mui/icons-material/Delete';
 import VisibilityIcon from '@mui/icons-material/Visibility';
-import { CheckCircle as ApproveIcon, Assignment as AssignmentIcon } from '@mui/icons-material';
 import { Link } from 'react-router-dom';
 import riskService from '../../services/riskService';
 
@@ -48,13 +46,6 @@ const RiskList = () => {
   const [selectedRisk, setSelectedRisk] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [pendingRisks, setPendingRisks] = useState([]);
-  const [openPendingDialog, setOpenPendingDialog] = useState(false);
-  const [pendingCount, setPendingCount] = useState(0);
-  const [pendingPage, setPendingPage] = useState(0);
-  const [pendingTotalPages, setPendingTotalPages] = useState(0);
-  const [openApproveDialog, setOpenApproveDialog] = useState(false);
-  const [approveId, setApproveId] = useState(null);
   const rowsPerPage = 10;
 
   // Fetch API
@@ -72,55 +63,10 @@ const RiskList = () => {
     }
   };
 
-  const fetchPendingRisks = async () => {
-    try {
-      setLoading(true);
-      const response = await riskService.getPendingApprovalRisks({
-        page: pendingPage,
-        size: rowsPerPage,
-        search: searchName
-      });
-      if (response.status === 200) {
-        const { content, totalPages, totalElements } = response.data;
-        setPendingRisks(content);
-        setPendingTotalPages(totalPages);
-        setPendingCount(totalElements);
-      } else {
-        setError(response.message || 'Có lỗi xảy ra khi tải dữ liệu');
-      }
-    } catch (err) {
-      console.error('Error fetching pending risks:', err);
-      setError('Không thể tải danh sách rủi ro chờ duyệt');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchPendingCount = async () => {
-    try {
-      const response = await riskService.getPendingApprovalRisks({
-        page: 0,
-        size: 1
-      });
-      if (response.status === 200) {
-        setPendingCount(response.data.totalElements);
-      }
-    } catch (err) {
-      console.error('Error fetching pending count:', err);
-    }
-  };
-
   useEffect(() => {
     fetchRisks();
-    fetchPendingCount();
     // eslint-disable-next-line
   }, [page, searchName]);
-
-  useEffect(() => {
-    if (openPendingDialog) {
-      fetchPendingRisks();
-    }
-  }, [openPendingDialog, pendingPage]);
 
   const handlePageChange = (event, newPage) => {
     setPage(newPage);
@@ -139,64 +85,106 @@ const RiskList = () => {
     setSelectedRisk(null);
   };
 
-  const handleApprove = (id) => {
-    setApproveId(id);
-    setOpenApproveDialog(true);
-  };
-
-  const handleConfirmApprove = async () => {
+  // Thêm hàm xử lý export
+  const handleExport = async () => {
     try {
       setLoading(true);
-      const response = await riskService.approveRisk(approveId, localStorage.getItem('userId'));
-      if (response.success) {
-        await fetchRisks();
-        await fetchPendingRisks();
-        await fetchPendingCount();
-      } else {
-        setError(response.message);
+      const filter = {
+        search: searchName,
+        riskType: riskType !== 'all' ? riskType : undefined,
+        impactLevel: riskLevel !== 'all' ? riskLevel : undefined
+      };
+      
+      const response = await riskService.exportRisks(filter);
+      
+      // Tạo blob từ response data
+      const blob = new Blob([response], { 
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+      });
+      
+      // Tạo URL để tải file
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Lấy tên file từ header content-disposition
+      let fileName = 'DanhSachRuiRo.xlsx';
+      const contentDisposition = response.headers?.['content-disposition'];
+      
+      if (contentDisposition) {
+        const fileNameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+        if (fileNameMatch && fileNameMatch[1]) {
+          fileName = decodeURIComponent(fileNameMatch[1]);
+        }
       }
+      
+      // Thiết lập thuộc tính cho link tải
+      link.setAttribute('download', fileName);
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      
+      // Kích hoạt tải file
+      link.click();
+      
+      // Dọn dẹp
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      setError(null);
     } catch (err) {
-      setError('Không thể phê duyệt rủi ro');
-      console.error('Error approving risk:', err);
+      console.error('Error exporting risks:', err);
+      setError('Không thể xuất dữ liệu rủi ro: ' + (err.message || 'Lỗi không xác định'));
     } finally {
       setLoading(false);
-      setOpenApproveDialog(false);
-      setApproveId(null);
     }
   };
 
-  const handleCloseApproveDialog = () => {
-    setOpenApproveDialog(false);
-    setApproveId(null);
+  // Hàm helper để chuyển đổi ID thành tên hiển thị
+  const getRiskTypeName = (typeId) => {
+    switch (typeId) {
+      case 1: return 'Vận hành';
+      case 2: return 'Kỹ thuật';
+      case 3: return 'Bảo mật';
+      case 4: return 'Tài chính';
+      case 5: return 'Nghiệp vụ';
+      default: return 'Chưa xác định';
+    }
   };
 
-  const handleClosePendingDialog = () => {
-    setOpenPendingDialog(false);
+  const getImpactLevelName = (levelId) => {
+    switch (levelId) {
+      case 1: return 'Thấp';
+      case 2: return 'Trung bình';
+      case 3: return 'Cao';
+      case 4: return 'Rất cao';
+      default: return 'Chưa xác định';
+    }
   };
 
-  const handlePendingPageChange = (event, newPage) => {
-    setPendingPage(newPage - 1);
+  const getStateName = (stateId) => {
+    switch (stateId) {
+      case 1: return 'Mới ghi nhận';
+      case 2: return 'Đang xử lý';
+      case 3: return 'Đã xử lý';
+      case 4: return 'Đã đóng';
+      default: return 'Chưa xác định';
+    }
   };
 
-  // Thêm hàm xử lý export
-  const handleExport = () => {
-    // Logic xuất file Excel/PDF
-    const data = risks.map(risk => ({
-      'Mã rủi ro': risk.code,
-      'Tên rủi ro': risk.name,
-      'Loại': risk.type,
-      'Mức độ ảnh hưởng': risk.level,
-      'Trạng thái': risk.stage,
-      'Người báo cáo': risk.reporter,
-      'Phòng ban': risk.department,
-      'Mô tả': risk.description
-    }));
-
-    // Tạo và tải xuống file
-    const worksheet = XLSX.utils.json_to_sheet(data);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Danh sách rủi ro");
-    XLSX.writeFile(workbook, "danh-sach-rui-ro.xlsx");
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Chưa có';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('vi-VN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      return dateString;
+    }
   };
 
   return (
@@ -222,23 +210,6 @@ const RiskList = () => {
           >
             DANH SÁCH RỦI RO
           </Typography>
-
-          <Badge badgeContent={pendingCount} color="error">
-            <Button
-              variant="contained"
-              onClick={() => setOpenPendingDialog(true)}
-              startIcon={<AssignmentIcon />}
-              sx={{ 
-                backgroundColor: '#ff9800',
-                '&:hover': {
-                  backgroundColor: '#f57c00'
-                },
-                mr: 1
-              }}
-            >
-              RỦI RO CHỜ DUYỆT
-            </Button>
-          </Badge>
 
           <Button
             variant="contained"
@@ -422,10 +393,10 @@ const RiskList = () => {
                     </TableCell>
                     <TableCell>
                       <Chip
-                        label={row.riskTypeName || row.type}
+                        label={getRiskTypeName(row.riskTypeId)}
                         size="small"
                         sx={{
-                          backgroundColor: getRiskTypeColor(row.riskTypeName || row.type),
+                          backgroundColor: getRiskTypeColor(getRiskTypeName(row.riskTypeId)),
                           color: '#fff',
                           fontWeight: 500,
                           fontSize: '0.75rem'
@@ -434,10 +405,10 @@ const RiskList = () => {
                     </TableCell>
                     <TableCell>
                       <Chip
-                        label={row.impactLevelName || row.level}
+                        label={getImpactLevelName(row.impactLevelId)}
                         size="small"
                         sx={{
-                          backgroundColor: getRiskLevelColor(row.impactLevelName || row.level),
+                          backgroundColor: getRiskLevelColor(getImpactLevelName(row.impactLevelId)),
                           color: '#fff',
                           fontWeight: 500,
                           fontSize: '0.75rem'
@@ -446,20 +417,20 @@ const RiskList = () => {
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2">
-                        {row.reflectionDay || row.updatedAt}
+                        {formatDate(row.createDate)}
                       </Typography>
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2">
-                        {row.reflectorName || row.reporter}
+                        {row.reflectorId || 'Chưa có'}
                       </Typography>
                     </TableCell>
                     <TableCell>
                       <Chip
-                        label={row.stateName || row.stage}
+                        label={getStateName(row.state)}
                         size="small"
                         sx={{
-                          backgroundColor: getRiskStageColor(row.stateName || row.stage),
+                          backgroundColor: getRiskStageColor(getStateName(row.state)),
                           color: '#fff',
                           fontWeight: 500,
                           fontSize: '0.75rem'
@@ -481,21 +452,6 @@ const RiskList = () => {
                         >
                           <VisibilityIcon fontSize="small" />
                         </IconButton>
-                        
-                        {row.stage === 'pending' && (
-                          <IconButton
-                            size="small"
-                            onClick={() => handleApprove(row.id)}
-                            sx={{ 
-                              color: '#1976d2',
-                              '&:hover': {
-                                backgroundColor: 'rgba(25, 118, 210, 0.04)'
-                              }
-                            }}
-                          >
-                            <ApproveIcon fontSize="small" />
-                          </IconButton>
-                        )}
                         
                         <IconButton
                           size="small"
@@ -563,147 +519,6 @@ const RiskList = () => {
           <Button onClick={handleConfirmDelete} color="error" autoFocus>
             Xóa
           </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Approve Dialog */}
-      <Dialog
-        open={openApproveDialog}
-        onClose={handleCloseApproveDialog}
-      >
-        <DialogTitle>Xác nhận phê duyệt</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Bạn có chắc chắn muốn phê duyệt rủi ro này không?
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseApproveDialog}>Hủy</Button>
-          <Button onClick={handleConfirmApprove} color="success" autoFocus>
-            Phê duyệt
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Pending Risks Dialog */}
-      <Dialog
-        open={openPendingDialog}
-        onClose={handleClosePendingDialog}
-        maxWidth="lg"
-        fullWidth
-      >
-        <DialogTitle>
-          Danh sách rủi ro chờ duyệt ({pendingCount})
-        </DialogTitle>
-        <DialogContent>
-          {loading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-              <CircularProgress />
-            </Box>
-          ) : (
-            <>
-              <TableContainer>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Mã rủi ro</TableCell>
-                      <TableCell>Tên rủi ro</TableCell>
-                      <TableCell>Loại rủi ro</TableCell>
-                      <TableCell>Mức độ ảnh hưởng</TableCell>
-                      <TableCell>Ngày phản ánh</TableCell>
-                      <TableCell>Người phản ánh</TableCell>
-                      <TableCell>Trạng thái</TableCell>
-                      <TableCell align="center">Thao tác</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {pendingRisks.map((risk) => (
-                      <TableRow key={risk.id}>
-                        <TableCell>{risk.code}</TableCell>
-                        <TableCell>{risk.name}</TableCell>
-                        <TableCell>
-                          <Box
-                            sx={{
-                              backgroundColor: getRiskTypeColor(risk.riskTypeName || risk.type),
-                              color: '#fff',
-                              py: 0.5,
-                              px: 1.5,
-                              borderRadius: 1,
-                              display: 'inline-block',
-                              fontSize: '0.875rem'
-                            }}
-                          >
-                            {risk.riskTypeName || risk.type}
-                          </Box>
-                        </TableCell>
-                        <TableCell>
-                          <Box
-                            sx={{
-                              backgroundColor: getRiskLevelColor(risk.impactLevelName || risk.level),
-                              color: '#fff',
-                              py: 0.5,
-                              px: 1.5,
-                              borderRadius: 1,
-                              display: 'inline-block',
-                              fontSize: '0.875rem'
-                            }}
-                          >
-                            {risk.impactLevelName || risk.level}
-                          </Box>
-                        </TableCell>
-                        <TableCell>{risk.reflectionDay || risk.updatedAt}</TableCell>
-                        <TableCell>{risk.reflectorName || risk.reporter}</TableCell>
-                        <TableCell>
-                          <Box
-                            sx={{
-                              backgroundColor: getRiskStageColor(risk.stateName || risk.stage),
-                              color: '#fff',
-                              py: 0.5,
-                              px: 1.5,
-                              borderRadius: 1,
-                              display: 'inline-block',
-                              fontSize: '0.875rem'
-                            }}
-                          >
-                            {risk.stateName || risk.stage}
-                          </Box>
-                        </TableCell>
-                        <TableCell align="center">
-                          <IconButton
-                            size="small"
-                            component={Link}
-                            to={`/risk/detail/${risk.id}`}
-                            sx={{ mr: 1 }}
-                          >
-                            <VisibilityIcon fontSize="small" />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            color="success"
-                            onClick={() => handleApprove(risk.id)}
-                          >
-                            <ApproveIcon fontSize="small" />
-                          </IconButton>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-              <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
-                <Pagination
-                  count={pendingTotalPages}
-                  page={pendingPage + 1}
-                  onChange={handlePendingPageChange}
-                  color="primary"
-                  size="small"
-                />
-              </Box>
-            </>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClosePendingDialog}>Đóng</Button>
         </DialogActions>
       </Dialog>
     </Box>

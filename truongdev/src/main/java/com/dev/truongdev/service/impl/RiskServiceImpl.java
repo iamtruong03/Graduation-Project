@@ -70,16 +70,28 @@ public class RiskServiceImpl extends XDevBaseServiceImpl<Risk, RiskFilter, RiskR
         this.taskRepo = taskRepo;
     }
 
-    /**
-     * Cập nhật thông tin rủi ro với kiểm tra trạng thái và quyền.
-     * - Kiểm tra tính hợp lệ của dữ liệu
-     * - Xác thực chuyển đổi trạng thái
-     * - Ghi lịch sử thay đổi
-     * 
-     * @param id ID rủi ro cần cập nhật
-     * @param riskDTO Thông tin rủi ro mới
-     * @return RiskDTO sau khi cập nhật
-     */
+    @Override
+    @Transactional
+    public RiskDTO createRisk(String uid, RiskDTO riskDTO) {
+        validateRiskDTO(riskDTO);
+
+        Risk risk = new Risk();
+        BeanUtils.copyProperties(riskDTO, risk);
+
+        risk.setState(AppConstants.STATUS_PENDING);
+        risk.setCreateBy(uid);
+
+        String[] approverInfo = determineApprover(uid, risk.getDepartmentId());
+
+        risk.setApproverId(approverInfo[0]);
+        Risk savedRisk = riskRepo.save(risk);
+
+        addRiskHistory(savedRisk.getId(), null, AppConstants.STATUS_PENDING,
+            uid, "Tạo mới risk và gửi phê duyệt tới " + approverInfo[1]);
+
+        return convertToDTO(savedRisk);
+    }
+
     @Override
     @Transactional
     public RiskDTO updateRisk(Long id, RiskDTO riskDTO) {
@@ -98,40 +110,6 @@ public class RiskServiceImpl extends XDevBaseServiceImpl<Risk, RiskFilter, RiskR
         handleStateChange(id, previousState, updatedRisk.getState(), riskDTO);
 
         return convertToDTO(updatedRisk);
-    }
-
-    /**
-     * Tạo mới một rủi ro và khởi tạo quy trình phê duyệt.
-     * - Đặt trạng thái ban đầu là CHỜ DUYỆT
-     * - Xác định người phê duyệt phù hợp theo phòng ban
-     * - Ghi lịch sử tạo rủi ro
-     * 
-     * @param uid ID người tạo rủi ro
-     * @param riskDTO Thông tin rủi ro
-     * @return RiskDTO vừa tạo
-     */
-    @Override
-    @Transactional
-    public RiskDTO createRisk(String uid, RiskDTO riskDTO) {
-        validateRiskDTO(riskDTO);
-        validateUserId(uid);
-
-        Risk risk = new Risk();
-        BeanUtils.copyProperties(riskDTO, risk);
-        
-        risk.setState(AppConstants.STATUS_PENDING);
-        risk.setCreateBy(uid);
-
-        User currentUser = userService.getById(uid, Long.valueOf(uid));
-        String[] approverInfo = determineApprover(uid, currentUser, risk.getDepartmentId());
-        
-        risk.setApproverId(approverInfo[0]);
-        Risk savedRisk = riskRepo.save(risk);
-        
-        addRiskHistory(savedRisk.getId(), null, AppConstants.STATUS_PENDING, 
-            uid, "Tạo mới risk và gửi phê duyệt tới " + approverInfo[1]);
-        
-        return convertToDTO(savedRisk);
     }
 
     /**
@@ -376,9 +354,6 @@ public class RiskServiceImpl extends XDevBaseServiceImpl<Risk, RiskFilter, RiskR
         if (riskDTO == null) {
             throw new IllegalArgumentException("Risk data cannot be null");
         }
-        if (riskDTO.getState() == null) {
-            throw new IllegalArgumentException("Risk state cannot be null");
-        }
     }
 
     /**
@@ -419,7 +394,6 @@ public class RiskServiceImpl extends XDevBaseServiceImpl<Risk, RiskFilter, RiskR
         if (approverIds == null || approverIds.isEmpty()) {
             throw new RuntimeException("Phải chỉ định người phê duyệt");
         }
-        validateUserId(uid);
         validateId(id);
     }
 
@@ -428,7 +402,6 @@ public class RiskServiceImpl extends XDevBaseServiceImpl<Risk, RiskFilter, RiskR
      * Xác nhận trạng thái rủi ro và quyền của người phê duyệt.
      */
     private void validateApproval(String uid, Long id) {
-        validateUserId(uid);
         validateId(id);
         Risk risk = riskRepo.findById(id)
             .orElseThrow(() -> new RuntimeException("Không tìm thấy risk"));
@@ -469,17 +442,20 @@ public class RiskServiceImpl extends XDevBaseServiceImpl<Risk, RiskFilter, RiskR
      * 
      * @return Mảng String [approverId, approverName]
      */
-    private String[] determineApprover(String uid, User currentUser, Long departmentId) {
+    private String[] determineApprover(String uid , Long departmentId) {
         String approverId;
         String approverName;
-        
-        if (currentUser.getRole().equals("ROLE_ADMIN")) {
+
+        User currentUser = userRepo.findById(Long.valueOf(uid))
+            .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+
+        if (currentUser.getRole().equals("1")) {
             approverId = uid;
             approverName = userService.getUserDisplayName(uid);
         } else {
             Department riskDepartment = departmentRepo.findById(departmentId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy phòng ban"));
-            
+
             Department userDepartment = departmentRepo.findById(currentUser.getDepartmentId())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy phòng ban của người dùng"));
 
@@ -489,21 +465,21 @@ public class RiskServiceImpl extends XDevBaseServiceImpl<Risk, RiskFilter, RiskR
             } else if (riskDepartment.getId().equals(userDepartment.getId())) {
                 Department parentDepartment = departmentRepo.findById(riskDepartment.getParentId())
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy phòng ban cha"));
-                
+
                 User departmentHead = userRepo.findByDepartmentIdAndPositionIdAndStatus(
                     parentDepartment.getId(),
                     AppConstants.POSITION_HEAD,
                     AppConstants.STATUS_ACTIVE
                 ).stream().findFirst()
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy trưởng phòng ban cha"));
-                
+
                 approverId = departmentHead.getId().toString();
                 approverName = userService.getUserDisplayName(approverId);
             } else {
                 throw new RuntimeException("Không có quyền tạo risk cho phòng ban này");
             }
         }
-        
+
         return new String[]{approverId, approverName};
     }
 
@@ -554,7 +530,7 @@ public class RiskServiceImpl extends XDevBaseServiceImpl<Risk, RiskFilter, RiskR
      * True cho admin và người dùng phòng ban gốc.
      */
     private boolean hasFullAccess(User user, Long departmentId) {
-        return user.getRole().equals("ROLE_ADMIN") || 
+        return user.getRole().equals("1") || 
                departmentRepo.findById(departmentId)
                    .map(dept -> dept.getParentId() == null)
                    .orElse(false);

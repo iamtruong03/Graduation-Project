@@ -47,24 +47,32 @@ const DepartmentList = () => {
   const fetchDepartments = async () => {
     try {
       setLoading(true);
-      const response = await departmentService.searchDepartments(
+      // Lấy danh sách phòng ban theo tìm kiếm
+      const searchResponse = await departmentService.searchDepartments(
         searchName,
         page - 1,
         rowsPerPage
       );
+
+      // Lấy danh sách tất cả phòng ban đang hoạt động để map parentId
+      const allDeptsResponse = await departmentService.getActiveDepartments();
       
-      const mappedDepartments = response.data.content.map(dept => ({
-        id: dept.id,
-        code: dept.code,
-        name: dept.name,
-        description: dept.description,
-        active: dept.status === 1,
-        parentName: dept.parentDepartment?.name || null,
-        updatedAt: new Date(dept.modifiedDate).toLocaleDateString('vi-VN')
-      }));
+      const mappedDepartments = searchResponse.data.content.map(dept => {
+        // Tìm phòng ban cha dựa trên parentId từ danh sách tất cả phòng ban
+        const parentDept = allDeptsResponse.find(d => d.id === dept.parentId);
+        return {
+          id: dept.id,
+          code: dept.code,
+          name: dept.name,
+          description: dept.description,
+          active: dept.status === 1,
+          parentName: parentDept ? parentDept.name : 'Không có',
+          updatedAt: new Date(dept.modifiedDate).toLocaleDateString('vi-VN')
+        };
+      });
       
       setDepartments(mappedDepartments);
-      setTotalPages(response.data.totalPages);
+      setTotalPages(searchResponse.data.totalPages);
       setError(null);
     } catch (err) {
       setError('Có lỗi xảy ra khi tải danh sách phòng ban');

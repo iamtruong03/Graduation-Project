@@ -64,4 +64,10 @@ public interface ProjectRepo extends XDevBaseRepo<Project> {
     @Query("SELECT CASE WHEN COUNT(p) > 0 THEN true ELSE false END FROM Project p " +
            "WHERE p.state = :state AND :userId IN (SELECT r FROM p.responsibleIds r)")
     boolean existsByResponsibleIdsContainingAndState(@Param("userId") String userId, @Param("state") Integer state);
+
+    List<Project> findByStatus(Integer status);
+
+    List<Project> findByStatusAndDepartmentIdIn(
+        Integer status, List<Long> departmentIds
+    );
 }

@@ -22,7 +22,7 @@ import lombok.experimental.SuperBuilder;
 @EqualsAndHashCode(callSuper = false)
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class Risk extends XDevBaseEntity {
-    // Trạng thái rủi ro (0: Identified, 1: Analyzing, 2: Monitored, 3: Resolved, 4: Closed)
+    // Trạng thái rủi ro
     @Column(name = "state")
     Integer state;
 

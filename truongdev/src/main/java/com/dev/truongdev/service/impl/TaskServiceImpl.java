@@ -409,7 +409,7 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
         String approverId;
         String approverName;
         
-        if (currentUser.getRole().equals("ROLE_ADMIN")) {
+        if (currentUser.getRole().equals("1")) {
             approverId = uid;
             approverName = userService.getUserDisplayName(uid);
         } else {
@@ -490,7 +490,7 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
      * True cho admin và người dùng phòng ban gốc.
      */
     private boolean hasFullAccess(User user, Long departmentId) {
-        return user.getRole().equals("ROLE_ADMIN") || 
+        return user.getRole().equals("1") || 
                departmentRepo.findById(departmentId)
                    .map(dept -> dept.getParentId() == null)
                    .orElse(false);

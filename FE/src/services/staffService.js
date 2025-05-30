@@ -63,6 +63,14 @@ const staffService = {
     return api.get('/user/list-user-child-dep', getAuthHeader());
   },
 
+  // Lấy danh sách user theo phòng ban
+  listUserByDep: (departmentId) => {
+    return api.get('/user/list-user-by-dep', {
+      ...getAuthHeader(),
+      params: { departmentId }
+    });
+  },
+
   // Lấy thông tin user theo ID
   getUserById: (id) => {
     return api.get(`/user/${id}`, getAuthHeader());

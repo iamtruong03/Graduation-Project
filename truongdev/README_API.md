@@ -360,7 +360,7 @@ Content-Type: application/json
   "email": "user001@company.com",
   "departmentId": 1,
   "positionId": 2,
-  "role": "ROLE_USER"
+  "role": "2"
 }
 ```
 
@@ -557,12 +557,12 @@ Response: DanhSachCongViec_20241215_143022.xlsx
 
 ## 🔒 Access Control
 
-### Admin Users (ROLE_ADMIN)
+### Admin Users (1)
 - Có quyền truy cập tất cả dữ liệu
 - Có thể tạo/sửa/xóa tất cả entities
 - Có thể phê duyệt tất cả requests
 
-### Regular Users (ROLE_USER)
+### Regular Users (2)
 - Chỉ truy cập dữ liệu thuộc phòng ban mình và phòng ban con
 - Có thể tạo entities trong phòng ban mình
 - Chỉ phê duyệt entities được assign

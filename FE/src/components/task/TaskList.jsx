@@ -65,11 +65,19 @@ const TaskList = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await taskService.searchTasks({ search: searchName }, page - 1, rowsPerPage);
+      const filter = {
+        search: searchName,
+        taskType: taskType !== 'all' ? taskType : null,
+        status: taskStatus !== 'all' ? taskStatus : null,
+        priority: taskPriority !== 'all' ? taskPriority : null
+      };
+
+      const response = await taskService.searchTasks(filter, page - 1, rowsPerPage);
       setTasks(response.data.content);
       setTotalPages(response.data.totalPages);
     } catch (err) {
       setError('Không thể tải danh sách công việc');
+      console.error('Error fetching tasks:', err);
     } finally {
       setLoading(false);
     }
@@ -79,21 +87,18 @@ const TaskList = () => {
     try {
       setLoading(true);
       const response = await taskService.getPendingApprovalTasks({
+        search: searchName,
         page: pendingPage,
-        size: rowsPerPage,
-        search: searchName
+        size: rowsPerPage
       });
-      if (response.status === 200) {
-        const { content, totalPages, totalElements } = response.data;
-        setPendingTasks(content);
-        setPendingTotalPages(totalPages);
-        setPendingCount(totalElements);
-      } else {
-        setError(response.message || 'Có lỗi xảy ra khi tải dữ liệu');
+      if (response.data) {
+        setPendingTasks(response.data.content);
+        setPendingTotalPages(response.data.totalPages);
+        setPendingCount(response.data.totalElements);
       }
     } catch (err) {
-      console.error('Error fetching pending tasks:', err);
       setError('Không thể tải danh sách công việc chờ duyệt');
+      console.error('Error fetching pending tasks:', err);
     } finally {
       setLoading(false);
     }
@@ -130,12 +135,19 @@ const TaskList = () => {
     setOpenDialog(true);
   };
 
-  const handleConfirmDelete = () => {
-    // Thực hiện xóa công việc
-    const newData = tasks.filter(task => task.id !== deleteId);
-    // Cập nhật state hoặc gọi API xóa
-    setOpenDialog(false);
-    setDeleteId(null);
+  const handleConfirmDelete = async () => {
+    try {
+      setLoading(true);
+      await taskService.deleteTask(deleteId);
+      await fetchTasks();
+      setOpenDialog(false);
+      setDeleteId(null);
+    } catch (err) {
+      setError('Không thể xóa công việc');
+      console.error('Error deleting task:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCloseDialog = () => {
@@ -156,12 +168,10 @@ const TaskList = () => {
     try {
       setLoading(true);
       const response = await taskService.approveTask(approveId, localStorage.getItem('userId'));
-      if (response.success) {
+      if (response) {
         await fetchTasks();
         await fetchPendingTasks();
         await fetchPendingCount();
-      } else {
-        setError(response.message);
       }
     } catch (err) {
       setError('Không thể phê duyệt công việc');
@@ -189,7 +199,45 @@ const TaskList = () => {
   const handleExport = async () => {
     try {
       setLoading(true);
-      await taskService.exportTasks();
+      const filter = {
+        search: searchName,
+        taskType: taskType !== 'all' ? taskType : null,
+        status: taskStatus !== 'all' ? taskStatus : null,
+        priority: taskPriority !== 'all' ? taskPriority : null
+      };
+
+      const response = await taskService.exportTasks(filter);
+      
+      // Tạo blob từ response data
+      const blob = new Blob([response], { 
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+      });
+      
+      // Tạo URL để tải file
+      const url = window.URL.createObjectURL(blob);
+      
+      // Tạo thẻ a ẩn để tải file
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Lấy tên file từ header
+      const contentDisposition = response.headers?.['content-disposition'];
+      let fileName = 'DanhSachCongViec.xlsx';
+      if (contentDisposition) {
+        const fileNameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+        if (fileNameMatch) {
+          fileName = decodeURIComponent(fileNameMatch[1]);
+        }
+      }
+      
+      link.setAttribute('download', fileName);
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
       setError(null);
     } catch (err) {
       setError('Không thể xuất dữ liệu công việc');

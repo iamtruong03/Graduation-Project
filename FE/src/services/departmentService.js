@@ -35,6 +35,17 @@ const departmentService = {
     });
   },
 
+  // Lấy danh sách phòng ban đang hoạt động với thông tin cơ bản
+  getActiveDepartments: () => {
+    return api.get('/department/active', {
+      ...getAuthHeader(),
+      headers: {
+        ...getAuthHeader().headers,
+        'Content-Type': 'application/json'
+      }
+    });
+  },
+
   // Lấy chi tiết một phòng ban
   getDepartmentById: (id) => {
     return api.get(`/department/${id}`);
@@ -74,7 +85,14 @@ const departmentService = {
 
   // Lấy danh sách nhân viên theo phòng ban
   getDepartmentStaff: (departmentId) => {
-    return api.get(`/department/${departmentId}/staff`, getAuthHeader());
+    return api.get('/user/list-user-by-dep', {
+      ...getAuthHeader(),
+      headers: {
+        ...getAuthHeader().headers,
+        'Content-Type': 'application/json'
+      },
+      params: { departmentId }
+    });
   }
 };
 

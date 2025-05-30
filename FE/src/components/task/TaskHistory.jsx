@@ -8,7 +8,7 @@ import {
   TimelineDot,
   TimelineOppositeContent
 } from '@mui/lab';
-import { Typography, Paper } from '@mui/material';
+import { Typography, Paper, Alert } from '@mui/material';
 import { History as HistoryIcon } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
 import vi from 'date-fns/locale/vi';
@@ -79,9 +79,17 @@ const formatDate = (dateString) => {
   }
 };
 
-const TaskHistory = ({ history = [] }) => {
-  console.log('TaskHistory component received:', history);
-  
+const TaskHistory = ({ history = [], error = null }) => {
+  if (error) {
+    return (
+      <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      </Paper>
+    );
+  }
+
   if (!Array.isArray(history)) {
     console.error('History prop is not an array:', history);
     return null;
@@ -109,7 +117,6 @@ const TaskHistory = ({ history = [] }) => {
       </Typography>
       <Timeline>
         {history.map((item, index) => {
-          console.log('Rendering history item:', item);
           if (!item) {
             console.error('Invalid history item at index', index);
             return null;

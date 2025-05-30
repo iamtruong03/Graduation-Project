@@ -132,27 +132,22 @@ const CategoryTypeManagement = () => {
 
     setLoading(true);
     try {
-      // TODO: Add API call to save category type
-      console.log('Submitting form data:', formData);
-      
-      // Mock API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      const submitData = {
+        ...formData,
+        status: dialogType === 'create' ? 1 : selectedCategory.status // 1 là trạng thái active
+      };
+
       if (dialogType === 'create') {
-        setCategoryTypes([...categoryTypes, {
-          id: categoryTypes.length + 1,
-          ...formData,
-          active: true
-        }]);
+        await categoryTypeService.createCategoryType(submitData);
       } else {
-        setCategoryTypes(categoryTypes.map(cat => 
-          cat.id === selectedCategory.id ? { ...cat, ...formData } : cat
-        ));
+        await categoryTypeService.updateCategoryType(selectedCategory.id, submitData);
       }
       
+      // Refresh danh sách sau khi thêm/sửa
+      await fetchCategoryTypes();
       handleCloseDialog();
     } catch (err) {
-      setError('Có lỗi xảy ra khi lưu loại danh mục. Vui lòng thử lại.');
+      setError('Có lỗi xảy ra khi lưu loại danh mục: ' + (err.response?.data?.message || err.message));
     } finally {
       setLoading(false);
     }
@@ -161,13 +156,26 @@ const CategoryTypeManagement = () => {
   const handleDelete = async () => {
     setLoading(true);
     try {
-      // TODO: Add API call to delete category type
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await categoryTypeService.deleteCategoryType(selectedCategory.id);
       
-      setCategoryTypes(categoryTypes.filter(cat => cat.id !== selectedCategory.id));
+      // Refresh danh sách sau khi xóa
+      await fetchCategoryTypes();
       handleCloseDeleteDialog();
     } catch (err) {
-      setError('Có lỗi xảy ra khi xóa loại danh mục. Vui lòng thử lại.');
+      setError('Có lỗi xảy ra khi xóa loại danh mục: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleChangeStatus = async (category) => {
+    setLoading(true);
+    try {
+      await categoryTypeService.changeStatus(category.id);
+      // Refresh danh sách sau khi thay đổi trạng thái
+      await fetchCategoryTypes();
+    } catch (err) {
+      setError('Có lỗi xảy ra khi thay đổi trạng thái: ' + (err.response?.data?.message || err.message));
     } finally {
       setLoading(false);
     }
@@ -311,9 +319,11 @@ const CategoryTypeManagement = () => {
                         size="small"
                         color="error"
                         onClick={() => handleOpenDeleteDialog(category)}
+                        sx={{ mr: 1 }}
                       >
                         <DeleteIcon />
                       </IconButton>
+                  
                     </TableCell>
                   </TableRow>
                 ))

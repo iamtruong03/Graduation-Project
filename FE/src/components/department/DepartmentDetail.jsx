@@ -40,7 +40,7 @@ const DepartmentDetail = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [department, setDepartment] = useState(null);
-  const [departments, setDepartments] = useState([]);
+  const [parentDepartment, setParentDepartment] = useState(null);
   const [departmentStaff, setDepartmentStaff] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
@@ -56,7 +56,6 @@ const DepartmentDetail = () => {
     if (id) {
       fetchDepartmentDetail();
       fetchDepartmentStaff();
-      fetchAllDepartments();
     }
   }, [id]);
 
@@ -71,15 +70,29 @@ const DepartmentDetail = () => {
           code: dept.code || '',
           name: dept.name || '',
           description: dept.description || '',
-          parentId: dept.parentDepartment?.id || '',
+          parentId: dept.parentId || '',
           status: dept.status || 1
         });
+        if (dept.parentId) {
+          fetchParentDepartment(dept.parentId);
+        }
       }
     } catch (err) {
       setError('Không thể tải thông tin phòng ban');
       console.error('Error fetching department:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchParentDepartment = async (parentId) => {
+    try {
+      const response = await departmentService.getDepartmentById(parentId);
+      if (response.data) {
+        setParentDepartment(response.data);
+      }
+    } catch (err) {
+      console.error('Error fetching parent department:', err);
     }
   };
 
@@ -91,18 +104,6 @@ const DepartmentDetail = () => {
       }
     } catch (err) {
       console.error('Error fetching department staff:', err);
-    }
-  };
-
-  const fetchAllDepartments = async () => {
-    try {
-      const response = await departmentService.getAll();
-      if (response.data) {
-        // Filter out current department to prevent circular reference
-        setDepartments(response.data.filter(dept => dept.id !== parseInt(id)));
-      }
-    } catch (err) {
-      console.error('Error fetching departments:', err);
     }
   };
 
@@ -157,7 +158,7 @@ const DepartmentDetail = () => {
       code: department.code || '',
       name: department.name || '',
       description: department.description || '',
-      parentId: department.parentDepartment?.id || '',
+      parentId: department.parentId || '',
       status: department.status || 1
     });
     setFormErrors({});
@@ -171,8 +172,11 @@ const DepartmentDetail = () => {
       setError(null);
 
       const updateData = {
-        ...formData,
-        parentId: formData.parentId || null
+        code: formData.code,
+        name: formData.name,
+        description: formData.description,
+        status: department.status,
+        parentId: department.parentId
       };
 
       const response = await departmentService.updateDepartment(id, updateData);
@@ -345,54 +349,9 @@ const DepartmentDetail = () => {
                   <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
                     Phòng ban cha
                   </Typography>
-                  {isEditing ? (
-                    <FormControl fullWidth size="small">
-                      <InputLabel>Phòng ban cha</InputLabel>
-                      <Select
-                        name="parentId"
-                        value={formData.parentId}
-                        onChange={handleInputChange}
-                        label="Phòng ban cha"
-                      >
-                        <MenuItem value="">
-                          <em>Không có</em>
-                        </MenuItem>
-                        {departments.map((dept) => (
-                          <MenuItem key={dept.id} value={dept.id}>
-                            {dept.name}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  ) : (
-                    <Typography variant="body1">
-                      {department.parentDepartment?.name || 'Không có'}
-                    </Typography>
-                  )}
-                </Grid>
-
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
-                    Trạng thái
+                  <Typography variant="body1">
+                    {parentDepartment?.name || 'Không có'}
                   </Typography>
-                  {isEditing ? (
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={formData.status === 1}
-                          onChange={handleStatusChange}
-                          color="primary"
-                        />
-                      }
-                      label={formData.status === 1 ? 'Hoạt động' : 'Không hoạt động'}
-                    />
-                  ) : (
-                    <Chip
-                      label={department.status === 1 ? 'Hoạt động' : 'Không hoạt động'}
-                      color={department.status === 1 ? 'success' : 'error'}
-                      size="small"
-                    />
-                  )}
                 </Grid>
 
                 <Grid item xs={12}>
@@ -420,7 +379,13 @@ const DepartmentDetail = () => {
                     Ngày tạo
                   </Typography>
                   <Typography variant="body1">
-                    {department.createdDate ? new Date(department.createdDate).toLocaleDateString('vi-VN') : 'N/A'}
+                    {department.createDate ? new Date(department.createDate).toLocaleDateString('vi-VN', {
+                      year: 'numeric',
+                      month: '2-digit',
+                      day: '2-digit',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    }) : 'N/A'}
                   </Typography>
                 </Grid>
 
@@ -429,7 +394,13 @@ const DepartmentDetail = () => {
                     Ngày cập nhật
                   </Typography>
                   <Typography variant="body1">
-                    {department.modifiedDate ? new Date(department.modifiedDate).toLocaleDateString('vi-VN') : 'N/A'}
+                    {department.modifiedDate ? new Date(department.modifiedDate).toLocaleDateString('vi-VN', {
+                      year: 'numeric',
+                      month: '2-digit',
+                      day: '2-digit',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    }) : 'N/A'}
                   </Typography>
                 </Grid>
               </Grid>

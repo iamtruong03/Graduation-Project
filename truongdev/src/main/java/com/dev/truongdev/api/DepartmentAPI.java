@@ -38,5 +38,11 @@ public class DepartmentAPI extends XDevBaseAPI<Department, DepartmentFilter> {
     return departmentService;
   }
 
-
+  @GetMapping("/active")
+  public ResponseEntity<List<Department>> getActiveDepartments(
+      @RequestAttribute String uid
+  ) {
+    return ResponseEntity.ok(departmentService.getActiveDepartments(uid));
   }
+
+}

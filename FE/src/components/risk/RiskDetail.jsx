@@ -43,50 +43,7 @@ import { format } from 'date-fns';
 import vi from 'date-fns/locale/vi';
 import riskService from '../../services/riskService';
 import RiskHistory from './RiskHistory';
-
-const mockRisk = {
-  id: 1,
-  code: 'RR001',
-  name: 'Rủi ro về tiến độ dự án',
-  type: 'Vận hành',
-  level: 'Cao',
-  stage: 'Đang xử lý',
-  updatedAt: '2024-01-15',
-  reporter: 'Nguyễn Văn A',
-  department: 'Phòng Quản lý dự án',
-  project: 'Dự án A',
-  description: 'Dự án có nguy cơ chậm tiến độ do thiếu nhân lực',
-  impactLevel: 'Cao',
-  probability: 'Cao',
-  priority: 'Cao',
-  active: true,
-  analysis: {
-    rootCause: 'Thiếu hụt nhân sự có kinh nghiệm trong lĩnh vực',
-    impact: 'Dự án có thể bị chậm tiến độ 2-3 tháng, ảnh hưởng đến kế hoạch triển khai',
-    preventiveMeasures: 'Tuyển dụng thêm nhân sự, đào tạo nội bộ',
-    remedialMeasures: 'Thuê ngoài một số công việc không yêu cầu bảo mật cao'
-  },
-  preventiveActions: [
-    {
-      id: 1,
-      name: 'Tuyển dụng developer',
-      assignee: 'Trần Thị B',
-      startDate: '2024-02-01',
-      endDate: '2024-02-15',
-      status: 'Đang thực hiện',
-      priority: 'Cao'
-    },
-    {
-      id: 2,
-      name: 'Đào tạo nội bộ về công nghệ mới',
-      assignee: 'Lê Văn C',
-      startDate: '2024-02-15',
-      endDate: '2024-03-15',
-      status: 'Chờ duyệt',
-      priority: 'Trung bình'
-    }
-  ]
-};
+import { message } from 'antd';
 
 const getRiskLevelColor = (level) => {
   switch (level) {
@@ -132,7 +89,30 @@ const getPriorityColor = (priority) => {
 const RiskDetail = () => {
   const navigate = useNavigate();
   const { id } = useParams();
-  const [risk, setRisk] = useState(mockRisk);
+  const [risk, setRisk] = useState({
+    id: null,
+    code: '',
+    name: '',
+    type: '',
+    level: '',
+    stage: '',
+    updatedAt: '',
+    reporter: '',
+    department: '',
+    project: '',
+    description: '',
+    impactLevel: '',
+    probability: '',
+    priority: '',
+    active: true,
+    analysis: {
+      rootCause: '',
+      impact: '',
+      preventiveMeasures: '',
+      remedialMeasures: ''
+    },
+    preventiveActions: []
+  });
   const [riskHistory, setRiskHistory] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
   const [editedRisk, setEditedRisk] = useState(null);
@@ -154,18 +134,99 @@ const RiskDetail = () => {
           riskService.getRiskById(id),
           riskService.getRiskHistory(id)
         ]);
-        setRisk(riskData || mockRisk);
+
+        if (riskData) {
+          // Map dữ liệu từ API sang cấu trúc hiển thị
+          const formattedRisk = {
+            id: riskData.id,
+            code: riskData.code || '',
+            name: riskData.name || '',
+            type: riskData.riskTypeId ? getRiskTypeName(riskData.riskTypeId) : '',
+            level: riskData.impactLevelId ? getImpactLevelName(riskData.impactLevelId) : '',
+            stage: riskData.state ? getRiskStateName(riskData.state) : '',
+            updatedAt: riskData.updatedAt || '',
+            reporter: riskData.reflectorId || '',
+            department: riskData.departmentId ? getDepartmentName(riskData.departmentId) : '',
+            project: riskData.projectId ? getProjectName(riskData.projectId) : '',
+            description: riskData.description || '',
+            impactLevel: riskData.impactLevelId ? getImpactLevelName(riskData.impactLevelId) : '',
+            probability: riskData.possibilityId ? getPossibilityName(riskData.possibilityId) : '',
+            priority: riskData.priorityId ? getPriorityName(riskData.priorityId) : '',
+            active: riskData.status === 1,
+            analysis: {
+              rootCause: riskData.rootCause || '',
+              impact: riskData.impactAnalysis || '',
+              preventiveMeasures: riskData.precautions || '',
+              remedialMeasures: riskData.remedy || ''
+            },
+            preventiveActions: riskData.preventiveActions || []
+          };
+          setRisk(formattedRisk);
+        }
         setRiskHistory(historyData || []);
       } catch (error) {
         console.error('Error fetching risk data:', error);
-        // Use mock data as fallback
-        setRisk(mockRisk);
-        setRiskHistory([]);
+        // Hiển thị thông báo lỗi cho người dùng
+        message.error('Không thể tải thông tin rủi ro. Vui lòng thử lại sau.');
       }
     };
 
     fetchData();
   }, [id]);
+
+  // Các hàm helper để chuyển đổi ID thành tên
+  const getRiskTypeName = (typeId) => {
+    // TODO: Implement mapping từ riskTypeId sang tên loại rủi ro
+    return 'Vận hành';
+  };
+
+  const getImpactLevelName = (levelId) => {
+    switch (levelId) {
+      case 1: return 'Thấp';
+      case 2: return 'Trung bình';
+      case 3: return 'Cao';
+      case 4: return 'Rất cao';
+      default: return 'Chưa xác định';
+    }
+  };
+
+  const getRiskStateName = (stateId) => {
+    switch (stateId) {
+      case 1: return 'Chưa xử lý';
+      case 2: return 'Đang xử lý';
+      case 3: return 'Đã xử lý';
+      case 4: return 'Đã đóng';
+      default: return 'Chưa xác định';
+    }
+  };
+
+  const getPossibilityName = (possibilityId) => {
+    switch (possibilityId) {
+      case 1: return 'Thấp';
+      case 2: return 'Trung bình';
+      case 3: return 'Cao';
+      default: return 'Chưa xác định';
+    }
+  };
+
+  const getPriorityName = (priorityId) => {
+    switch (priorityId) {
+      case 1: return 'Thấp';
+      case 2: return 'Trung bình';
+      case 3: return 'Cao';
+      default: return 'Chưa xác định';
+    }
+  };
+
+  const getDepartmentName = (departmentId) => {
+    // TODO: Implement mapping từ departmentId sang tên phòng ban
+    return 'Phòng ban';
+  };
+
+  const getProjectName = (projectId) => {
+    // TODO: Implement mapping từ projectId sang tên dự án
+    return 'Dự án';
+  };
 
   const formatDate = (dateString) => {
     try {
@@ -429,9 +490,9 @@ const RiskDetail = () => {
                         ) : (
                           <Stack direction="row" spacing={1} alignItems="center">
                             <Avatar sx={{ width: 24, height: 24 }}>
-                              {risk.reporter.charAt(0)}
+                              {risk.reporter ? risk.reporter.charAt(0) : '?'}
                             </Avatar>
-                            <Typography>{risk.reporter}</Typography>
+                            <Typography>{risk.reporter || 'Chưa có người phản ánh'}</Typography>
                           </Stack>
                         )}
                       </Box>
@@ -574,11 +635,11 @@ const RiskDetail = () => {
                       multiline
                       rows={3}
                       name="rootCause"
-                      value={editedRisk.analysis.rootCause}
+                      value={editedRisk?.analysis?.rootCause || ''}
                       onChange={handleAnalysisChange}
                     />
                   ) : (
-                    <Typography>{risk.analysis.rootCause}</Typography>
+                    <Typography>{risk?.analysis?.rootCause || 'Chưa có thông tin'}</Typography>
                   )}
                 </Box>
 
@@ -592,11 +653,11 @@ const RiskDetail = () => {
                       multiline
                       rows={3}
                       name="impact"
-                      value={editedRisk.analysis.impact}
+                      value={editedRisk?.analysis?.impact || ''}
                       onChange={handleAnalysisChange}
                     />
                   ) : (
-                    <Typography>{risk.analysis.impact}</Typography>
+                    <Typography>{risk?.analysis?.impact || 'Chưa có thông tin'}</Typography>
                   )}
                 </Box>
 
@@ -610,11 +671,11 @@ const RiskDetail = () => {
                       multiline
                       rows={3}
                       name="preventiveMeasures"
-                      value={editedRisk.analysis.preventiveMeasures}
+                      value={editedRisk?.analysis?.preventiveMeasures || ''}
                       onChange={handleAnalysisChange}
                     />
                   ) : (
-                    <Typography>{risk.analysis.preventiveMeasures}</Typography>
+                    <Typography>{risk?.analysis?.preventiveMeasures || 'Chưa có thông tin'}</Typography>
                   )}
                 </Box>
 
@@ -628,11 +689,11 @@ const RiskDetail = () => {
                       multiline
                       rows={3}
                       name="remedialMeasures"
-                      value={editedRisk.analysis.remedialMeasures}
+                      value={editedRisk?.analysis?.remedialMeasures || ''}
                       onChange={handleAnalysisChange}
                     />
                   ) : (
-                    <Typography>{risk.analysis.remedialMeasures}</Typography>
+                    <Typography>{risk?.analysis?.remedialMeasures || 'Chưa có thông tin'}</Typography>
                   )}
                 </Box>
               </Stack>

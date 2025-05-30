@@ -17,7 +17,9 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  TextField
+  TextField,
+  CircularProgress,
+  Alert
 } from '@mui/material';
 import {
   Assignment as AssignmentIcon,
@@ -99,18 +101,22 @@ const TaskDetail = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedTask, setEditedTask] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setLoading(true);
+        setError(null);
         const [taskData, historyData] = await Promise.all([
           taskService.getTaskById(id),
           taskService.getTaskHistory(id)
         ]);
         setTask(taskData);
         setTaskHistory(historyData);
-      } catch (error) {
-        console.error('Error fetching task data:', error);
+      } catch (err) {
+        console.error('Error fetching task data:', err);
+        setError('Không thể tải thông tin công việc');
       } finally {
         setLoading(false);
       }
@@ -135,14 +141,19 @@ const TaskDetail = () => {
 
   const handleSave = async () => {
     try {
+      setLoading(true);
+      setError(null);
       const updatedTask = await taskService.updateTask(id, editedTask);
       setTask(updatedTask);
       // Refresh history after update
       const newHistory = await taskService.getTaskHistory(id);
       setTaskHistory(newHistory);
       setIsEditing(false);
-    } catch (error) {
-      console.error('Error updating task:', error);
+    } catch (err) {
+      console.error('Error updating task:', err);
+      setError('Không thể cập nhật công việc');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -155,7 +166,24 @@ const TaskDetail = () => {
   };
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
+        <Button variant="contained" onClick={handleClose}>
+          Quay lại
+        </Button>
+      </Box>
+    );
   }
 
   return (

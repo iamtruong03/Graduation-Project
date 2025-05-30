@@ -30,7 +30,6 @@ import CategoryManagement from './components/category/CategoryManagement';
 import CategoryTypeManagement from './components/category/CategoryTypeManagement';
 import StaffCreate from './components/user/StaffCreate';
 import StaffDetail from './components/user/StaffDetail';
-import StaffEdit from './components/user/StaffEdit';
 import Login from './components/Login';
 import Home from './components/Home';
 import MyAccount from './components/user/MyAccount';
@@ -105,7 +104,6 @@ function App() {
             <Route path="/category/type" element={<CategoryTypeManagement />} />
             <Route path="/staff/create" element={<StaffCreate />} />
             <Route path="/staff/detail/:id" element={<StaffDetail />} />
-            <Route path="/staff/edit/:id" element={<StaffEdit />} />
             <Route path="/account/my-account" element={<MyAccount />} />
             <Route path="/notification" element={<NotificationCenter />} />
             <Route path="/document/management" element={<DocumentManagement />} />

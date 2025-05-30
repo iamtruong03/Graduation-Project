@@ -25,8 +25,13 @@ const riskService = {
   },
 
   // Thêm rủi ro mới
-  createRisk: (riskData) => {
-    return api.post('api/risks', riskData, getAuthHeader());
+  createRisk: async (riskData) => {
+    try {
+      const response = await api.post('/api/risks/create', riskData, getAuthHeader());
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
   },
 
   // Cập nhật thông tin rủi ro
@@ -68,6 +73,29 @@ const riskService = {
     return api.post('api/risks/search', filter, {
       ...getAuthHeader(),
       params: { page, size }
+    });
+  },
+
+  // Lấy danh sách rủi ro chờ duyệt
+  getPendingApprovalRisks: async () => {
+    try {
+      const response = await api.get('/api/risks/pending-approval', getAuthHeader());
+      return response.data;
+    } catch (error) {
+      console.error('Lỗi khi lấy danh sách rủi ro chờ duyệt:', error);
+      return [];
+    }
+  },
+
+  // Xuất dữ liệu rủi ro
+  exportRisks: (filter) => {
+    return api.get('/api/risks/export', {
+      ...getAuthHeader(),
+      responseType: 'blob',
+      params: filter,
+      headers: {
+        'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      }
     });
   }
 };

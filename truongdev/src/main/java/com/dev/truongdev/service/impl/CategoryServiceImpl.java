@@ -33,40 +33,6 @@ public class CategoryServiceImpl extends XDevBaseServiceImpl<Category, CategoryF
     }
 
     @Override
-    public CategoryDTO getCategoryById(Long id) {
-        Category category = categoryRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Category not found with id: " + id));
-        return convertToDTO(category);
-    }
-
-    @Override
-    @Transactional
-    public CategoryDTO updateCategory(Long id, CategoryDTO categoryDTO) {
-        Category category = categoryRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Category not found with id: " + id));
-        
-        // Validate category type exists
-        if (categoryDTO.getCategoryTypeId() != null) {
-            categoryTypeService.getCategoryTypeById(categoryDTO.getCategoryTypeId());
-        }
-        
-        category.setName(categoryDTO.getName());
-        category.setDescription(categoryDTO.getDescription());
-        category.setCategoryTypeId(categoryDTO.getCategoryTypeId());
-        
-        category = categoryRepo.save(category);
-        return convertToDTO(category);
-    }
-
-    @Override
-    public void deleteCategory(Long id) {
-        if (!categoryRepo.existsById(id)) {
-            throw new RuntimeException("Category not found");
-        }
-        categoryRepo.deleteById(id);
-    }
-
-    @Override
     public Page<Category> searchAll(Long departmentId, String uid, CategoryFilter filter, Pageable pageable) {
         return categoryRepo.searchByCodeOrName(
             1, // STATUS_ACTIVE
@@ -75,18 +41,4 @@ public class CategoryServiceImpl extends XDevBaseServiceImpl<Category, CategoryF
         );
     }
 
-    private CategoryDTO convertToDTO(Category category) {
-        CategoryDTO dto = new CategoryDTO();
-        BeanUtils.copyProperties(category, dto);
-        
-        if (category.getCategoryTypeId() != null) {
-            try {
-                dto.setCategoryTypeName(categoryTypeService.getCategoryTypeById(category.getCategoryTypeId()).getName());
-            } catch (Exception e) {
-                dto.setCategoryTypeName("Unknown");
-            }
-        }
-        
-        return dto;
-    }
 } 

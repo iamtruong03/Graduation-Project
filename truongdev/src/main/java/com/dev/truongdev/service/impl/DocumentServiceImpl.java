@@ -74,60 +74,12 @@ public class DocumentServiceImpl extends XDevBaseServiceImpl<Document, DocumentF
     }
 
     /**
-     * Lấy thông tin tài liệu theo ID.
-     * @param id ID của tài liệu
-     * @return DocumentDTO chứa thông tin tài liệu
-     * @throws RuntimeException nếu không tìm thấy tài liệu
-     */
-    @Override
-    public DocumentDTO getDocumentById(Long id) {
-        Document document = documentRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Document not found with id: " + id));
-        return convertToDTO(document);
-    }
-
-    /**
-     * Cập nhật thông tin tài liệu (không bao gồm file).
-     * - Kiểm tra tồn tại phòng ban và dự án
-     * - Cập nhật metadata của tài liệu
-     * 
-     * @param id ID tài liệu cần cập nhật
-     * @param documentDTO Thông tin tài liệu mới
-     * @return DocumentDTO sau khi cập nhật
-     * @throws RuntimeException nếu không tìm thấy tài liệu hoặc tham chiếu
-     */
-    @Override
-    @Transactional
-    public DocumentDTO updateDocument(Long id, DocumentDTO documentDTO) {
-        Document document = documentRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Document not found with id: " + id));
-        
-        // Validate references exist
-        if (documentDTO.getDepartmentId() != null) {
-            departmentRepo.findById(documentDTO.getDepartmentId())
-                .orElseThrow(() -> new RuntimeException("Department not found with id: " + documentDTO.getDepartmentId()));
-        }
-        
-        if (documentDTO.getProjectId() != null) {
-            projectService.getById("system", documentDTO.getProjectId());
-        }
-        
-        document.setName(documentDTO.getName());
-        document.setDescription(documentDTO.getDescription());
-        document.setDocumentTypeId(documentDTO.getDocumentTypeId());
-        document.setDepartmentId(documentDTO.getDepartmentId());
-        document.setProjectId(documentDTO.getProjectId());
-        
-        document = documentRepo.save(document);
-        return convertToDTO(document);
-    }
-
-    /**
      * Upload tài liệu mới lên hệ thống.
      * - Tạo tên file duy nhất
      * - Lưu file vào thư mục upload
      * - Tạo bản ghi tài liệu trong database
      * 
+     * @param uid ID người thực hiện upload
      * @param file File cần upload
      * @param documentDTO Thông tin metadata của tài liệu
      * @return DocumentDTO của tài liệu vừa upload
@@ -135,7 +87,7 @@ public class DocumentServiceImpl extends XDevBaseServiceImpl<Document, DocumentF
      */
     @Override
     @Transactional
-    public DocumentDTO uploadDocument(MultipartFile file, DocumentDTO documentDTO) {
+    public DocumentDTO uploadDocument(String uid, MultipartFile file, DocumentDTO documentDTO) {
         try {
             // Generate unique filename
             String originalFilename = file.getOriginalFilename();
@@ -148,12 +100,16 @@ public class DocumentServiceImpl extends XDevBaseServiceImpl<Document, DocumentF
 
             // Create document record
             Document document = new Document();
+            document.setCode(documentDTO.getCode());
             document.setName(documentDTO.getName() != null ? documentDTO.getName() : originalFilename);
             document.setDescription(documentDTO.getDescription());
             document.setFilePath(targetLocation.toString());
             document.setDocumentTypeId(documentDTO.getDocumentTypeId());
             document.setDepartmentId(documentDTO.getDepartmentId());
             document.setProjectId(documentDTO.getProjectId());
+            document.setCreateBy(uid);
+            document.setUpdateBy(uid);
+            document.setStatus(1);
 
             document = documentRepo.save(document);
             return convertToDTO(document);
@@ -167,12 +123,13 @@ public class DocumentServiceImpl extends XDevBaseServiceImpl<Document, DocumentF
      * - Tìm thông tin tài liệu trong database
      * - Đọc file từ đường dẫn lưu trữ
      * 
+     * @param uid ID người thực hiện download
      * @param id ID tài liệu cần download
      * @return Byte array của file
      * @throws RuntimeException nếu không tìm thấy tài liệu hoặc file
      */
     @Override
-    public byte[] downloadDocument(Long id) {
+    public byte[] downloadDocument(String uid, Long id) {
         Document document = documentRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Document not found with id: " + id));
         try {
@@ -228,7 +185,7 @@ public class DocumentServiceImpl extends XDevBaseServiceImpl<Document, DocumentF
         User user = userService.getById(uid, Long.valueOf(uid));
 
         // Check if user is admin or from root department
-        boolean hasFullAccess = user.getRole().equals("ROLE_ADMIN") || 
+        boolean hasFullAccess = user.getRole().equals("1") || 
                               departmentRepo.findById(departmentId)
                                   .map(dept -> dept.getParentId() == null)
                                   .orElse(false);

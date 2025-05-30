@@ -23,6 +23,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.beans.BeanUtils;
 import org.springframework.util.StringUtils;
+import com.dev.truongdev.utils.AppConstants;
+import com.dev.truongdev.repo.UserRepo;
+import com.dev.truongdev.repo.ProjectRepo;
+import com.dev.truongdev.repo.TaskRepo;
 
 import java.util.Date;
 import java.util.List;
@@ -43,44 +47,51 @@ public class RiskServiceImpl extends XDevBaseServiceImpl<Risk, RiskFilter, RiskR
     IUserService userService;
     DepartmentRepo departmentRepo;
     IDepartmentService<Department, ?> departmentService;
+    UserRepo userRepo;
+    ProjectRepo projectRepo;
+    TaskRepo taskRepo;
 
     public RiskServiceImpl(RiskRepo repo, 
                           RiskHistoryRepo historyRepo, 
                           IUserService userService, 
                           DepartmentRepo departmentRepo, 
-                          IDepartmentService<Department, ?> departmentService) {
+                          IDepartmentService<Department, ?> departmentService,
+                          UserRepo userRepo,
+                          ProjectRepo projectRepo,
+                          TaskRepo taskRepo) {
         super(repo);
         this.riskRepo = repo;
         this.riskHistoryRepo = historyRepo;
         this.userService = userService;
         this.departmentRepo = departmentRepo;
         this.departmentService = departmentService;
+        this.userRepo = userRepo;
+        this.projectRepo = projectRepo;
+        this.taskRepo = taskRepo;
     }
 
-    /**
-     * Lấy thông tin rủi ro theo ID.
-     * @param id ID của rủi ro
-     * @return RiskDTO chứa thông tin rủi ro
-     * @throws RuntimeException nếu không tìm thấy rủi ro
-     */
     @Override
-    public RiskDTO getRiskById(Long id) {
-        validateId(id);
-        Risk risk = riskRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Risk not found with id: " + id));
-        return convertToDTO(risk);
+    @Transactional
+    public RiskDTO createRisk(String uid, RiskDTO riskDTO) {
+        validateRiskDTO(riskDTO);
+
+        Risk risk = new Risk();
+        BeanUtils.copyProperties(riskDTO, risk);
+
+        risk.setState(AppConstants.STATUS_PENDING);
+        risk.setCreateBy(uid);
+
+        String[] approverInfo = determineApprover(uid, risk.getDepartmentId());
+
+        risk.setApproverId(approverInfo[0]);
+        Risk savedRisk = riskRepo.save(risk);
+
+        addRiskHistory(savedRisk.getId(), null, AppConstants.STATUS_PENDING,
+            uid, "Tạo mới risk và gửi phê duyệt tới " + approverInfo[1]);
+
+        return convertToDTO(savedRisk);
     }
 
-    /**
-     * Cập nhật thông tin rủi ro với kiểm tra trạng thái và quyền.
-     * - Kiểm tra tính hợp lệ của dữ liệu
-     * - Xác thực chuyển đổi trạng thái
-     * - Ghi lịch sử thay đổi
-     * 
-     * @param id ID rủi ro cần cập nhật
-     * @param riskDTO Thông tin rủi ro mới
-     * @return RiskDTO sau khi cập nhật
-     */
     @Override
     @Transactional
     public RiskDTO updateRisk(Long id, RiskDTO riskDTO) {
@@ -102,40 +113,6 @@ public class RiskServiceImpl extends XDevBaseServiceImpl<Risk, RiskFilter, RiskR
     }
 
     /**
-     * Tạo mới một rủi ro và khởi tạo quy trình phê duyệt.
-     * - Đặt trạng thái ban đầu là CHỜ DUYỆT
-     * - Xác định người phê duyệt phù hợp theo phòng ban
-     * - Ghi lịch sử tạo rủi ro
-     * 
-     * @param uid ID người tạo rủi ro
-     * @param riskDTO Thông tin rủi ro
-     * @return RiskDTO vừa tạo
-     */
-    @Override
-    @Transactional
-    public RiskDTO createRisk(String uid, RiskDTO riskDTO) {
-        validateRiskDTO(riskDTO);
-        validateUserId(uid);
-
-        Risk risk = new Risk();
-        BeanUtils.copyProperties(riskDTO, risk);
-        
-        risk.setState(AppConstants.STATUS_PENDING);
-        risk.setCreateBy(uid);
-
-        User currentUser = userService.getById(uid, Long.valueOf(uid));
-        String[] approverInfo = determineApprover(uid, currentUser, risk.getDepartmentId());
-        
-        risk.setApproverId(approverInfo[0]);
-        Risk savedRisk = riskRepo.save(risk);
-        
-        addRiskHistory(savedRisk.getId(), null, AppConstants.STATUS_PENDING, 
-            uid, "Tạo mới risk và gửi phê duyệt tới " + approverInfo[1]);
-        
-        return convertToDTO(savedRisk);
-    }
-
-    /**
      * Gửi rủi ro đi phê duyệt, chỉ định người phê duyệt.
      * @param uid ID người gửi phê duyệt
      * @param id ID rủi ro
@@ -152,7 +129,6 @@ public class RiskServiceImpl extends XDevBaseServiceImpl<Risk, RiskFilter, RiskR
             
         risk.setApproverId(approverIds.get(0).toString());
         risk.setUpdateBy(uid);
-        risk.setModifiedDate(new Date());
         
         Risk savedRisk = riskRepo.save(risk);
         
@@ -179,7 +155,6 @@ public class RiskServiceImpl extends XDevBaseServiceImpl<Risk, RiskFilter, RiskR
         
         risk.setState(AppConstants.STATUS_APPROVED);
         risk.setUpdateBy(uid);
-        risk.setModifiedDate(new Date());
         
         Risk savedRisk = riskRepo.save(risk);
         
@@ -208,7 +183,6 @@ public class RiskServiceImpl extends XDevBaseServiceImpl<Risk, RiskFilter, RiskR
         
         risk.setState(AppConstants.STATUS_REJECTED);
         risk.setUpdateBy(uid);
-        risk.setModifiedDate(new Date());
         
         Risk savedRisk = riskRepo.save(risk);
         
@@ -257,7 +231,6 @@ public class RiskServiceImpl extends XDevBaseServiceImpl<Risk, RiskFilter, RiskR
 
         risk.setStatus(AppConstants.STATUS_INACTIVE);
         risk.setUpdateBy(uid);
-        risk.setModifiedDate(new Date());
         riskRepo.save(risk);
         
         addRiskHistory(id, risk.getState(), risk.getState(), uid, "Xóa risk");
@@ -295,9 +268,6 @@ public class RiskServiceImpl extends XDevBaseServiceImpl<Risk, RiskFilter, RiskR
      */
     @Override
     public Page<Risk> searchAll(Long departmentId, String uid, RiskFilter filter, Pageable pageable) {
-        validateDepartmentId(departmentId);
-        validateUserId(uid);
-        
         User user = userService.getById(uid, Long.valueOf(uid));
 
         if (hasFullAccess(user, departmentId)) {
@@ -317,6 +287,63 @@ public class RiskServiceImpl extends XDevBaseServiceImpl<Risk, RiskFilter, RiskR
         );
     }
 
+    @Override
+    public void addRiskHistory(Long riskId, Integer previousState, Integer newState, String changedBy, String comment) {
+        RiskHistory history = RiskHistory.builder()
+            .riskId(riskId)
+            .previousState(previousState)
+            .newState(newState)
+            .changedBy(changedBy)
+            .changedAt(new Date())
+            .comment(comment)
+            .build();
+        riskHistoryRepo.save(history);
+    }
+
+    @Override
+    public List<RiskHistoryDTO> getRiskHistory(Long riskId) {
+        validateId(riskId);
+        List<RiskHistory> histories = riskHistoryRepo.findByRiskIdOrderByChangedAtDesc(riskId);
+        return histories.stream()
+            .map(this::convertHistoryToDTO)
+            .collect(Collectors.toList());
+    }
+
+    private RiskHistoryDTO convertHistoryToDTO(RiskHistory history) {
+        RiskHistoryDTO dto = new RiskHistoryDTO();
+        dto.setId(history.getId());
+        dto.setRiskId(history.getRiskId());
+        dto.setPreviousState(history.getPreviousState());
+        dto.setNewState(history.getNewState());
+        dto.setChangedBy(history.getChangedBy());
+        dto.setChangedAt(history.getChangedAt());
+        dto.setComment(history.getComment());
+        
+        // Set state names
+        dto.setPreviousStateName(StateNameUtils.getRiskStateName(history.getPreviousState()));
+        dto.setStateName(StateNameUtils.getRiskStateName(history.getNewState()));
+        
+        // Set changed by name
+        if (history.getChangedBy() != null) {
+            dto.setChangedByName(userService.getUserDisplayName(history.getChangedBy()));
+        }
+        
+        return dto;
+    }
+
+    private void updateRiskState(String uid, Long riskId, Integer newState, String changedBy, String comment) {
+        Risk risk = riskRepo.findById(riskId)
+            .orElseThrow(() -> new RuntimeException("Không tìm thấy risk"));
+            
+        Integer previousState = risk.getState();
+        risk.setState(newState);
+        risk.setUpdateBy(uid);
+        
+        riskRepo.save(risk);
+        
+        addRiskHistory(riskId, previousState, newState, changedBy, comment);
+    }
+
     // Private helper methods
 
     /**
@@ -326,9 +353,6 @@ public class RiskServiceImpl extends XDevBaseServiceImpl<Risk, RiskFilter, RiskR
     private void validateRiskDTO(RiskDTO riskDTO) {
         if (riskDTO == null) {
             throw new IllegalArgumentException("Risk data cannot be null");
-        }
-        if (riskDTO.getState() == null) {
-            throw new IllegalArgumentException("Risk state cannot be null");
         }
     }
 
@@ -370,7 +394,6 @@ public class RiskServiceImpl extends XDevBaseServiceImpl<Risk, RiskFilter, RiskR
         if (approverIds == null || approverIds.isEmpty()) {
             throw new RuntimeException("Phải chỉ định người phê duyệt");
         }
-        validateUserId(uid);
         validateId(id);
     }
 
@@ -379,7 +402,6 @@ public class RiskServiceImpl extends XDevBaseServiceImpl<Risk, RiskFilter, RiskR
      * Xác nhận trạng thái rủi ro và quyền của người phê duyệt.
      */
     private void validateApproval(String uid, Long id) {
-        validateUserId(uid);
         validateId(id);
         Risk risk = riskRepo.findById(id)
             .orElseThrow(() -> new RuntimeException("Không tìm thấy risk"));
@@ -420,17 +442,20 @@ public class RiskServiceImpl extends XDevBaseServiceImpl<Risk, RiskFilter, RiskR
      * 
      * @return Mảng String [approverId, approverName]
      */
-    private String[] determineApprover(String uid, User currentUser, Long departmentId) {
+    private String[] determineApprover(String uid , Long departmentId) {
         String approverId;
         String approverName;
-        
-        if (currentUser.getRole().equals("ROLE_ADMIN")) {
+
+        User currentUser = userRepo.findById(Long.valueOf(uid))
+            .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+
+        if (currentUser.getRole().equals("1")) {
             approverId = uid;
             approverName = userService.getUserDisplayName(uid);
         } else {
             Department riskDepartment = departmentRepo.findById(departmentId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy phòng ban"));
-            
+
             Department userDepartment = departmentRepo.findById(currentUser.getDepartmentId())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy phòng ban của người dùng"));
 
@@ -440,21 +465,21 @@ public class RiskServiceImpl extends XDevBaseServiceImpl<Risk, RiskFilter, RiskR
             } else if (riskDepartment.getId().equals(userDepartment.getId())) {
                 Department parentDepartment = departmentRepo.findById(riskDepartment.getParentId())
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy phòng ban cha"));
-                
+
                 User departmentHead = userRepo.findByDepartmentIdAndPositionIdAndStatus(
                     parentDepartment.getId(),
                     AppConstants.POSITION_HEAD,
                     AppConstants.STATUS_ACTIVE
                 ).stream().findFirst()
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy trưởng phòng ban cha"));
-                
+
                 approverId = departmentHead.getId().toString();
                 approverName = userService.getUserDisplayName(approverId);
             } else {
                 throw new RuntimeException("Không có quyền tạo risk cho phòng ban này");
             }
         }
-        
+
         return new String[]{approverId, approverName};
     }
 
@@ -505,7 +530,7 @@ public class RiskServiceImpl extends XDevBaseServiceImpl<Risk, RiskFilter, RiskR
      * True cho admin và người dùng phòng ban gốc.
      */
     private boolean hasFullAccess(User user, Long departmentId) {
-        return user.getRole().equals("ROLE_ADMIN") || 
+        return user.getRole().equals("1") || 
                departmentRepo.findById(departmentId)
                    .map(dept -> dept.getParentId() == null)
                    .orElse(false);
@@ -548,10 +573,20 @@ public class RiskServiceImpl extends XDevBaseServiceImpl<Risk, RiskFilter, RiskR
         dto.setState(risk.getState());
         dto.setRiskTypeId(risk.getRiskTypeId());
         dto.setProjectId(risk.getProjectId());
+        dto.setDepartmentId(risk.getDepartmentId());
         dto.setImpactLevelId(risk.getImpactLevelId());
         dto.setScopeId(risk.getScopeId());
+        dto.setPossibilityId(risk.getPossibilityId());
+        dto.setPriorityId(risk.getPriorityId());
         dto.setReflectorId(risk.getReflectorId());
+        dto.setApproverId(risk.getApproverId());
+        dto.setRootCause(risk.getRootCause());
+        dto.setImpactAnalysis(risk.getImpactAnalysis());
+        dto.setRemedy(risk.getRemedy());
+        dto.setPrecautions(risk.getPrecautions());
         dto.setReflectionDay(risk.getReflectionDay());
+        dto.setStatus(risk.getStatus());
+        dto.setUpdateBy(risk.getUpdateBy());
         
         dto.setStateName(StateNameUtils.getRiskStateName(risk.getState()));
         if (risk.getReflectorId() != null) {
@@ -561,24 +596,68 @@ public class RiskServiceImpl extends XDevBaseServiceImpl<Risk, RiskFilter, RiskR
         return dto;
     }
 
-    /**
-     * Chuyển đổi RiskHistory entity thành RiskHistoryDTO.
-     * Bao gồm tên người thay đổi và tên trạng thái.
-     */
-    private RiskHistoryDTO convertHistoryToDTO(RiskHistory history) {
-        RiskHistoryDTO dto = new RiskHistoryDTO();
-        dto.setId(history.getId());
-        dto.setRiskId(history.getRiskId());
-        dto.setPreviousState(history.getPreviousState());
-        dto.setNewState(history.getNewState());
-        dto.setChangedBy(history.getChangedBy());
-        dto.setChangedAt(history.getChangedAt());
-        dto.setComment(history.getComment());
+    private void validateReferences(RiskDTO riskDTO) {
+        // Validate project exists
+        if (riskDTO.getProjectId() != null) {
+            projectRepo.findById(riskDTO.getProjectId())
+                .orElseThrow(() -> new RuntimeException("Dự án không tồn tại"));
+        }
+        // Validate task exists if provided
+        if (riskDTO.getTaskId() != null) {
+            taskRepo.findById(riskDTO.getTaskId())
+                .orElseThrow(() -> new RuntimeException("Công việc không tồn tại"));
+        }
+    }
+
+    private void validateStateTransition(Integer previousState, Integer newState) {
+        if (previousState == null) return;
         
-        dto.setChangedByName(userService.getUserDisplayName(history.getChangedBy()));
-        dto.setPreviousStateName(StateNameUtils.getRiskStateName(history.getPreviousState()));
-        dto.setNewStateName(StateNameUtils.getRiskStateName(history.getNewState()));
-        
-        return dto;
+        boolean isValid;
+        if (previousState.equals(AppConstants.STATUS_PENDING)) {
+            isValid = newState.equals(AppConstants.STATUS_APPROVED) || 
+                     newState.equals(AppConstants.STATUS_REJECTED);
+        } else if (previousState.equals(AppConstants.STATUS_APPROVED)) {
+            isValid = newState.equals(AppConstants.STATUS_IN_PROGRESS);
+        } else if (previousState.equals(AppConstants.STATUS_IN_PROGRESS)) {
+            isValid = newState.equals(AppConstants.STATUS_COMPLETE) || 
+                     newState.equals(AppConstants.STATUS_OVERDUE);
+        } else if (previousState.equals(AppConstants.STATUS_COMPLETE) || 
+                  previousState.equals(AppConstants.STATUS_OVERDUE) || 
+                  previousState.equals(AppConstants.STATUS_REJECTED)) {
+            isValid = false;
+        } else {
+            isValid = false;
+        }
+
+        if (!isValid) {
+            throw new RuntimeException("Không thể chuyển từ trạng thái " + 
+                AppConstants.getProjectStateName(previousState) + " sang " + 
+                AppConstants.getProjectStateName(newState));
+        }
+    }
+
+    private Risk convertDTOToEntity(RiskDTO dto, Long id) {
+        Risk risk = id != null ? riskRepo.findById(id).orElse(new Risk()) : new Risk();
+        risk.setName(dto.getName());
+        risk.setCode(dto.getCode());
+        risk.setDescription(dto.getDescription());
+        risk.setState(dto.getState());
+        risk.setRiskTypeId(dto.getRiskTypeId());
+        risk.setProjectId(dto.getProjectId());
+        risk.setDepartmentId(dto.getDepartmentId());
+        risk.setImpactLevelId(dto.getImpactLevelId());
+        risk.setScopeId(dto.getScopeId());
+        risk.setPossibilityId(dto.getPossibilityId());
+        risk.setPriorityId(dto.getPriorityId());
+        risk.setReflectorId(dto.getReflectorId());
+        risk.setApproverId(dto.getApproverId());
+        risk.setRootCause(dto.getRootCause());
+        risk.setImpactAnalysis(dto.getImpactAnalysis());
+        risk.setRemedy(dto.getRemedy());
+        risk.setPrecautions(dto.getPrecautions());
+        risk.setReflectionDay(dto.getReflectionDay());
+        risk.setStatus(dto.getStatus());
+        risk.setUpdateBy(dto.getUpdateBy());
+        return risk;
     }
 } 

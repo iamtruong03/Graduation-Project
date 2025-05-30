@@ -86,111 +86,136 @@ const RiskList = () => {
   };
 
   // Thêm hàm xử lý export
-  const handleExport = () => {
-    // Logic xuất file Excel/PDF
-    const data = risks.map(risk => ({
-      'Mã rủi ro': risk.code,
-      'Tên rủi ro': risk.name,
-      'Loại': risk.type,
-      'Mức độ ảnh hưởng': risk.level,
-      'Trạng thái': risk.stage,
-      'Người báo cáo': risk.reporter,
-      'Phòng ban': risk.department,
-      'Mô tả': risk.description
-    }));
+  const handleExport = async () => {
+    try {
+      setLoading(true);
+      const filter = {
+        search: searchName,
+        riskType: riskType !== 'all' ? riskType : undefined,
+        impactLevel: riskLevel !== 'all' ? riskLevel : undefined
+      };
+      
+      const response = await riskService.exportRisks(filter);
+      
+      // Tạo blob từ response data
+      const blob = new Blob([response], { 
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+      });
+      
+      // Tạo URL để tải file
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Lấy tên file từ header content-disposition
+      let fileName = 'DanhSachRuiRo.xlsx';
+      const contentDisposition = response.headers?.['content-disposition'];
+      
+      if (contentDisposition) {
+        const fileNameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+        if (fileNameMatch && fileNameMatch[1]) {
+          fileName = decodeURIComponent(fileNameMatch[1]);
+        }
+      }
+      
+      // Thiết lập thuộc tính cho link tải
+      link.setAttribute('download', fileName);
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      
+      // Kích hoạt tải file
+      link.click();
+      
+      // Dọn dẹp
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      setError(null);
+    } catch (err) {
+      console.error('Error exporting risks:', err);
+      setError('Không thể xuất dữ liệu rủi ro: ' + (err.message || 'Lỗi không xác định'));
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    // Tạo và tải xuống file
-    const worksheet = XLSX.utils.json_to_sheet(data);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Danh sách rủi ro");
-    XLSX.writeFile(workbook, "danh-sach-rui-ro.xlsx");
+  // Hàm helper để chuyển đổi ID thành tên hiển thị
+  const getRiskTypeName = (typeId) => {
+    switch (typeId) {
+      case 1: return 'Vận hành';
+      case 2: return 'Kỹ thuật';
+      case 3: return 'Bảo mật';
+      case 4: return 'Tài chính';
+      case 5: return 'Nghiệp vụ';
+      default: return 'Chưa xác định';
+    }
+  };
+
+  const getImpactLevelName = (levelId) => {
+    switch (levelId) {
+      case 1: return 'Thấp';
+      case 2: return 'Trung bình';
+      case 3: return 'Cao';
+      case 4: return 'Rất cao';
+      default: return 'Chưa xác định';
+    }
+  };
+
+  const getStateName = (stateId) => {
+    switch (stateId) {
+      case 1: return 'Mới ghi nhận';
+      case 2: return 'Đang xử lý';
+      case 3: return 'Đã xử lý';
+      case 4: return 'Đã đóng';
+      default: return 'Chưa xác định';
+    }
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Chưa có';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('vi-VN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      return dateString;
+    }
   };
 
   return (
     <Box sx={{ p: 4, backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
-      <Paper elevation={3} sx={{ p: 3, borderRadius: 2 }}>
-        <Typography
-          variant="h5"
-          sx={{
+      <Paper elevation={3} sx={{ p: 3, borderRadius: 2, backgroundColor: '#fff' }}>
+        <Stack 
+          direction="row" 
+          alignItems="center" 
+          spacing={2} 
+          sx={{ 
             mb: 4,
-            fontWeight: 600,
-            color: '#1976d2',
-            borderBottom: '2px solid #1976d2',
-            pb: 1
+            pb: 2,
+            borderBottom: '2px solid #1976d2'
           }}
         >
-          DANH SÁCH RỦI RO
-        </Typography>
-
-        <Stack
-          direction="row"
-          spacing={2}
-          sx={{
-            mb: 3,
-            flexWrap: 'wrap',
-            gap: 2
-          }}
-        >
-          <TextField
-            size="small"
-            placeholder="Tên, mã rủi ro"
-            value={searchName}
-            onChange={(e) => setSearchName(e.target.value)}
-            InputProps={{
-              endAdornment: <SearchIcon color="action" />
-            }}
+          <Typography
+            variant="h5"
             sx={{
-              minWidth: 250,
-              backgroundColor: '#fff'
-            }}
-          />
-
-          <FormControl
-            size="small"
-            sx={{
-              minWidth: 200,
-              backgroundColor: '#fff'
+              fontWeight: 600,
+              color: '#1976d2',
+              flex: 1
             }}
           >
-            <InputLabel>Loại rủi ro</InputLabel>
-            <Select
-              value={riskType}
-              label="Loại rủi ro"
-              onChange={(e) => setRiskType(e.target.value)}
-            >
-              <MenuItem value="all">Tất cả</MenuItem>
-              <MenuItem value="operation">Vận hành</MenuItem>
-              <MenuItem value="technical">Kỹ thuật</MenuItem>
-              <MenuItem value="security">Bảo mật</MenuItem>
-              <MenuItem value="financial">Tài chính</MenuItem>
-              <MenuItem value="business">Nghiệp vụ</MenuItem>
-            </Select>
-          </FormControl>
-
-          <FormControl
-            size="small"
-            sx={{
-              minWidth: 200,
-              backgroundColor: '#fff'
-            }}
-          >
-            <InputLabel>Mức độ ảnh hưởng</InputLabel>
-            <Select
-              value={riskLevel}
-              label="Mức độ ảnh hưởng"
-              onChange={(e) => setRiskLevel(e.target.value)}
-            >
-              <MenuItem value="all">Tất cả</MenuItem>
-              <MenuItem value="high">Cao</MenuItem>
-              <MenuItem value="medium">Trung bình</MenuItem>
-              <MenuItem value="low">Thấp</MenuItem>
-            </Select>
-          </FormControl>
+            DANH SÁCH RỦI RO
+          </Typography>
 
           <Button
             variant="contained"
-            onClick={handleExport}
-            startIcon={<FileDownloadIcon />}
+            component={Link}
+            to="/risk/create"
+            startIcon={<AddIcon />}
             sx={{
               backgroundColor: '#2e7d32',
               '&:hover': {
@@ -198,75 +223,139 @@ const RiskList = () => {
               }
             }}
           >
-            XUẤT DỮ LIỆU
-          </Button>
-
-          <Button
-            variant="contained"
-            component={Link}
-            to="/risk/create"
-            sx={{
-              ml: 'auto',
-              backgroundColor: '#1976d2',
-              '&:hover': {
-                backgroundColor: '#1565c0'
-              }
-            }}
-          >
-            TẠO RỦI RO
+            TẠO RỦI RO MỚI
           </Button>
         </Stack>
 
+        {error && (
+          <Alert 
+            severity="error" 
+            onClose={() => setError(null)}
+            sx={{ mb: 3 }}
+          >
+            {error}
+          </Alert>
+        )}
+
+        <Paper elevation={0} sx={{ p: 2, mb: 3, backgroundColor: '#f8f9fa', borderRadius: 2 }}>
+          <Stack
+            direction="row"
+            spacing={2}
+            sx={{
+              flexWrap: 'wrap',
+              gap: 2
+            }}
+          >
+            <TextField
+              size="small"
+              placeholder="Tên, mã rủi ro"
+              value={searchName}
+              onChange={(e) => setSearchName(e.target.value)}
+              InputProps={{
+                startAdornment: <SearchIcon color="action" sx={{ mr: 1 }} />,
+                sx: { backgroundColor: '#fff' }
+              }}
+              sx={{
+                minWidth: 300,
+                flex: 1
+              }}
+            />
+
+            <FormControl
+              size="small"
+              sx={{
+                minWidth: 200,
+                backgroundColor: '#fff'
+              }}
+            >
+              <InputLabel>Loại rủi ro</InputLabel>
+              <Select
+                value={riskType}
+                label="Loại rủi ro"
+                onChange={(e) => setRiskType(e.target.value)}
+              >
+                <MenuItem value="all">Tất cả</MenuItem>
+                <MenuItem value="operation">Vận hành</MenuItem>
+                <MenuItem value="technical">Kỹ thuật</MenuItem>
+                <MenuItem value="security">Bảo mật</MenuItem>
+                <MenuItem value="financial">Tài chính</MenuItem>
+                <MenuItem value="business">Nghiệp vụ</MenuItem>
+              </Select>
+            </FormControl>
+
+            <FormControl
+              size="small"
+              sx={{
+                minWidth: 200,
+                backgroundColor: '#fff'
+              }}
+            >
+              <InputLabel>Mức độ ảnh hưởng</InputLabel>
+              <Select
+                value={riskLevel}
+                label="Mức độ ảnh hưởng"
+                onChange={(e) => setRiskLevel(e.target.value)}
+              >
+                <MenuItem value="all">Tất cả</MenuItem>
+                <MenuItem value="high">Cao</MenuItem>
+                <MenuItem value="medium">Trung bình</MenuItem>
+                <MenuItem value="low">Thấp</MenuItem>
+              </Select>
+            </FormControl>
+
+            <Button
+              variant="outlined"
+              onClick={handleExport}
+              startIcon={<FileDownloadIcon />}
+              sx={{
+                borderColor: '#1976d2',
+                color: '#1976d2',
+                '&:hover': {
+                  borderColor: '#1565c0',
+                  backgroundColor: 'rgba(25, 118, 210, 0.04)'
+                },
+                minWidth: 140
+              }}
+            >
+              XUẤT DỮ LIỆU
+            </Button>
+          </Stack>
+        </Paper>
+
         <TableContainer
           component={Paper}
+          elevation={0}
           sx={{
-            borderRadius: 1,
-            boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
-            overflow: 'hidden'
+            borderRadius: 2,
+            border: '1px solid #e0e0e0'
           }}
         >
           <Table>
             <TableHead>
-              <TableRow sx={{ backgroundColor: '#1976d2' }}>
-                <TableCell sx={{ color: '#fff', fontWeight: 600 }}>STT</TableCell>
-                <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Mã rủi ro</TableCell>
-                <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Tên rủi ro</TableCell>
-                <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Loại rủi ro</TableCell>
-                <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Mức độ ảnh hưởng</TableCell>
-                <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Ngày phản ánh</TableCell>
-                <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Người phản ánh</TableCell>
-                <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Trạng thái</TableCell>
-                <TableCell align="center" sx={{ color: '#fff', fontWeight: 600 }}>Thao tác</TableCell>
+              <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>STT</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Mã rủi ro</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Tên rủi ro</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Loại rủi ro</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Mức độ ảnh hưởng</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Ngày phản ánh</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Người phản ánh</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Trạng thái</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 600, color: '#1976d2' }}>Thao tác</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {error ? (
+              {loading ? (
                 <TableRow>
-                  <TableCell colSpan={9}>
-                    <Alert
-                      severity="error"
-                      sx={{
-                        mb: 2,
-                        '& .MuiAlert-icon': {
-                          color: '#d32f2f'
-                        }
-                      }}
-                    >
-                      {error}
-                    </Alert>
-                  </TableCell>
-                </TableRow>
-              ) : loading ? (
-                <TableRow>
-                  <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
-                    <CircularProgress sx={{ color: '#1976d2' }} />
+                  <TableCell colSpan={9} align="center" sx={{ py: 3 }}>
+                    <CircularProgress size={40} />
                   </TableCell>
                 </TableRow>
               ) : risks.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
+                  <TableCell colSpan={9} align="center" sx={{ py: 3 }}>
                     <Typography color="text.secondary">
-                      Không tìm thấy dữ liệu
+                      Không có dữ liệu
                     </Typography>
                   </TableCell>
                 </TableRow>
@@ -281,57 +370,102 @@ const RiskList = () => {
                     }}
                   >
                     <TableCell>{(page - 1) * rowsPerPage + index + 1}</TableCell>
-                    <TableCell>{row.code}</TableCell>
-                    <TableCell>{row.name}</TableCell>
+                    <TableCell>
+                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                        {row.code}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          color: '#1976d2',
+                          cursor: 'pointer',
+                          '&:hover': {
+                            textDecoration: 'underline'
+                          }
+                        }}
+                        component={Link}
+                        to={`/risk/detail/${row.id}`}
+                      >
+                        {row.name}
+                      </Typography>
+                    </TableCell>
                     <TableCell>
                       <Chip
-                        label={row.riskTypeName || row.type}
+                        label={getRiskTypeName(row.riskTypeId)}
                         size="small"
                         sx={{
-                          backgroundColor: getRiskTypeColor(row.riskTypeName || row.type),
-                          color: '#fff'
+                          backgroundColor: getRiskTypeColor(getRiskTypeName(row.riskTypeId)),
+                          color: '#fff',
+                          fontWeight: 500,
+                          fontSize: '0.75rem'
                         }}
                       />
                     </TableCell>
                     <TableCell>
                       <Chip
-                        label={row.impactLevelName || row.level}
+                        label={getImpactLevelName(row.impactLevelId)}
                         size="small"
                         sx={{
-                          backgroundColor: getRiskLevelColor(row.impactLevelName || row.level),
-                          color: '#fff'
+                          backgroundColor: getRiskLevelColor(getImpactLevelName(row.impactLevelId)),
+                          color: '#fff',
+                          fontWeight: 500,
+                          fontSize: '0.75rem'
                         }}
                       />
                     </TableCell>
-                    <TableCell>{row.reflectionDay || row.updatedAt}</TableCell>
-                    <TableCell>{row.reflectorName || row.reporter}</TableCell>
+                    <TableCell>
+                      <Typography variant="body2">
+                        {formatDate(row.createDate)}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2">
+                        {row.reflectorId || 'Chưa có'}
+                      </Typography>
+                    </TableCell>
                     <TableCell>
                       <Chip
-                        label={row.stateName || row.stage}
+                        label={getStateName(row.state)}
                         size="small"
                         sx={{
-                          backgroundColor: getRiskStageColor(row.stateName || row.stage),
-                          color: '#fff'
+                          backgroundColor: getRiskStageColor(getStateName(row.state)),
+                          color: '#fff',
+                          fontWeight: 500,
+                          fontSize: '0.75rem'
                         }}
                       />
                     </TableCell>
                     <TableCell align="center">
-                      <IconButton
-                        size="small"
-                        color="primary"
-                        component={Link}
-                        to={`/risk/detail/${row.id}`}
-                        sx={{ mr: 1 }}
-                      >
-                        <VisibilityIcon />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        color="error"
-                        onClick={() => handleDelete(row)}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
+                      <Stack direction="row" spacing={1} justifyContent="center">
+                        <IconButton
+                          size="small"
+                          component={Link}
+                          to={`/risk/detail/${row.id}`}
+                          sx={{ 
+                            color: '#1976d2',
+                            '&:hover': {
+                              backgroundColor: 'rgba(25, 118, 210, 0.04)'
+                            }
+                          }}
+                        >
+                          <VisibilityIcon fontSize="small" />
+                        </IconButton>
+                        
+                        <IconButton
+                          size="small"
+                          onClick={() => handleDelete(row)}
+                          sx={{ 
+                            color: '#d32f2f',
+                            '&:hover': {
+                              backgroundColor: 'rgba(211, 47, 47, 0.04)'
+                            }
+                          }}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Stack>
                     </TableCell>
                   </TableRow>
                 ))
@@ -341,74 +475,48 @@ const RiskList = () => {
         </TableContainer>
 
         <Box sx={{
-          mt: 2,
+          mt: 3,
           p: 2,
-          backgroundColor: '#fff',
-          borderRadius: 1,
-          boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)'
+          backgroundColor: '#f8f9fa',
+          borderRadius: 2,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
         }}>
-          <Stack
-            direction="row"
-            justifyContent="space-between"
-            alignItems="center"
-          >
-            <Typography variant="body2" color="text.secondary">
-              Tổng {risks.length} bản ghi
-            </Typography>
-            <Pagination
-              count={totalPages}
-              page={page}
-              onChange={(e, value) => setPage(value)}
-              color="primary"
-              size="small"
-            />
-          </Stack>
+          <Typography variant="body2" color="text.secondary">
+            Tổng {risks.length} rủi ro
+          </Typography>
+          <Pagination
+            count={totalPages}
+            page={page}
+            onChange={(e, value) => setPage(value)}
+            color="primary"
+            size="medium"
+            showFirstButton
+            showLastButton
+            sx={{
+              '& .MuiPaginationItem-root': {
+                fontSize: '0.875rem'
+              }
+            }}
+          />
         </Box>
       </Paper>
 
+      {/* Delete Dialog */}
       <Dialog
         open={openDeleteDialog}
         onClose={() => setOpenDeleteDialog(false)}
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-            p: 1
-          }
-        }}
       >
-        <DialogTitle sx={{
-          color: '#d32f2f',
-          pb: 1
-        }}>
-          Xác nhận xóa
-        </DialogTitle>
+        <DialogTitle>Xác nhận xóa</DialogTitle>
         <DialogContent>
           <DialogContentText>
             Bạn có chắc chắn muốn xóa rủi ro này không?
           </DialogContentText>
         </DialogContent>
-        <DialogActions sx={{ p: 2, pt: 1 }}>
-          <Button
-            onClick={() => setOpenDeleteDialog(false)}
-            sx={{
-              color: 'text.secondary',
-              '&:hover': {
-                backgroundColor: '#f5f5f5'
-              }
-            }}
-          >
-            Hủy
-          </Button>
-          <Button
-            onClick={handleConfirmDelete}
-            color="error"
-            variant="contained"
-            sx={{
-              '&:hover': {
-                backgroundColor: '#c62828'
-              }
-            }}
-          >
+        <DialogActions>
+          <Button onClick={() => setOpenDeleteDialog(false)}>Hủy</Button>
+          <Button onClick={handleConfirmDelete} color="error" autoFocus>
             Xóa
           </Button>
         </DialogActions>

@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Box, Avatar, Typography, Paper, CircularProgress } from '@mui/material';
+import React, { useState, useEffect, useRef } from 'react';
+import { Box, Avatar, Typography, Paper, CircularProgress, Chip } from '@mui/material';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
+import { chatService } from '../../services/chatService';
 import api from '../../services/api';
 
 const MessageList = ({ selectedUser }) => {
@@ -9,131 +10,220 @@ const MessageList = ({ selectedUser }) => {
   const [currentUserId, setCurrentUserId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [userMap, setUserMap] = useState({});
+  const [typingUsers, setTypingUsers] = useState(new Set());
+  const messagesEndRef = useRef(null);
+  const typingTimeouts = useRef(new Map());
 
+  // Scroll to bottom
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  // Fetch current user info
   useEffect(() => {
     const fetchCurrentUser = async () => {
       try {
         const response = await api.get('/user/current-user');
         console.log('Current user response:', response);
         if (response?.data && response.data.id) {
-          const userId = response.data.id;
+          const userId = response.data.id.toString();
           console.log('Current user ID:', userId);
           setCurrentUserId(userId);
-          // Lưu thông tin người dùng hiện tại vào userMap
           setUserMap(prev => ({
             ...prev,
             [userId]: response.data
           }));
         } else if (response?.data?.data && response.data.data.id) {
-          const userId = response.data.data.id;
+          const userId = response.data.data.id.toString();
           console.log('Current user ID (from data.data):', userId);
           setCurrentUserId(userId);
-          // Lưu thông tin người dùng hiện tại vào userMap
           setUserMap(prev => ({
             ...prev,
             [userId]: response.data.data
           }));
-        } else {
-          console.error('Không tìm thấy ID người dùng trong response hoặc response không hợp lệ:', response);
         }
       } catch (error) {
         console.error('Lỗi khi lấy thông tin người dùng hiện tại:', error);
       }
     };
 
-    const fetchUserInfo = async (userId) => {
-      try {
-        const response = await api.get(`/user/${userId}`);
-        console.log(`User info for ${userId}:`, response);
-        if (response?.data?.data) {
-          setUserMap(prev => ({
-            ...prev,
-            [userId]: response.data.data
-          }));
-        } else if (response?.data && response.data.id) {
-          setUserMap(prev => ({
-            ...prev,
-            [userId]: response.data
-          }));
-        }
-      } catch (error) {
-        console.error(`Lỗi khi lấy thông tin người dùng ${userId}:`, error);
-      }
-    };
-
-    const fetchMessages = async () => {
-      if (selectedUser) {
-        setLoading(true);
-        try {
-          const response = await api.get(`/api/messages/history/${selectedUser.id}`);
-          console.log('Response from API:', response);
-          
-          // Kiểm tra response và data
-          // Dữ liệu tin nhắn nằm trực tiếp trong response.data
-          if (response?.data && Array.isArray(response.data)) {
-            const messagesData = response.data; // Lấy dữ liệu từ response.data
-            console.log('Messages data extracted from response.data:', messagesData);
-            
-            if (messagesData.length > 0) {
-              // Lấy thông tin người gửi cho mỗi tin nhắn
-              const uniqueUserIds = [...new Set(messagesData.map(msg => msg.senderId).filter(id => id != null))];
-              console.log('Unique user IDs for fetching info:', uniqueUserIds);
-              
-              // Lấy thông tin người dùng cho mỗi ID
-              // Đảm bảo fetchUserInfo trả về Promise.resolve() nếu không có ID hợp lệ
-              await Promise.all(uniqueUserIds.map(userId => userId ? fetchUserInfo(userId) : Promise.resolve()));
-              
-              // Sắp xếp tin nhắn theo thời gian
-              const sortedMessages = [...messagesData].sort((a, b) => 
-                new Date(a.timestamp) - new Date(b.timestamp)
-              );
-              
-              setMessages(sortedMessages);
-              console.log('Messages set to state:', sortedMessages);
-              
-              // Đánh dấu tin nhắn đã đọc
-              const unreadMessages = messagesData.filter(
-                msg => !msg.read && msg.senderId === selectedUser.id
-              );
-              
-              unreadMessages.forEach(async (msg) => {
-                try {
-                  // Kiểm tra msg.id tồn tại trước khi gọi API
-                  if(msg.id) {
-                    await api.put(`/api/messages/${msg.id}/read`);
-                  }
-                } catch (error) {
-                  console.error('Lỗi khi đánh dấu tin nhắn đã đọc:', error);
-                }
-              });
-            } else {
-              console.log('API returned empty messages array in response.data.');
-              setMessages([]);
-            }
-          } else {
-            console.error('Response API tin nhắn không hợp lệ hoặc data không phải là mảng:', response);
-            setMessages([]);
-          }
-        } catch (error) {
-          console.error('Lỗi khi lấy lịch sử tin nhắn:', error);
-          setMessages([]);
-        } finally {
-          setLoading(false);
-        }
-      }
-    };
-
     fetchCurrentUser();
-    fetchMessages();
+  }, []);
 
-    const interval = setInterval(fetchMessages, 5000);
-    return () => clearInterval(interval);
-  }, [selectedUser]);
+  // Fetch user info by ID
+  const fetchUserInfo = async (userId) => {
+    if (userMap[userId]) return userMap[userId];
+    
+    try {
+      const response = await api.get(`/user/${userId}`);
+      console.log(`User info for ${userId}:`, response);
+      let userData = null;
+      
+      if (response?.data?.data) {
+        userData = response.data.data;
+      } else if (response?.data && response.data.id) {
+        userData = response.data;
+      }
+      
+      if (userData) {
+        setUserMap(prev => ({
+          ...prev,
+          [userId]: userData
+        }));
+        return userData;
+      }
+    } catch (error) {
+      console.error(`Lỗi khi lấy thông tin người dùng ${userId}:`, error);
+    }
+    return null;
+  };
+
+  // Load conversation messages
+  const loadMessages = async () => {
+    if (!selectedUser || !currentUserId) return;
+
+    setLoading(true);
+    try {
+      const response = await chatService.getConversation(selectedUser.id.toString(), 0, 50);
+      console.log('Conversation response:', response);
+      
+      if (response && response.content && Array.isArray(response.content)) {
+        const messagesData = response.content;
+        console.log('Messages data:', messagesData);
+        
+        // Fetch user info for all senders
+        const uniqueUserIds = [...new Set(messagesData.map(msg => msg.senderId).filter(id => id != null))];
+        await Promise.all(uniqueUserIds.map(userId => fetchUserInfo(userId)));
+        
+        // Sort messages by timestamp
+        const sortedMessages = [...messagesData].sort((a, b) => 
+          new Date(a.timestamp) - new Date(b.timestamp)
+        );
+        
+        setMessages(sortedMessages);
+        
+        // Mark messages as read via WebSocket
+        if (messagesData.some(msg => !msg.isRead && msg.senderId === selectedUser.id.toString())) {
+          chatService.markMessagesAsRead(selectedUser.id.toString());
+        }
+      } else {
+        console.log('No messages found or invalid response format');
+        setMessages([]);
+      }
+    } catch (error) {
+      console.error('Lỗi khi lấy cuộc trò chuyện:', error);
+      setMessages([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle typing timeout
+  const handleTypingTimeout = (userId) => {
+    if (typingTimeouts.current.has(userId)) {
+      clearTimeout(typingTimeouts.current.get(userId));
+    }
+    
+    const timeout = setTimeout(() => {
+      setTypingUsers(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(userId);
+        return newSet;
+      });
+      typingTimeouts.current.delete(userId);
+    }, 3000);
+    
+    typingTimeouts.current.set(userId, timeout);
+  };
+
+  // Set up WebSocket listeners
+  useEffect(() => {
+    if (!chatService.isWebSocketConnected()) return;
+
+    // Listen for new messages
+    const unsubscribeMessage = chatService.onMessage((messageData) => {
+      console.log('Received new message:', messageData);
+      
+      // Only add message if it's part of current conversation
+      if (selectedUser && (
+        (messageData.senderId === selectedUser.id.toString() && messageData.receiverId === currentUserId) ||
+        (messageData.senderId === currentUserId && messageData.receiverId === selectedUser.id.toString())
+      )) {
+        setMessages(prev => {
+          // Check if message already exists
+          if (prev.some(msg => msg.id === messageData.id)) {
+            return prev;
+          }
+          
+          // Add new message and sort
+          const newMessages = [...prev, messageData];
+          return newMessages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+        });
+
+        // Fetch sender info if not available
+        if (messageData.senderId && !userMap[messageData.senderId]) {
+          fetchUserInfo(messageData.senderId);
+        }
+
+        // Mark as read if received from selected user
+        if (messageData.senderId === selectedUser.id.toString()) {
+          chatService.markMessagesAsRead(messageData.senderId);
+        }
+      }
+    });
+
+    // Listen for typing notifications
+    const unsubscribeTyping = chatService.onTyping((typingData) => {
+      console.log('Received typing notification:', typingData);
+      
+      if (selectedUser && typingData.senderId === selectedUser.id.toString()) {
+        setTypingUsers(prev => new Set(prev).add(typingData.senderId));
+        handleTypingTimeout(typingData.senderId);
+      }
+    });
+
+    // Listen for read receipts
+    const unsubscribeReadReceipt = chatService.onReadReceipt((readData) => {
+      console.log('Received read receipt:', readData);
+      
+      // Update message read status
+      setMessages(prev => prev.map(msg => {
+        if (msg.senderId === currentUserId && msg.receiverId === readData.senderId) {
+          return { ...msg, isRead: true };
+        }
+        return msg;
+      }));
+    });
+
+    return () => {
+      unsubscribeMessage();
+      unsubscribeTyping();
+      unsubscribeReadReceipt();
+    };
+  }, [selectedUser, currentUserId, userMap]);
+
+  // Load messages when selectedUser changes
+  useEffect(() => {
+    if (selectedUser && currentUserId) {
+      loadMessages();
+    }
+  }, [selectedUser, currentUserId]);
+
+  // Cleanup typing timeouts
+  useEffect(() => {
+    return () => {
+      typingTimeouts.current.forEach(timeout => clearTimeout(timeout));
+      typingTimeouts.current.clear();
+    };
+  }, []);
 
   const MessageBubble = ({ message, isCurrentUser }) => {
     const sender = userMap[message?.senderId];
     const senderName = sender?.name || (message?.senderId ? `User ${message.senderId}` : 'Unknown User');
-    console.log('Message bubble data:', { message, sender, senderName, userMap });
 
     return (
       <Box
@@ -194,31 +284,29 @@ const MessageList = ({ selectedUser }) => {
               }
             }}
           >
-            <Box>
-              <Typography 
-                variant="body1" 
-                sx={{ 
-                  wordBreak: 'break-word',
-                  lineHeight: 1.4
+            <Typography 
+              variant="body1" 
+              sx={{ 
+                wordBreak: 'break-word',
+                lineHeight: 1.4
+              }}
+            >
+              {message?.content || ''}
+            </Typography>
+            {isCurrentUser && (
+              <Typography
+                variant="caption"
+                sx={{
+                  display: 'block',
+                  textAlign: 'right',
+                  color: message?.isRead ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.9)',
+                  fontSize: '0.7rem',
+                  mt: 0.5
                 }}
               >
-                {message?.content || ''}
+                {message?.isRead ? 'Đã xem' : 'Đã gửi'}
               </Typography>
-              {isCurrentUser && (
-                <Typography
-                  variant="caption"
-                  sx={{
-                    display: 'block',
-                    textAlign: 'right',
-                    color: message?.read ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.9)',
-                    fontSize: '0.7rem',
-                    mt: 0.5
-                  }}
-                >
-                  {message?.read ? 'Đã xem' : 'Đã gửi'}
-                </Typography>
-              )}
-            </Box>
+            )}
           </Paper>
           <Typography
             variant="caption"
@@ -249,24 +337,51 @@ const MessageList = ({ selectedUser }) => {
     );
   };
 
+  const TypingIndicator = () => {
+    if (typingUsers.size === 0) return null;
+
+    const typingUserNames = Array.from(typingUsers).map(userId => {
+      const user = userMap[userId];
+      return user?.name || `User ${userId}`;
+    });
+
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'flex-start', mb: 2 }}>
+        <Chip
+          size="small"
+          label={`${typingUserNames.join(', ')} đang gõ...`}
+          sx={{
+            backgroundColor: '#e3f2fd',
+            color: '#1976d2',
+            fontSize: '0.75rem'
+          }}
+        />
+      </Box>
+    );
+  };
+
   return (
-    <Box sx={{ height: '100%', overflowY: 'auto' }}>
+    <Box sx={{ height: '100%', overflowY: 'auto', pb: 2 }}>
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
           <CircularProgress />
         </Box>
       ) : Array.isArray(messages) && messages.length > 0 ? (
-        messages.map((message) => (
-          <MessageBubble
-            key={message.id}
-            message={message}
-            isCurrentUser={message.senderId === currentUserId}
-          />
-        ))
+        <>
+          {messages.map((message) => (
+            <MessageBubble
+              key={message.id || `${message.senderId}-${message.timestamp}`}
+              message={message}
+              isCurrentUser={message.senderId === currentUserId}
+            />
+          ))}
+          <TypingIndicator />
+          <div ref={messagesEndRef} />
+        </>
       ) : (
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
           <Typography color="text.secondary">
-            Chưa có tin nhắn nào
+            Chưa có tin nhắn nào. Hãy bắt đầu cuộc trò chuyện!
           </Typography>
         </Box>
       )}

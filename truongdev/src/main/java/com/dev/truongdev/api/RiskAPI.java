@@ -15,6 +15,7 @@ import lombok.experimental.FieldDefaults;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -86,15 +87,6 @@ public class RiskAPI extends XDevBaseAPI<Risk, RiskFilter> {
         }
     }
 
-    @GetMapping("/{id}/details")
-    public ResponseEntity<ApiResponse<RiskDTO>> getRiskById(@PathVariable Long id) {
-        try {
-            return ApiResponse.ok(riskService.getRiskById(id));
-        } catch (Exception e) {
-            return ApiResponse.error(e.getMessage());
-        }
-    }
-
     @PutMapping("/{id}/update")
     public ResponseEntity<ApiResponse<RiskDTO>> updateRisk(
             @RequestAttribute String uid,
@@ -151,11 +143,12 @@ public class RiskAPI extends XDevBaseAPI<Risk, RiskFilter> {
                 java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) + 
                 ".xlsx";
             
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, 
-                           "attachment; filename*=UTF-8''" + URLEncoder.encode(fileName, StandardCharsets.UTF_8))
-                    .header(HttpHeaders.CONTENT_TYPE, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-                    .body(outputStream.toByteArray());
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+            headers.setContentDispositionFormData("attachment", fileName);
+            headers.setCacheControl("must-revalidate, post-check=0, pre-check=0");
+            
+            return new ResponseEntity<>(outputStream.toByteArray(), headers, HttpStatus.OK);
                     
         } catch (Exception e) {
             return ResponseEntity.badRequest()
@@ -164,5 +157,4 @@ public class RiskAPI extends XDevBaseAPI<Risk, RiskFilter> {
         }
     }
 
-    // Không cần endpoint addRiskHistory vì đã được xử lý internal trong service
 } 

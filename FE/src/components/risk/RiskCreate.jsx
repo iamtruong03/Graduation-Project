@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Button,
   TextField,
@@ -19,11 +19,15 @@ import CloseIcon from '@mui/icons-material/Close';
 import SaveIcon from '@mui/icons-material/Save';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useNavigate } from 'react-router-dom';
+import projectService from '../../services/projectService';
+import departmentService from '../../services/departmentService';
+import staffService from '../../services/staffService';
+import riskService from '../../services/riskService';
 
 const RiskCreate = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    code: 'RISK_0001',
+    code: '',
     name: '',
     type: '',
     impactScope: '',
@@ -33,14 +37,56 @@ const RiskCreate = () => {
     analysisDate: '',
     description: ''
   });
-
+  const [projects, setProjects] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [users, setUsers] = useState([]);
   const [errors, setErrors] = useState({});
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Lấy danh sách dự án
+        const projectResponse = await projectService.getProjectList();
+        setProjects(projectResponse || []);
+
+        // Lấy danh sách phòng ban
+        const departmentResponse = await departmentService.getAll();
+        // Kiểm tra và chuyển đổi dữ liệu thành mảng
+        const departmentData = departmentResponse?.data || [];
+        setDepartments(Array.isArray(departmentData) ? departmentData : []);
+      } catch (error) {
+        console.error('Lỗi khi lấy dữ liệu:', error);
+        setDepartments([]); // Đặt mảng rỗng nếu có lỗi
+      }
+    };
+    fetchData();
+  }, []);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      if (formData.department) {
+        try {
+          const response = await staffService.listUserByDep(formData.department);
+          const userData = response?.data || [];
+          setUsers(Array.isArray(userData) ? userData : []);
+        } catch (error) {
+          console.error('Lỗi khi lấy danh sách người dùng:', error);
+          setUsers([]);
+        }
+      } else {
+        setUsers([]);
+      }
+    };
+    fetchUsers();
+  }, [formData.department]);
 
   const handleFormChange = (event) => {
     const { name, value } = event.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: value,
+      // Reset người phản ánh khi đổi phòng ban
+      ...(name === 'department' && { analyst: '' })
     }));
     // Clear error when field is changed
     if (errors[name]) {
@@ -53,7 +99,7 @@ const RiskCreate = () => {
 
   const validateForm = () => {
     const newErrors = {};
-    const requiredFields = ['name', 'type', 'impactScope', 'projectName', 'department', 'analyst', 'analysisDate'];
+    const requiredFields = ['code', 'name', 'type', 'impactScope', 'projectName', 'department', 'analyst', 'analysisDate'];
     
     requiredFields.forEach(field => {
       if (!formData[field]) {
@@ -65,10 +111,28 @@ const RiskCreate = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (validateForm()) {
-      console.log('Form submitted:', formData);
-      navigate('/risk/list');
+      try {
+        // Chuẩn bị dữ liệu gửi lên server
+        const riskData = {
+          ...formData,
+          projectId: formData.projectName, // Đổi tên field để khớp với API
+          departmentId: formData.department, // Đổi tên field để khớp với API
+          analystId: formData.analyst, // Đổi tên field để khớp với API
+        };
+
+        await riskService.createRisk(riskData);
+        
+        // Hiển thị thông báo thành công
+        alert('Tạo rủi ro thành công!');
+        
+        // Chuyển về trang danh sách
+        navigate('/risk/list');
+      } catch (error) {
+        console.error('Lỗi khi tạo rủi ro:', error);
+        alert('Có lỗi xảy ra khi tạo rủi ro: ' + (error.response?.data?.message || error.message));
+      }
     }
   };
 
@@ -116,11 +180,10 @@ const RiskCreate = () => {
               name="code"
               value={formData.code}
               onChange={handleFormChange}
-              disabled
+              required
               size="small"
-              sx={{
-                backgroundColor: '#f5f5f5'
-              }}
+              error={!!errors.code}
+              helperText={errors.code}
             />
           </Grid>
           <Grid item xs={12} md={4}>
@@ -201,9 +264,11 @@ const RiskCreate = () => {
                 onChange={handleFormChange}
                 label="Tên dự án"
               >
-                <MenuItem value="Kiểm soát rủi ro tiếp xúc với chất độc hại">
-                  Kiểm soát rủi ro tiếp xúc với chất độc hại
-                </MenuItem>
+                {projects.map((project) => (
+                  <MenuItem key={project.id} value={project.id}>
+                    {project.name}
+                  </MenuItem>
+                ))}
               </Select>
               {errors.projectName && (
                 <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.5 }}>
@@ -227,7 +292,11 @@ const RiskCreate = () => {
                 onChange={handleFormChange}
                 label="Đơn vị ghi nhận"
               >
-                <MenuItem value="Phòng quản lý rủi ro">Phòng quản lý rủi ro</MenuItem>
+                {Array.isArray(departments) && departments.map((dept) => (
+                  <MenuItem key={dept.id} value={dept.id}>
+                    {dept.name}
+                  </MenuItem>
+                ))}
               </Select>
               {errors.department && (
                 <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.5 }}>
@@ -250,8 +319,13 @@ const RiskCreate = () => {
                 value={formData.analyst}
                 onChange={handleFormChange}
                 label="Người phản ánh"
+                disabled={!formData.department}
               >
-                <MenuItem value="Phạm Như Hoài">Phạm Như Hoài</MenuItem>
+                {Array.isArray(users) && users.map((user) => (
+                  <MenuItem key={user.id} value={user.id}>
+                    {user.name}
+                  </MenuItem>
+                ))}
               </Select>
               {errors.analyst && (
                 <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.5 }}>

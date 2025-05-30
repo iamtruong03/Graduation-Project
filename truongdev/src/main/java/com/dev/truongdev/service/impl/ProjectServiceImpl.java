@@ -60,20 +60,6 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
     }
 
     /**
-     * Lấy thông tin dự án theo ID.
-     * @param id ID của dự án
-     * @return Thông tin dự án dưới dạng ProjectDTO
-     * @throws RuntimeException nếu không tìm thấy dự án
-     */
-    @Override
-    public ProjectDTO getProjectById(Long id) {
-        validateId(id);
-        Project project = projectRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Project not found"));
-        return convertToDTO(project);
-    }
-
-    /**
      * Tạo mới một dự án và khởi tạo quy trình phê duyệt.
      * - Đặt trạng thái ban đầu là CHỜ DUYỆT
      * - Xác định người phê duyệt phù hợp theo phòng ban
@@ -126,7 +112,6 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
             
         project.setApproverId(approverIds.get(0).toString());
         project.setUpdateBy(uid);
-        project.setModifiedDate(new Date());
         
         Project savedProject = projectRepo.save(project);
         
@@ -140,12 +125,11 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
      * Phê duyệt dự án, chuyển trạng thái sang ĐÃ DUYỆT và tự động sang ĐANG THỰC HIỆN.
      * @param uid ID người phê duyệt
      * @param id ID dự án
-     * @param approvedBy Thông tin người phê duyệt
      * @return Dự án sau khi phê duyệt
      */
     @Override
     @Transactional
-    public ProjectDTO approveProject(String uid, Long id, String approvedBy) {
+    public ProjectDTO approveProject(String uid, Long id) {
         validateApproval(uid, id);
         
         Project project = projectRepo.findById(id)
@@ -154,7 +138,6 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
         project.setState(AppConstants.STATUS_APPROVED);
         project.setIsApproved(true);
         project.setUpdateBy(uid);
-        project.setModifiedDate(new Date());
         
         Project savedProject = projectRepo.save(project);
         
@@ -184,7 +167,6 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
         project.setState(AppConstants.STATUS_REJECTED);
         project.setIsApproved(false);
         project.setUpdateBy(uid);
-        project.setModifiedDate(new Date());
         
         Project savedProject = projectRepo.save(project);
         
@@ -217,7 +199,6 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
         Integer previousState = project.getState();
         project.setState(newState);
         project.setUpdateBy(changedBy);
-        project.setModifiedDate(new Date());
         
         Project savedProject = projectRepo.save(project);
         
@@ -268,7 +249,6 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
 
         project.setStatus(AppConstants.STATUS_INACTIVE);
         project.setUpdateBy(uid);
-        project.setModifiedDate(new Date());
         projectRepo.save(project);
         
         createProjectHistory(id, project.getState(), project.getState(), uid, "Xóa dự án");
@@ -293,23 +273,33 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
         );
     }
 
+    @Override
+    public List<Project> getAll(Long did, String uid) {
+        User user = userRepo.findById(Long.valueOf(uid))
+            .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+
+        if (hasFullAccess(user, did)) {
+            return projectRepo.findByStatus(AppConstants.STATUS_ACTIVE);
+        }
+
+        List<Long> departmentIds = getDepartmentAndSubDepartmentIds(did);
+        return projectRepo.findByStatusAndDepartmentIdIn(AppConstants.STATUS_ACTIVE, departmentIds);
+    }
+
     /**
      * Tìm kiếm dự án theo phòng ban, kiểm soát truy cập theo quyền.
-     * @param departmentId ID phòng ban
+     * @param did ID phòng ban
      * @param uid ID người dùng
      * @param filter Bộ lọc tìm kiếm
      * @param pageable Thông tin phân trang
      * @return Danh sách dự án phù hợp
      */
     @Override
-    public Page<Project> searchAll(Long departmentId, String uid, ProjectFilter filter, Pageable pageable) {
-        validateDepartmentId(departmentId);
-        validateUserId(uid);
-        
+    public Page<Project> searchAll(Long did, String uid, ProjectFilter filter, Pageable pageable) {
         User user = userRepo.findById(Long.valueOf(uid))
             .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
 
-        if (hasFullAccess(user, departmentId)) {
+        if (hasFullAccess(user, did)) {
             return projectRepo.searchByCodeOrName(
                 AppConstants.STATUS_ACTIVE,
                 filter.getSearch(),
@@ -317,13 +307,52 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
             );
         }
 
-        List<Long> departmentIds = getDepartmentAndSubDepartmentIds(departmentId);
+        List<Long> departmentIds = getDepartmentAndSubDepartmentIds(did);
         return projectRepo.searchByCodeOrNameAndDepartments(
             AppConstants.STATUS_ACTIVE,
             filter.getSearch(),
             departmentIds,
             pageable
         );
+    }
+
+    @Override
+    public ProjectDTO updateProject(Long id, ProjectDTO projectDTO) {
+        validateProjectDTO(projectDTO);
+        validateId(id);
+
+        Project project = projectRepo.findById(id)
+                .orElseThrow(() -> new RuntimeException("Project not found"));
+
+        if (project.getState() != AppConstants.STATUS_IN_PROGRESS) {
+            throw new RuntimeException("Chỉ có thể cập nhật dự án khi đang trong trạng thái thực hiện");
+        }
+
+        Integer previousState = project.getState();
+        
+        BeanUtils.copyProperties(projectDTO, project, "id", "createBy", "createDate","modifiedDate");
+        project = projectRepo.save(project);
+        
+        if (!Objects.equals(previousState, project.getState())) {
+            createProjectHistory(id, previousState, project.getState(), 
+                projectDTO.getUpdateBy(), "Cập nhật trạng thái dự án");
+        }
+        
+        return convertToDTO(project);
+    }
+
+    @Override
+    public List<ProjectHistoryDTO> getProjectHistory(Long projectId) {
+        validateId(projectId);
+        List<ProjectHistory> histories = projectHistoryRepo.findByProjectIdOrderByChangedAtDesc(projectId);
+        return histories.stream()
+            .map(this::convertHistoryToDTO)
+            .collect(Collectors.toList());
+    }
+
+    @Override
+    public void addProjectHistory(Long projectId, Integer previousState, Integer newState, String changedBy, String comment) {
+        createProjectHistory(projectId, previousState, newState, changedBy, comment);
     }
 
     // Private helper methods
@@ -345,12 +374,6 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
     private void validateUserId(String uid) {
         if (!StringUtils.hasText(uid)) {
             throw new IllegalArgumentException("User ID cannot be empty");
-        }
-    }
-
-    private void validateDepartmentId(Long departmentId) {
-        if (departmentId == null || departmentId <= 0) {
-            throw new IllegalArgumentException("Invalid department ID");
         }
     }
 
@@ -396,7 +419,7 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
         String approverId;
         String approverName;
         
-        if (currentUser.getRole().equals("ROLE_ADMIN")) {
+        if (currentUser.getRole().equals("1")) {
             approverId = uid;
             approverName = userService.getUserDisplayName(uid);
         } else {
@@ -435,13 +458,24 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
             return;
         }
         
-        boolean isValidTransition = switch (currentState) {
-            case AppConstants.STATUS_PENDING -> newState == AppConstants.STATUS_APPROVED || newState == AppConstants.STATUS_REJECTED;
-            case AppConstants.STATUS_APPROVED -> newState == AppConstants.STATUS_IN_PROGRESS;
-            case AppConstants.STATUS_IN_PROGRESS -> newState == AppConstants.STATUS_COMPLETE || newState == AppConstants.STATUS_OVERDUE;
-            case AppConstants.STATUS_COMPLETE, AppConstants.STATUS_OVERDUE, AppConstants.STATUS_REJECTED -> false;
-            default -> false;
-        };
+        boolean isValidTransition;
+        if (currentState == null) {
+            isValidTransition = false;
+        } else if (currentState == AppConstants.STATUS_PENDING) {
+            isValidTransition = newState == AppConstants.STATUS_APPROVED || 
+                              newState == AppConstants.STATUS_REJECTED;
+        } else if (currentState == AppConstants.STATUS_APPROVED) {
+            isValidTransition = newState == AppConstants.STATUS_IN_PROGRESS;
+        } else if (currentState == AppConstants.STATUS_IN_PROGRESS) {
+            isValidTransition = newState == AppConstants.STATUS_COMPLETE || 
+                              newState == AppConstants.STATUS_OVERDUE;
+        } else if (currentState == AppConstants.STATUS_COMPLETE || 
+                  currentState == AppConstants.STATUS_OVERDUE || 
+                  currentState == AppConstants.STATUS_REJECTED) {
+            isValidTransition = false;
+        } else {
+            isValidTransition = false;
+        }
 
         if (!isValidTransition) {
             throw new IllegalStateException(
@@ -476,7 +510,7 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
     }
 
     private boolean hasFullAccess(User user, Long departmentId) {
-        return user.getRole().equals("ROLE_ADMIN") || 
+        return user.getRole().equals("1") || 
                departmentRepo.findById(departmentId)
                    .map(dept -> dept.getParentId() == null)
                    .orElse(false);

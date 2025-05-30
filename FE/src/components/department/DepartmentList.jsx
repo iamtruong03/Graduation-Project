@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Button,
@@ -12,140 +13,66 @@ import {
   Paper,
   Typography,
   IconButton,
-  Switch,
-  FormControl,
-  Select,
-  MenuItem,
-  InputLabel,
   Stack,
   Pagination,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  Grid,
-  Alert
+  Alert,
+  CircularProgress
 } from '@mui/material';
+import { Add as AddIcon } from '@mui/icons-material';
 import SearchIcon from '@mui/icons-material/Search';
-import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import departmentService from '../../services/departmentService';
 
 const DepartmentList = () => {
-  const [searchCode, setSearchCode] = useState('');
   const [searchName, setSearchName] = useState('');
-  const [status, setStatus] = useState('all');
   const [page, setPage] = useState(1);
-  const [openDialog, setOpenDialog] = useState(false);
-  const [dialogType, setDialogType] = useState('create');
   const [selectedDepartment, setSelectedDepartment] = useState(null);
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [formData, setFormData] = useState({
-    code: '',
-    name: '',
-    parentId: ''
-  });
-  const [formErrors, setFormErrors] = useState({});
-  const [departmentStaff, setDepartmentStaff] = useState([]);
-  const [openDetailDialog, setOpenDetailDialog] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const rowsPerPage = 10;
   const [totalPages, setTotalPages] = useState(1);
-
-  const validateForm = () => {
-    const errors = {};
-    if (!formData.code) errors.code = 'Vui lòng nhập mã bộ phận';
-    if (!formData.name) errors.name = 'Vui lòng nhập tên bộ phận';
-    setFormErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    if (formErrors[name]) {
-      setFormErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }));
-    }
-  };
-
-  const handleCreateDepartment = async () => {
-    if (!validateForm()) return;
-
-    try {
-      setLoading(true);
-      const response = await departmentService.createDepartment({
-        ...formData,
-        status: 1
-      });
-      
-      await fetchDepartments(); // Tải lại danh sách sau khi tạo mới
-      setOpenDialog(false);
-      setFormData({ code: '', name: '', parentId: '' });
-      setError(null);
-    } catch (err) {
-      setError('Có lỗi xảy ra khi tạo phòng ban');
-      console.error('Error creating department:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleUpdateDepartment = async () => {
-    if (!validateForm()) return;
-
-    try {
-      setLoading(true);
-      await departmentService.updateDepartment(selectedDepartment.id, {
-        ...formData,
-        status: selectedDepartment.active ? 1 : 0
-      });
-      
-      await fetchDepartments(); // Tải lại danh sách sau khi cập nhật
-      setOpenDialog(false);
-      setFormData({ code: '', name: '', parentId: '' });
-      setError(null);
-    } catch (err) {
-      setError('Có lỗi xảy ra khi cập nhật phòng ban');
-      console.error('Error updating department:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchDepartments();
-  }, [page, searchName, status]);
+  }, [page, searchName]);
 
   const fetchDepartments = async () => {
     try {
       setLoading(true);
-      const response = await departmentService.searchDepartments(
+      // Lấy danh sách phòng ban theo tìm kiếm
+      const searchResponse = await departmentService.searchDepartments(
         searchName,
         page - 1,
         rowsPerPage
       );
+
+      // Lấy danh sách tất cả phòng ban đang hoạt động để map parentId
+      const allDeptsResponse = await departmentService.getActiveDepartments();
       
-      const mappedDepartments = response.data.content.map(dept => ({
-        id: dept.id,
-        code: dept.code,
-        name: dept.name,
-        description: dept.description,
-        active: dept.status === 1,
-        parentName: dept.parentDepartment?.name || null,
-        updatedAt: new Date(dept.modifiedDate).toLocaleDateString('vi-VN')
-      }));
+      const mappedDepartments = searchResponse.data.content.map(dept => {
+        // Tìm phòng ban cha dựa trên parentId từ danh sách tất cả phòng ban
+        const parentDept = allDeptsResponse.find(d => d.id === dept.parentId);
+        return {
+          id: dept.id,
+          code: dept.code,
+          name: dept.name,
+          description: dept.description,
+          active: dept.status === 1,
+          parentName: parentDept ? parentDept.name : 'Không có',
+          updatedAt: new Date(dept.modifiedDate).toLocaleDateString('vi-VN')
+        };
+      });
       
       setDepartments(mappedDepartments);
-      setTotalPages(response.data.totalPages);
+      setTotalPages(searchResponse.data.totalPages);
       setError(null);
     } catch (err) {
       setError('Có lỗi xảy ra khi tải danh sách phòng ban');
@@ -153,23 +80,6 @@ const DepartmentList = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleOpenEditDialog = (department) => {
-    setDialogType('edit');
-    setSelectedDepartment(department);
-    setFormData({
-      code: department.code,
-      name: department.name,
-      parentId: departments.find(d => d.name === department.parentName)?.id || ''
-    });
-    setOpenDialog(true);
-  };
-
-  const handleViewDetail = (department) => {
-    setDepartmentStaff([]);
-    setSelectedDepartment(department);
-    setOpenDetailDialog(true);
   };
 
   const handleDelete = async () => {
@@ -231,10 +141,10 @@ const DepartmentList = () => {
               backgroundColor: '#fff'
             }}
           />
-        
       
           <Button 
             variant="contained" 
+            startIcon={<AddIcon />}
             sx={{ 
               ml: 'auto',
               backgroundColor: '#1976d2',
@@ -242,15 +152,16 @@ const DepartmentList = () => {
                 backgroundColor: '#1565c0'
               }
             }} 
-            onClick={() => {
-              setDialogType('create');
-              setOpenDialog(true);
-            }}
+            onClick={() => navigate('/department/create')}
           >
             Tạo phòng ban
           </Button>
         </Stack>
     
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
+        )}
+
         <TableContainer 
           component={Paper} 
           sx={{ 
@@ -271,30 +182,50 @@ const DepartmentList = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {error && (
+              {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7}>
-                    <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
+                  <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
+                    <CircularProgress size={40} />
                   </TableCell>
                 </TableRow>
+              ) : departments.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
+                    <Typography color="text.secondary">
+                      Không có dữ liệu
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                paginatedDepartments.map((row, index) => (
+                  <TableRow key={row.id}>
+                    <TableCell>{(page - 1) * rowsPerPage + index + 1}</TableCell>
+                    <TableCell>{row.code}</TableCell>
+                    <TableCell>{row.name}</TableCell>
+                    <TableCell>{row.parentName || '-'}</TableCell>
+                    <TableCell>{row.updatedAt}</TableCell>
+                    <TableCell align="center">
+                      <IconButton 
+                        size="small" 
+                        onClick={() => navigate(`/department/detail/${row.id}`)} 
+                        sx={{ mr: 1 }}
+                      >
+                        <VisibilityIcon />
+                      </IconButton>
+                      <IconButton 
+                        size="small" 
+                        onClick={() => {
+                          setSelectedDepartment(row);
+                          setOpenDeleteDialog(true);
+                        }} 
+                        color="error"
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))
               )}
-              {paginatedDepartments.map((row, index) => (
-                <TableRow key={row.id}>
-                  <TableCell>{(page - 1) * rowsPerPage + index + 1}</TableCell>
-                  <TableCell>{row.code}</TableCell>
-                  <TableCell>{row.name}</TableCell>
-                  <TableCell>{row.parentName || '-'}</TableCell>
-                  <TableCell>{row.updatedAt}</TableCell>
-                  <TableCell align="center">
-                    <IconButton size="small" onClick={() => handleViewDetail(row)} sx={{ mr: 1 }}><VisibilityIcon /></IconButton>
-                    <IconButton size="small" onClick={() => handleOpenEditDialog(row)} sx={{ mr: 1 }}><EditIcon /></IconButton>
-                    <IconButton size="small" onClick={() => {
-                      setSelectedDepartment(row);
-                      setOpenDeleteDialog(true);
-                    }} color="error"><DeleteIcon /></IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
             </TableBody>
           </Table>
         </TableContainer>
@@ -323,9 +254,28 @@ const DepartmentList = () => {
             />
           </Stack>
         </Box>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog
+          open={openDeleteDialog}
+          onClose={() => setOpenDeleteDialog(false)}
+        >
+          <DialogTitle>Xác nhận xóa</DialogTitle>
+          <DialogContent>
+            <Typography>
+              Bạn có chắc chắn muốn xóa phòng ban "{selectedDepartment?.name}" không?
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setOpenDeleteDialog(false)}>Hủy</Button>
+            <Button onClick={handleDelete} color="error" autoFocus>
+              Xóa
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Paper>
     </Box>
-);
+  );
 };
 
 export default DepartmentList;

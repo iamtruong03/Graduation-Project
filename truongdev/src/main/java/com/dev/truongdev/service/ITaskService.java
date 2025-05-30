@@ -10,7 +10,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 public interface ITaskService extends IXDevBaseService<Task, TaskFilter> {
-    TaskDTO getTaskById(Long id);
+
     TaskDTO updateTask(Long id, TaskDTO taskDTO);
     List<TaskHistoryDTO> getTaskHistory(Long taskId);
     void addTaskHistory(Long taskId, Integer previousState, Integer newState, String changedBy, String comment);

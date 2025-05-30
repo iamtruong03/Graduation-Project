@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import taskService from '../../services/taskService';
+import TaskHistory from './TaskHistory';
 import {
   Box,
   Paper,
@@ -16,19 +17,11 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  TextField
+  TextField,
+  CircularProgress,
+  Alert
 } from '@mui/material';
 import {
-  Timeline,
-  TimelineItem,
-  TimelineSeparator,
-  TimelineConnector,
-  TimelineContent,
-  TimelineDot,
-  TimelineOppositeContent
-} from '@mui/lab';
-import {
-  History as HistoryIcon,
   Assignment as AssignmentIcon,
   Flag as FlagIcon,
   Business as BusinessIcon,
@@ -108,18 +101,22 @@ const TaskDetail = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedTask, setEditedTask] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setLoading(true);
+        setError(null);
         const [taskData, historyData] = await Promise.all([
           taskService.getTaskById(id),
           taskService.getTaskHistory(id)
         ]);
         setTask(taskData);
         setTaskHistory(historyData);
-      } catch (error) {
-        console.error('Error fetching task data:', error);
+      } catch (err) {
+        console.error('Error fetching task data:', err);
+        setError('Không thể tải thông tin công việc');
       } finally {
         setLoading(false);
       }
@@ -144,14 +141,19 @@ const TaskDetail = () => {
 
   const handleSave = async () => {
     try {
+      setLoading(true);
+      setError(null);
       const updatedTask = await taskService.updateTask(id, editedTask);
       setTask(updatedTask);
       // Refresh history after update
       const newHistory = await taskService.getTaskHistory(id);
       setTaskHistory(newHistory);
       setIsEditing(false);
-    } catch (error) {
-      console.error('Error updating task:', error);
+    } catch (err) {
+      console.error('Error updating task:', err);
+      setError('Không thể cập nhật công việc');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -164,7 +166,24 @@ const TaskDetail = () => {
   };
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
+        <Button variant="contained" onClick={handleClose}>
+          Quay lại
+        </Button>
+      </Box>
+    );
   }
 
   return (
@@ -486,40 +505,7 @@ const TaskDetail = () => {
 
           {/* Sidebar - Lịch sử trạng thái */}
           <Grid item xs={12} md={4}>
-            <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>
-              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
-                <HistoryIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />
-                Lịch sử trạng thái
-              </Typography>
-              <Timeline>
-                {taskHistory.map((history, index) => (
-                  <TimelineItem key={history.id}>
-                    <TimelineOppositeContent color="text.secondary">
-                      <Typography variant="caption">
-                        {new Date(history.changedAt).toLocaleDateString()}
-                      </Typography>
-                    </TimelineOppositeContent>
-                    <TimelineSeparator>
-                      <TimelineDot variant="outlined" color={getStatusColor(history.stateName)} />
-                      {index < taskHistory.length - 1 && <TimelineConnector />}
-                    </TimelineSeparator>
-                    <TimelineContent>
-                      <Typography variant="body2" component="span">
-                        {history.stateName}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary" display="block">
-                        bởi {history.changedByName}
-                      </Typography>
-                      {history.comment && (
-                        <Typography variant="caption" color="text.secondary" display="block">
-                          {history.comment}
-                        </Typography>
-                      )}
-                    </TimelineContent>
-                  </TimelineItem>
-                ))}
-              </Timeline>
-            </Paper>
+            <TaskHistory history={taskHistory} />
           </Grid>
         </Grid>
       </Paper>

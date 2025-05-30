@@ -11,11 +11,16 @@ import {
   Typography,
   Paper,
   Grid,
-  TextareaAutosize
+  TextareaAutosize,
+  Alert
 } from '@mui/material';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import taskService from '../../services/taskService';
 
 const TaskCreate = () => {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [formData, setFormData] = useState({
     code: '',
     name: '',
@@ -24,9 +29,11 @@ const TaskCreate = () => {
     department: '',
     manager: '',
     assignee: '',
-    status: '',
+    status: 'not_started',
     priority: '',
-    description: ''
+    description: '',
+    startDate: '',
+    dueDate: ''
   });
 
   const handleChange = (e) => {
@@ -37,17 +44,33 @@ const TaskCreate = () => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // TODO: Implement task creation logic
-    console.log(formData);
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await taskService.createTask(formData);
+      if (response) {
+        navigate('/task/list');
+      }
+    } catch (err) {
+      setError(err.message || 'Có lỗi xảy ra khi tạo công việc');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h5" sx={{ mb: 3 }}>TẠO CÔNG VIỆC MỚI</Typography>
       <Paper sx={{ p: 3 }}>
-          <form onSubmit={handleSubmit}>
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {error}
+          </Alert>
+        )}
+        <form onSubmit={handleSubmit}>
           <Grid container spacing={3}>
             <Grid item xs={12} md={6}>
               <TextField
@@ -177,6 +200,32 @@ const TaskCreate = () => {
                 </Select>
               </FormControl>
             </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                size="small"
+                type="date"
+                label="Ngày bắt đầu"
+                name="startDate"
+                value={formData.startDate}
+                onChange={handleChange}
+                InputLabelProps={{ shrink: true }}
+                required
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                size="small"
+                type="date"
+                label="Ngày kết thúc"
+                name="dueDate"
+                value={formData.dueDate}
+                onChange={handleChange}
+                InputLabelProps={{ shrink: true }}
+                required
+              />
+            </Grid>
             <Grid item xs={12}>
               <TextareaAutosize
                 minRows={4}
@@ -195,13 +244,26 @@ const TaskCreate = () => {
             </Grid>
             <Grid item xs={12}>
               <Stack direction="row" spacing={2} justifyContent="flex-end">
-                <Button variant="outlined" component={Link} to="/task/list">Hủy</Button>
-                <Button type="submit" variant="contained">Tạo</Button>
+                <Button 
+                  variant="outlined" 
+                  component={Link} 
+                  to="/task/list"
+                  disabled={loading}
+                >
+                  Hủy
+                </Button>
+                <Button 
+                  type="submit" 
+                  variant="contained"
+                  disabled={loading}
+                >
+                  {loading ? 'Đang tạo...' : 'Tạo'}
+                </Button>
               </Stack>
             </Grid>
           </Grid>
         </form>
-        </Paper>
+      </Paper>
     </Box>
   );
 };

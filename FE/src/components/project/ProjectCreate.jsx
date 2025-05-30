@@ -54,12 +54,6 @@ const ProjectCreate = () => {
         if (deptResponse.data) {
           setDepartments(deptResponse.data);
         }
-
-        // Lấy danh sách người quản lý
-        const userResponse = await staffService.listUserChildDep();
-        if (userResponse.data) {
-          setManagers(userResponse.data);
-        }
       } catch (err) {
         console.error('Error fetching data:', err);
         setError('Không thể tải dữ liệu. Vui lòng thử lại sau.');
@@ -78,13 +72,31 @@ const ProjectCreate = () => {
     }
   };
 
-  const handleChange = (event) => {
+  const handleChange = async (event) => {
     const { name, value } = event.target;
     setProject(prev => ({
       ...prev,
       [name]: value
     }));
     validateField(name, value);
+
+    // Nếu thay đổi phòng ban, cập nhật lại danh sách người quản lý
+    if (name === 'departmentId') {
+      try {
+        const userResponse = await staffService.listUserByDep(value);
+        if (userResponse.data) {
+          setManagers(userResponse.data);
+          // Reset người quản lý khi đổi phòng ban
+          setProject(prev => ({
+            ...prev,
+            managerId: ''
+          }));
+        }
+      } catch (err) {
+        console.error('Error fetching managers:', err);
+        setError('Không thể tải danh sách người quản lý');
+      }
+    }
   };
 
   const handleDateChange = (name, value) => {
@@ -118,14 +130,14 @@ const ProjectCreate = () => {
 
       const response = await projectService.createProject(projectData);
       
-      if (response.data.status === 200) {
+      if (response.status === 200 || response.message === "Success") {
         setOpenSnackbar(true);
         // Đợi 1 giây trước khi chuyển trang để người dùng thấy thông báo
         setTimeout(() => {
           navigate('/project/list');
         }, 1000);
       } else {
-        setError(response.data.message || 'Có lỗi xảy ra khi tạo dự án');
+        setError(response.message || 'Có lỗi xảy ra khi tạo dự án');
       }
     } catch (err) {
       if (err.name === 'ValidationError') {
@@ -136,7 +148,7 @@ const ProjectCreate = () => {
         setValidationErrors(errors);
       } else if (err.response) {
         // Xử lý lỗi từ API
-        setError(err.response.data.message || 'Có lỗi xảy ra khi tạo dự án');
+        setError(err.response.message || 'Có lỗi xảy ra khi tạo dự án');
       } else {
         console.error('Error creating project:', err);
         setError('Không thể tạo dự án. Vui lòng thử lại sau.');

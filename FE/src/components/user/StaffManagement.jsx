@@ -355,7 +355,10 @@ const StaffManagement = () => {
                     <TableCell>{staff.name}</TableCell>
                     <TableCell>{staff.email}</TableCell>
                     <TableCell>{staff.phoneNumber}</TableCell>
-                    <TableCell>{staff.department}</TableCell>
+                    <TableCell>
+                      {/* Map department ID to department name */}
+                      {departmentList.find(dept => dept.id === staff.department)?.name || staff.department}
+                    </TableCell>
                     <TableCell>{staff.position}</TableCell>
                     <TableCell>{staff.joinDate}</TableCell>
                     <TableCell align="center">

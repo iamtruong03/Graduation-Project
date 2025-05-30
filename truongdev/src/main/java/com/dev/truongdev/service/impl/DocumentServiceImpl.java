@@ -36,7 +36,7 @@ import java.util.UUID;
 @Service
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class DocumentServiceImpl extends XDevBaseServiceImpl<Document, DocumentFilter, DocumentRepo>
-        implements IDocumentService {
+    implements IDocumentService {
 
     DocumentRepo documentRepo;
     IDepartmentService departmentService;
@@ -45,18 +45,18 @@ public class DocumentServiceImpl extends XDevBaseServiceImpl<Document, DocumentF
     IUserService userService;
     Path uploadDir;
 
-    public DocumentServiceImpl(DocumentRepo repo, 
-                             IDepartmentService departmentService, 
-                             IProjectService projectService, 
-                             DepartmentRepo departmentRepo, 
-                             IUserService userService) {
+    public DocumentServiceImpl(DocumentRepo repo,
+        IDepartmentService departmentService,
+        IProjectService projectService,
+        DepartmentRepo departmentRepo,
+        IUserService userService) {
         super(repo);
         this.documentRepo = repo;
         this.departmentService = departmentService;
         this.projectService = projectService;
         this.departmentRepo = departmentRepo;
         this.userService = userService;
-        
+
         this.uploadDir = Paths.get("uploads", "documents");
         initializeUploadDirectory();
     }
@@ -78,7 +78,7 @@ public class DocumentServiceImpl extends XDevBaseServiceImpl<Document, DocumentF
      * - Tạo tên file duy nhất
      * - Lưu file vào thư mục upload
      * - Tạo bản ghi tài liệu trong database
-     * 
+     *
      * @param uid ID người thực hiện upload
      * @param file File cần upload
      * @param documentDTO Thông tin metadata của tài liệu
@@ -93,7 +93,7 @@ public class DocumentServiceImpl extends XDevBaseServiceImpl<Document, DocumentF
             String originalFilename = file.getOriginalFilename();
             String fileExtension = originalFilename.substring(originalFilename.lastIndexOf("."));
             String fileName = UUID.randomUUID().toString() + fileExtension;
-            
+
             // Save file
             Path targetLocation = uploadDir.resolve(fileName);
             Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
@@ -122,7 +122,7 @@ public class DocumentServiceImpl extends XDevBaseServiceImpl<Document, DocumentF
      * Download tài liệu từ hệ thống.
      * - Tìm thông tin tài liệu trong database
      * - Đọc file từ đường dẫn lưu trữ
-     * 
+     *
      * @param uid ID người thực hiện download
      * @param id ID tài liệu cần download
      * @return Byte array của file
@@ -131,37 +131,28 @@ public class DocumentServiceImpl extends XDevBaseServiceImpl<Document, DocumentF
     @Override
     public byte[] downloadDocument(String uid, Long id) {
         Document document = documentRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Document not found with id: " + id));
+            .orElseThrow(() -> new RuntimeException("Document not found with id: " + id));
+        Path filePath = Paths.get(document.getFilePath());
         try {
-            Path filePath = Paths.get(document.getFilePath());
             if (!Files.exists(filePath)) {
-                throw new RuntimeException("File not found: " + document.getFilePath());
+                throw new RuntimeException("File not found: " + filePath);
             }
             return Files.readAllBytes(filePath);
         } catch (IOException e) {
-            throw new RuntimeException("Could not read file: " + document.getFilePath(), e);
+            throw new RuntimeException("Could not read file: " + filePath, e);
         }
     }
 
-    /**
-     * Xóa tài liệu khỏi hệ thống.
-     * - Xóa file vật lý trong thư mục upload
-     * - Xóa bản ghi trong database
-     * 
-     * @param uid ID người thực hiện xóa
-     * @param id ID tài liệu cần xóa
-     * @throws RuntimeException nếu xóa file thất bại
-     */
     @Override
     @Transactional
     public void delete(String uid, Long id) {
         Document document = documentRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Document not found with id: " + id));
+            .orElseThrow(() -> new RuntimeException("Document not found with id: " + id));
         try {
             // Delete file first
             Path filePath = Paths.get(document.getFilePath());
             Files.deleteIfExists(filePath);
-            
+
             // Then delete database record
             documentRepo.deleteById(id);
         } catch (IOException e) {
@@ -173,7 +164,7 @@ public class DocumentServiceImpl extends XDevBaseServiceImpl<Document, DocumentF
      * Tìm kiếm tài liệu với kiểm soát truy cập theo phòng ban.
      * - Admin và trưởng phòng ban gốc: xem tất cả tài liệu
      * - Người dùng khác: chỉ xem tài liệu trong phòng ban và phòng ban con
-     * 
+     *
      * @param departmentId ID phòng ban
      * @param uid ID người dùng
      * @param filter Bộ lọc tìm kiếm
@@ -185,10 +176,10 @@ public class DocumentServiceImpl extends XDevBaseServiceImpl<Document, DocumentF
         User user = userService.getById(uid, Long.valueOf(uid));
 
         // Check if user is admin or from root department
-        boolean hasFullAccess = user.getRole().equals("1") || 
-                              departmentRepo.findById(departmentId)
-                                  .map(dept -> dept.getParentId() == null)
-                                  .orElse(false);
+        boolean hasFullAccess = user.getRole().equals("1") ||
+            departmentRepo.findById(departmentId)
+                .map(dept -> dept.getParentId() == null)
+                .orElse(false);
 
         if (hasFullAccess) {
             return documentRepo.searchByCodeOrName(
@@ -196,7 +187,7 @@ public class DocumentServiceImpl extends XDevBaseServiceImpl<Document, DocumentF
                 filter.getSearch(),
                 pageable
             );
-        } 
+        }
 
         // Get department and its sub-departments
         Department department = departmentRepo.findById(departmentId)
@@ -222,20 +213,20 @@ public class DocumentServiceImpl extends XDevBaseServiceImpl<Document, DocumentF
     /**
      * Chuyển đổi Document entity thành DocumentDTO.
      * Bao gồm tên phòng ban và tên dự án.
-     * 
+     *
      * @param document Document entity
      * @return DocumentDTO với thông tin đầy đủ
      */
     private DocumentDTO convertToDTO(Document document) {
         DocumentDTO dto = new DocumentDTO();
         BeanUtils.copyProperties(document, dto);
-        
+
         if (document.getDepartmentId() != null) {
-            departmentRepo.findById(document.getDepartmentId()).ifPresent(department -> 
+            departmentRepo.findById(document.getDepartmentId()).ifPresent(department ->
                 dto.setDepartmentName(department.getName())
             );
         }
-        
+
         if (document.getProjectId() != null) {
             try {
                 dto.setProjectName(projectService.getById("system", document.getProjectId()).getName());
@@ -243,7 +234,7 @@ public class DocumentServiceImpl extends XDevBaseServiceImpl<Document, DocumentF
                 dto.setProjectName("Unknown");
             }
         }
-        
+
         return dto;
     }
 }

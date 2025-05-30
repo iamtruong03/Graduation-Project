@@ -31,22 +31,43 @@ public class DocumentAPI extends XDevBaseAPI<Document, DocumentFilter> {
         return (S) documentService;
     }
 
+    @GetMapping("/{id}/dto")
+    public ResponseEntity<ApiResponse<DocumentDTO>> getDocumentDTO(@PathVariable Long id) {
+        try {
+            DocumentDTO dto = documentService.getDocumentById(id);
+            return ApiResponse.ok(dto);
+        } catch (Exception e) {
+            return ApiResponse.error(e.getMessage());
+        }
+    }
+
+    @PutMapping("/{id}/dto")
+    public ResponseEntity<ApiResponse<DocumentDTO>> updateDocumentDTO(
+            @PathVariable Long id,
+            @RequestBody DocumentDTO documentDTO) {
+        try {
+            DocumentDTO updated = documentService.updateDocument(id, documentDTO);
+            return ApiResponse.ok(updated);
+        } catch (Exception e) {
+            return ApiResponse.error(e.getMessage());
+        }
+    }
+
     @PostMapping("/upload")
     public ResponseEntity<ApiResponse<DocumentDTO>> uploadDocument(
-            @RequestAttribute String uid,
             @RequestParam("file") MultipartFile file,
             @ModelAttribute DocumentDTO documentDTO) {
         try {
             if (file.isEmpty()) {
                 return ApiResponse.error("Please select a file to upload");
             }
-
+            
             // Validate file size (example: 10MB max)
             if (file.getSize() > 10 * 1024 * 1024) {
                 return ApiResponse.error("File size exceeds maximum limit (10MB)");
             }
 
-            DocumentDTO uploaded = documentService.uploadDocument(uid, file, documentDTO);
+            DocumentDTO uploaded = documentService.uploadDocument(file, documentDTO);
             return ApiResponse.ok(uploaded);
         } catch (Exception e) {
             return ApiResponse.error("Failed to upload document: " + e.getMessage());
@@ -54,17 +75,15 @@ public class DocumentAPI extends XDevBaseAPI<Document, DocumentFilter> {
     }
 
     @GetMapping("/{id}/download")
-    public ResponseEntity<?> downloadDocument(
-            @RequestAttribute String uid,
-            @PathVariable Long id) {
+    public ResponseEntity<?> downloadDocument(@PathVariable Long id) {
         try {
-            byte[] data = documentService.downloadDocument(uid, id);
-            Document document = documentService.getById(uid, id);
+            byte[] data = documentService.downloadDocument(id);
+            DocumentDTO document = documentService.getDocumentById(id);
             ByteArrayResource resource = new ByteArrayResource(data);
 
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment;filename=" + document.getName())
+                    .header(HttpHeaders.CONTENT_DISPOSITION, 
+                           "attachment;filename=" + document.getName())
                     .contentType(MediaType.APPLICATION_OCTET_STREAM)
                     .contentLength(data.length)
                     .body(resource);

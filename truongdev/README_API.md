@@ -44,32 +44,26 @@ Authorization: Bearer {accessToken}
 ## 📋 Business Logic & States
 
 ### Project States
-| Mã | Trạng thái |
-|-----|------------|
-| `1` | Chờ duyệt (PENDING) |
-| `2` | Đã duyệt (APPROVED) |
-| `4` | Đang thực hiện (IN_PROGRESS) |
-| `5` | Hoàn thành (COMPLETE) |
-| `6` | Quá hạn (OVERDUE) |
-| `3` | Từ chối (REJECTED) |
+- `1`: Chờ duyệt (PENDING)
+- `2`: Đã duyệt (APPROVED) 
+- `4`: Đang thực hiện (IN_PROGRESS)
+- `5`: Hoàn thành (COMPLETE)
+- `6`: Quá hạn (OVERDUE)
+- `3`: Từ chối (REJECTED)
 
 ### Risk States
-| Mã | Trạng thái |
-|-----|------------|
-| `0` | Identified |
-| `1` | Analyzing |
-| `2` | Monitored |
-| `3` | Resolved |
-| `4` | Closed |
+- `0`: Identified
+- `1`: Analyzing
+- `2`: Monitored  
+- `3`: Resolved
+- `4`: Closed
 
 ### Task States
-| Mã | Trạng thái |
-|-----|------------|
-| `0` | Chưa bắt đầu |
-| `1` | Đang thực hiện |
-| `2` | Tạm dừng |
-| `3` | Hoàn thành |
-| `4` | Đã hủy |
+- `0`: Chưa bắt đầu
+- `1`: Đang thực hiện
+- `2`: Tạm dừng
+- `3`: Hoàn thành
+- `4`: Đã hủy
 
 ---
 
@@ -360,7 +354,7 @@ Content-Type: application/json
   "email": "user001@company.com",
   "departmentId": 1,
   "positionId": 2,
-  "role": "2"
+  "role": "ROLE_USER"
 }
 ```
 
@@ -557,12 +551,12 @@ Response: DanhSachCongViec_20241215_143022.xlsx
 
 ## 🔒 Access Control
 
-### Admin Users (1)
+### Admin Users (ROLE_ADMIN)
 - Có quyền truy cập tất cả dữ liệu
 - Có thể tạo/sửa/xóa tất cả entities
 - Có thể phê duyệt tất cả requests
 
-### Regular Users (2)
+### Regular Users (ROLE_USER)
 - Chỉ truy cập dữ liệu thuộc phòng ban mình và phòng ban con
 - Có thể tạo entities trong phòng ban mình
 - Chỉ phê duyệt entities được assign
@@ -645,5 +639,4 @@ POST /api/tasks/{id}/approve
 3. **File Upload**: Max size 10MB cho documents
 4. **Date Format**: `yyyy-MM-dd` hoặc `yyyy-MM-dd'T'HH:mm:ss'Z'`
 5. **Timezone**: Asia/Ho_Chi_Minh (UTC+7)
-6. **Encoding**: UTF-8 cho tiếng Việt
-        
+6. **Encoding**: UTF-8 cho tiếng Việt 

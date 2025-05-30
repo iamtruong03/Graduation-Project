@@ -37,19 +37,4 @@ public interface RiskRepo extends XDevBaseRepo<Risk> {
             @Param("departmentIds") List<Long> departmentIds,
             Pageable pageable
     );
-
-    @Query("SELECT r FROM Risk r " +
-            "WHERE r.status = :status " +
-            "AND r.state = :state " +
-            "AND r.approverId = :approverId " +
-            "AND (LOWER(r.code) LIKE LOWER(CONCAT('%', :search, '%')) " +
-            "OR LOWER(r.name) LIKE LOWER(CONCAT('%', :search, '%'))) " +
-            "ORDER BY r.createDate DESC")
-    Page<Risk> findPendingApprovalRisks(
-            @Param("status") Integer status,
-            @Param("state") Integer state,
-            @Param("approverId") String approverId,
-            @Param("search") String search,
-            Pageable pageable
-    );
 } 

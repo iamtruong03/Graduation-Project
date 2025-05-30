@@ -32,7 +32,7 @@ import { format, parseISO } from 'date-fns';
 import vi from 'date-fns/locale/vi';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider, DateTimePicker } from '@mui/x-date-pickers';
-import {
+import { 
   Close as CloseIcon,
   Edit as EditIcon,
   CloudDownload as CloudDownloadIcon,
@@ -161,26 +161,10 @@ const ProjectDetail = () => {
     try {
       if (!dateString) return '';
       const date = parseISO(dateString);
-      return format(date, 'dd/MM/yyyy', { locale: vi });
+    return format(date, 'dd/MM/yyyy', { locale: vi });
     } catch (error) {
       console.error('Error formatting date:', error);
       return dateString;
-    }
-  };
-
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case 'HIGH':
-      case 'Cao':
-        return '#d32f2f'; // Red
-      case 'MEDIUM':
-      case 'Trung bình':
-        return '#ed6c02'; // Orange
-      case 'LOW':
-      case 'Thấp':
-        return '#2e7d32'; // Green
-      default:
-        return '#757575'; // Grey
     }
   };
 
@@ -214,51 +198,31 @@ const ProjectDetail = () => {
 
   const handleEdit = () => {
     setIsEditing(true);
-    // Chuyển đổi chuỗi ngày thành đối tượng Date
-    const editedProjectData = {
-      ...project,
-      startDate: project.startDate ? new Date(project.startDate) : null,
-      endDate: project.endDate ? new Date(project.endDate) : null
-    };
-    setEditedProject(editedProjectData);
+    setEditedProject({...project});
   };
 
   const handleCancelEdit = () => {
     setIsEditing(false);
-    setEditedProject({ ...project });
+    setEditedProject({...project});
   };
 
   const handleSave = async () => {
     try {
       setLoading(true);
-      // Chuyển đổi đối tượng Date thành chuỗi ISO trước khi gửi lên server
-      const projectDataToSave = {
-        ...editedProject,
-        startDate: editedProject.startDate ? editedProject.startDate.toISOString() : null,
-        endDate: editedProject.endDate ? editedProject.endDate.toISOString() : null,
-        updateBy: localStorage.getItem('userId') // Thêm userId của người cập nhật
-      };
-
-      const response = await projectService.updateProject(id, projectDataToSave);
-
-      if (response.data.status === 200 || response.data.message === "Success") {
-        setProject(projectDataToSave);
+      const response = await projectService.updateProjectState(
+        id,
+        editedProject.state,
+        editedProject.updatedBy,
+        'Cập nhật thông tin dự án'
+      );
+      if (response.success) {
+        setProject(response.data);
         setIsEditing(false);
-        setError({
-          type: 'success',
-          message: 'Cập nhật dự án thành công'
-        });
       } else {
-        setError({
-          type: 'error',
-          message: response.data.message || 'Có lỗi xảy ra khi cập nhật dự án'
-        });
+        setError(response.message);
       }
     } catch (error) {
-      setError({
-        type: 'error',
-        message: error.response?.data?.message || 'Không thể cập nhật dự án'
-      });
+      setError('Không thể cập nhật dự án');
       console.error('Error updating project:', error);
     } finally {
       setLoading(false);
@@ -312,16 +276,16 @@ const ProjectDetail = () => {
     let updatedAttachments;
     if (selectedAttachment) {
       // Cập nhật tài liệu hiện có
-      updatedAttachments = project.attachments.map(doc =>
-        doc.id === selectedAttachment.id
+      updatedAttachments = project.attachments.map(doc => 
+        doc.id === selectedAttachment.id 
           ? {
-            ...doc,
-            name: newAttachment.name,
-            version: newAttachment.version,
-            fileName: newAttachment.file ? newAttachment.file.name : doc.fileName,
-            updatedBy: 'Người dùng hiện tại',
-            uploadDate: new Date().toISOString()
-          }
+              ...doc,
+              name: newAttachment.name,
+              version: newAttachment.version,
+              fileName: newAttachment.file ? newAttachment.file.name : doc.fileName,
+              updatedBy: 'Người dùng hiện tại',
+              uploadDate: new Date().toISOString()
+            }
           : doc
       );
     } else {
@@ -334,7 +298,7 @@ const ProjectDetail = () => {
       };
       updatedAttachments = [...project.attachments, newDoc];
     }
-
+    
     setProject({
       ...project,
       attachments: updatedAttachments
@@ -497,11 +461,11 @@ const ProjectDetail = () => {
         <Grid container spacing={3}>
           <Grid item xs={12} md={8}>
             <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>
-              <Grid container spacing={3}>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Mã dự án
-                  </Typography>
+        <Grid container spacing={3}>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">
+              Mã dự án
+            </Typography>
                   {isEditing ? (
                     <TextField
                       fullWidth
@@ -512,14 +476,14 @@ const ProjectDetail = () => {
                       sx={{ mt: 1 }}
                     />
                   ) : (
-                    <Typography variant="body1">{project.code}</Typography>
+            <Typography variant="body1">{project.code}</Typography>
                   )}
-                </Grid>
+          </Grid>
 
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Tên dự án
-                  </Typography>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">
+              Tên dự án
+            </Typography>
                   {isEditing ? (
                     <TextField
                       fullWidth
@@ -530,14 +494,14 @@ const ProjectDetail = () => {
                       sx={{ mt: 1 }}
                     />
                   ) : (
-                    <Typography variant="body1">{project.name}</Typography>
+            <Typography variant="body1">{project.name}</Typography>
                   )}
-                </Grid>
+          </Grid>
 
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Người phụ trách
-                  </Typography>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">
+            Người phụ trách
+            </Typography>
                   {isEditing ? (
                     <TextField
                       fullWidth
@@ -548,14 +512,14 @@ const ProjectDetail = () => {
                       sx={{ mt: 1 }}
                     />
                   ) : (
-                    <Typography variant="body1">{managers[project.managerId] || project.managerId}</Typography>
+            <Typography variant="body1">{managers[project.managerId] || project.managerId}</Typography>
                   )}
-                </Grid>
+          </Grid>
 
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Phòng ban thực hiện
-                  </Typography>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">
+              Phòng ban thực hiện
+            </Typography>
                   {isEditing ? (
                     <TextField
                       fullWidth
@@ -566,7 +530,7 @@ const ProjectDetail = () => {
                       sx={{ mt: 1 }}
                     />
                   ) : (
-                    <Typography variant="body1"> {departments[project.departmentId] || project.departmentId}</Typography>
+            <Typography variant="body1"> {departments[project.departmentId] || project.departmentId}</Typography>
                   )}
                 </Grid>
 
@@ -591,58 +555,58 @@ const ProjectDetail = () => {
                       {PROJECT_TYPES[project.projectTypeId]}
                     </Typography>
                   )}
-                </Grid>
+          </Grid>
 
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Ngày bắt đầu
-                  </Typography>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">
+              Ngày bắt đầu
+            </Typography>
                   {isEditing ? (
                     <LocalizationProvider dateAdapter={AdapterDateFns}>
                       <DateTimePicker
                         value={editedProject.startDate}
                         onChange={(newValue) => handleDateChange('startDate', newValue)}
-                        slotProps={{
-                          textField: {
+                        slotProps={{ 
+                          textField: { 
                             size: 'small',
                             sx: { mt: 1 },
-                            fullWidth: true
-                          }
+                            fullWidth: true 
+                          } 
                         }}
                       />
                     </LocalizationProvider>
                   ) : (
-                    <Typography variant="body1">{formatDate(project.startDate)}</Typography>
+            <Typography variant="body1">{formatDate(project.startDate)}</Typography>
                   )}
-                </Grid>
+          </Grid>
 
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Ngày kết thúc
-                  </Typography>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">
+              Ngày kết thúc
+            </Typography>
                   {isEditing ? (
                     <LocalizationProvider dateAdapter={AdapterDateFns}>
                       <DateTimePicker
                         value={editedProject.endDate}
                         onChange={(newValue) => handleDateChange('endDate', newValue)}
-                        slotProps={{
-                          textField: {
+                        slotProps={{ 
+                          textField: { 
                             size: 'small',
                             sx: { mt: 1 },
-                            fullWidth: true
-                          }
+                            fullWidth: true 
+                          } 
                         }}
                       />
                     </LocalizationProvider>
                   ) : (
-                    <Typography variant="body1">{formatDate(project.endDate)}</Typography>
+            <Typography variant="body1">{formatDate(project.endDate)}</Typography>
                   )}
-                </Grid>
+          </Grid>
 
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Trạng thái
-                  </Typography>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">
+              Trạng thái
+            </Typography>
                   {isEditing ? (
                     <FormControl fullWidth size="small" sx={{ mt: 1 }}>
                       <Select
@@ -650,20 +614,21 @@ const ProjectDetail = () => {
                         value={editedProject.state}
                         onChange={handleProjectChange}
                       >
-                        <MenuItem value={4}>Đang thực hiện</MenuItem>
-                        <MenuItem value={5}>Hoàn thành</MenuItem>
+                        {Object.entries(PROJECT_STATES).map(([key, value]) => (
+                          <MenuItem key={key} value={Number(key)}>{value}</MenuItem>
+                        ))}
                       </Select>
                     </FormControl>
                   ) : (
-                    <Chip
-                      label={PROJECT_STATES[project.state]}
-                      size="small"
-                      sx={{
-                        bgcolor: getStatusColor(project.state),
-                        color: 'white',
-                        mt: 0.5,
-                      }}
-                    />
+            <Chip
+              label={PROJECT_STATES[project.state]}
+              size="small"
+              sx={{
+                bgcolor: getStatusColor(project.state),
+                color: 'white',
+                mt: 0.5,
+              }}
+            />
                   )}
                 </Grid>
 
@@ -686,9 +651,9 @@ const ProjectDetail = () => {
                       {project.description}
                     </Typography>
                   )}
-                </Grid>
-              </Grid>
-            </Paper>
+          </Grid>
+        </Grid>
+      </Paper>
 
             {/* Phần tài liệu đính kèm */}
             <Paper elevation={1} sx={{ p: 3, borderRadius: 2, mt: 3 }}>
@@ -716,8 +681,8 @@ const ProjectDetail = () => {
                 )}
               </Box>
               <TableContainer>
-                <Table>
-                  <TableHead>
+        <Table>
+          <TableHead>
                     <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
                       <TableCell sx={{ fontWeight: 600 }}>Tên tài liệu</TableCell>
                       <TableCell sx={{ fontWeight: 600 }}>Phiên bản</TableCell>
@@ -727,14 +692,14 @@ const ProjectDetail = () => {
                       {project.state === 4 && (
                         <TableCell align="center" sx={{ fontWeight: 600 }}>Thao tác</TableCell>
                       )}
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
+            </TableRow>
+          </TableHead>
+          <TableBody>
                     {project.attachments.map((doc) => (
                       <TableRow key={doc.id}>
                         <TableCell>{doc.name}</TableCell>
                         <TableCell>{doc.version}</TableCell>
-                        <TableCell>
+                <TableCell>
                           <Typography
                             component="span"
                             sx={{
@@ -756,7 +721,7 @@ const ProjectDetail = () => {
                             <Stack direction="row" spacing={1} justifyContent="center">
                               <IconButton
                                 size="small"
-                                color="primary"
+                    color="primary"
                                 onClick={() => handleEditAttachment(doc)}
                               >
                                 <EditIcon />
@@ -769,8 +734,8 @@ const ProjectDetail = () => {
                                 <DeleteIcon />
                               </IconButton>
                             </Stack>
-                          </TableCell>
-                        )}
+                </TableCell>
+                      )}
                       </TableRow>
                     ))}
                   </TableBody>
@@ -827,9 +792,9 @@ const ProjectDetail = () => {
                     }}
                   >
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
-                      <Typography
-                        variant="subtitle1"
-                        sx={{
+                      <Typography 
+                        variant="subtitle1" 
+                        sx={{ 
                           fontWeight: 600,
                           color: '#2196f3',
                           cursor: 'pointer',
@@ -847,7 +812,7 @@ const ProjectDetail = () => {
                           <IconButton
                             size="small"
                             onClick={() => handleEditTask(task)}
-                            sx={{
+                            sx={{ 
                               color: 'primary.main',
                               p: 0.5,
                               '&:hover': {
@@ -860,7 +825,7 @@ const ProjectDetail = () => {
                           <IconButton
                             size="small"
                             onClick={() => handleDeleteTask(task.id)}
-                            sx={{
+                            sx={{ 
                               color: 'error.main',
                               p: 0.5,
                               '&:hover': {
@@ -941,13 +906,13 @@ const ProjectDetail = () => {
 
       {/* Dialog thêm/sửa công việc */}
       {project.state === 4 && (
-        <Dialog
-          open={openTaskDialog}
+        <Dialog 
+          open={openTaskDialog} 
           onClose={handleCloseTaskDialog}
           maxWidth="sm"
           fullWidth
         >
-          <DialogTitle sx={{
+          <DialogTitle sx={{ 
             pb: 2,
             borderBottom: '1px solid #e0e0e0',
             color: '#1976d2',
@@ -1041,13 +1006,13 @@ const ProjectDetail = () => {
 
       {/* Dialog thêm/sửa tài liệu */}
       {project.state === 4 && (
-        <Dialog
-          open={openAttachmentDialog}
+        <Dialog 
+          open={openAttachmentDialog} 
           onClose={handleCloseAttachmentDialog}
           maxWidth="sm"
           fullWidth
         >
-          <DialogTitle sx={{
+          <DialogTitle sx={{ 
             pb: 2,
             borderBottom: '1px solid #e0e0e0',
             color: '#1976d2',
@@ -1063,6 +1028,14 @@ const ProjectDetail = () => {
                   label="Tên tài liệu"
                   value={newAttachment.name}
                   onChange={(e) => setNewAttachment({ ...newAttachment, name: e.target.value })}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Phiên bản"
+                  value={newAttachment.version}
+                  onChange={(e) => setNewAttachment({ ...newAttachment, version: e.target.value })}
                 />
               </Grid>
               <Grid item xs={12}>

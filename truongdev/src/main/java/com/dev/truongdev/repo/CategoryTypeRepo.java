@@ -22,6 +22,4 @@ public interface CategoryTypeRepo extends XDevBaseRepo<CategoryType> {
             @Param("search") String search,
             Pageable pageable
     );
-
-    boolean existsByCode(String code);
 } 

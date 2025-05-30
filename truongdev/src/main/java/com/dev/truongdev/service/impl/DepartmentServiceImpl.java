@@ -105,30 +105,24 @@ public class DepartmentServiceImpl extends
 
   // lấy phòng ban hiện tại + con cháu...
   @Override
-  public List<Department> getAll(Long did, String uid) {
+  public List<Department> getAll(Long id, String uid) {
     User user = userRepo.findById(Long.valueOf(uid))
         .orElseThrow(() -> new RuntimeException("User not found"));
 
     // Kiểm tra điều kiện xem toàn hệ thống (admin hoặc phòng ban root)
-    if (user.getRole().equals("1") ||
-        (departmentRepo.findById(did).get().getParentId() == null)) {
+    if (user.getRole().equals("ROLE_ADMIN") ||
+        (departmentRepo.findById(id).get().getParentId() == null)) {
       return departmentRepo.findAllByStatus(AppConstants.STATUS_ACTIVE);
     }
 
-    Department department = departmentRepo.findById(did)
+    Department department = departmentRepo.findById(id)
         .orElseThrow(() -> new RuntimeException("Department not found"));
 
     List<Department> list = new ArrayList<>();
     list.add(department);
-    list.addAll(getAllSubDepartments(did));
+    list.addAll(getAllSubDepartments(id));
 
     return list;
-  }
-
-  // Lấy danh sách phòng ban đang hoạt động với thông tin cơ bản
-  @Override
-  public List<Department> getActiveDepartments(String uid) {
-    return departmentRepo.findAllByStatus(AppConstants.STATUS_ACTIVE);
   }
 
   // lấy phòng ban hiện tại + con cháu...
@@ -140,7 +134,7 @@ public class DepartmentServiceImpl extends
     Page<Department> page;
 
     // Kiểm tra điều kiện xem toàn hệ thống (admin hoặc phòng ban root)
-    if (user.getRole().equals("1") ||
+    if (user.getRole().equals("ROLE_ADMIN") ||
         (departmentRepo.findById(did).get().getParentId() == null)) {
         List<Department> allDepartments = departmentRepo.findAllByStatus(AppConstants.STATUS_ACTIVE);
 

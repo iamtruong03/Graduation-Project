@@ -196,31 +196,20 @@ const ProjectList = () => {
     try {
       setLoading(true);
       const response = await projectService.deleteProject(deleteId);
-      
-      if (response.status === 200) {
-        setError({
-          type: 'success',
-          message: response.message || 'Xóa dự án thành công'
-        });
+      if (response.data.success) {
         await fetchProjects();
       } else {
-        setError({
-          type: 'error',
-          message: response.message || 'Không thể xóa dự án'
-        });
+        setError(response.data.message);
       }
     } catch (err) {
-      setError({
-        type: 'error',
-        message: err.response?.message || 'Không thể xóa dự án'
-      });
+      setError('Không thể xóa dự án');
       console.error('Error deleting project:', err);
     } finally {
       setLoading(false);
       setOpenDialog(false);
       setDeleteId(null);
     }
-  };  
+  };
 
   const handleCloseDialog = () => {
     setOpenDialog(false);
@@ -230,49 +219,11 @@ const ProjectList = () => {
   const handleExport = async () => {
     try {
       setLoading(true);
-      const filter = {
-        search: searchTerm,
-        projectType: projectType !== 'all' ? projectType : undefined,
-        state: status !== 'all' ? status : undefined
-      };
-      
-      const response = await projectService.exportProjects(filter);
-      
-      // Tạo blob từ response data
-      const blob = new Blob([response], { 
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
-      });
-      
-      // Tạo URL để tải file
-      const url = window.URL.createObjectURL(blob);
-      
-      // Tạo thẻ a ẩn để tải file
-      const link = document.createElement('a');
-      link.href = url;
-      
-      // Lấy tên file từ header content-disposition
-      let fileName = 'DanhSachDuAn.xlsx';
-      const contentDisposition = response.headers?.['content-disposition'];
-      
-      if (contentDisposition) {
-        const fileNameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
-        if (fileNameMatch && fileNameMatch[1]) {
-          fileName = decodeURIComponent(fileNameMatch[1]);
-        }
-      }
-      
-      link.setAttribute('download', fileName);
-      document.body.appendChild(link);
-      link.click();
-      
-      // Cleanup
-      link.remove();
-      window.URL.revokeObjectURL(url);
-      
+      await projectService.exportProjects();
       setError(null);
     } catch (err) {
-      console.error('Error exporting projects:', err);
       setError('Không thể xuất dữ liệu dự án');
+      console.error('Error exporting projects:', err);
     } finally {
       setLoading(false);
     }
@@ -374,11 +325,11 @@ const ProjectList = () => {
 
         {error && (
           <Alert 
-            severity={error.type || 'error'} 
+            severity="error" 
             onClose={() => setError(null)}
             sx={{ mb: 3 }}
           >
-            {error.message || error}
+            {error}
           </Alert>
         )}
         

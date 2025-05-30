@@ -30,11 +30,9 @@ import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   PersonAdd as PersonAddIcon,
-  Visibility as VisibilityIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import staffService from '../../services/staffService';
-import departmentService from '../../services/departmentService';
 import { Alert } from '@mui/material';
 import { Stack } from '@mui/material';
 
@@ -43,7 +41,7 @@ const StaffManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
-  const [positionId, setPositionId] = useState('');
+  const [positionId, setPositionId] = useState(''); // Thêm state positionId
   const [openDialog, setOpenDialog] = useState(false);
   const [dialogType, setDialogType] = useState('create');
   const [selectedStaff, setSelectedStaff] = useState(null);
@@ -53,16 +51,10 @@ const StaffManagement = () => {
   const [error, setError] = useState(null);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
 
-  const positionOptions = [
-    { id: 1, name: 'Quản lý' },
-    { id: 2, name: 'Nhân viên' }
-  ];
-
-  const genderOptions = [
-    { value: 'MALE', label: 'Nam' },
-    { value: 'FEMALE', label: 'Nữ' },
-    { value: 'OTHER', label: 'Khác' }
-  ];
+  const position = {
+    1: 'Quản lý',
+    2: 'Nhân viên',
+  };
 
   const [page, setPage] = useState(0);
   const [size, setSize] = useState(10);
@@ -70,8 +62,7 @@ const StaffManagement = () => {
 
   useEffect(() => {
     fetchStaffList();
-    fetchDepartments();
-  }, [page, size, searchTerm, selectedDepartment, selectedStatus, positionId]);
+  }, [page, size, searchTerm, selectedDepartment, selectedStatus, positionId]); // Thêm positionId vào đây
 
   const fetchStaffList = async () => {
     try {
@@ -96,7 +87,7 @@ const StaffManagement = () => {
         id: staff.id,
         code: staff.code,
         name: staff.name,
-        position: positionOptions.find(p => p.id === staff.positionId)?.name || '---',
+        position: staff.positionId ? position[staff.positionId] || `Chức vụ ${staff.positionId}` : '---',
         department: departmentList.find(d => d.id === staff.departmentId)?.name || '---',
         email: staff.email,
         phoneNumber: staff.phoneNumber,
@@ -107,28 +98,23 @@ const StaffManagement = () => {
         birthday: staff.birthday
           ? new Date(staff.birthday).toLocaleDateString()
           : '---',
-        gender: genderOptions.find(g => g.value === staff.gender)?.label || '---',
+        gender: staff.gender,
         address: staff.address
       }));
 
       setStaffList(formattedStaff);
+      // Sử dụng departmentNames trực tiếp
+      setDepartments(
+        [...new Set(formattedStaff.map((s) => s.department))].map(
+          (dept, idx) => ({ id: idx + 1, name: dept })
+        )
+      );
       setError(null);
     } catch (err) {
       console.error('Lỗi khi lấy danh sách nhân viên:', err);
       setError('Không thể tải danh sách nhân viên');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchDepartments = async () => {
-    try {
-      const response = await departmentService.getAll();
-      if (response.data) {
-        setDepartmentList(response.data);
-      }
-    } catch (error) {
-      console.error('Lỗi khi lấy danh sách phòng ban:', error);
     }
   };
 
@@ -189,6 +175,36 @@ const StaffManagement = () => {
       size: 10,
       sort: ['id,desc']
     };
+  };
+
+  const fetchDepartments = async () => {
+    try {
+      const response = await staffService.getDepartments();
+      const departments = response.data.map(dept => ({
+        id: dept.id,
+        name: dept.name
+      }));
+      setDepartmentList(departments);
+    } catch (error) {
+      console.error('Lỗi khi lấy danh sách phòng ban:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchDepartments();
+  }, []);
+
+  const handleExport = async () => {
+    try {
+      setLoading(true);
+      await staffService.exportStaff();
+      setError(null);
+    } catch (err) {
+      setError('Không thể xuất dữ liệu nhân viên');
+      console.error('Error exporting staff:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -265,13 +281,24 @@ const StaffManagement = () => {
               onChange={handlePositionChange}
             >
               <MenuItem value="">Tất cả</MenuItem>
-              {positionOptions.map((option) => (
-                <MenuItem key={option.id} value={option.id}>
-                  {option.name}
-                </MenuItem>
-              ))}
+              <MenuItem value={1}>Quản lý</MenuItem>
+              <MenuItem value={2}>Nhân viên</MenuItem>
             </Select>
           </FormControl>
+
+          <Button
+            variant="contained"
+            onClick={handleExport}
+            startIcon={<FileDownloadIcon />}
+            sx={{ 
+              backgroundColor: '#2e7d32',
+              '&:hover': {
+                backgroundColor: '#1b5e20'
+              }
+            }}
+          >
+            XUẤT DỮ LIỆU
+          </Button>
 
           <Button
             variant="contained"
@@ -362,10 +389,10 @@ const StaffManagement = () => {
                       <IconButton
                         size="small"
                         color="primary"
-                        onClick={() => navigate(`/staff/detail/${staff.id}`)}
+                        onClick={() => navigate(`/staff/edit/${staff.id}`)}
                         sx={{ mr: 1 }}
                       >
-                        <VisibilityIcon />
+                        <EditIcon />
                       </IconButton>
                       <IconButton
                         size="small"

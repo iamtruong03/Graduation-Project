@@ -1,13 +1,9 @@
 package com.dev.truongdev.dto;
 
 import lombok.Data;
-import lombok.Getter;
-import lombok.Setter;
 import java.util.Date;
 
 @Data
-@Getter
-@Setter
 public class TaskHistoryDTO {
     private Long id;
     private Long taskId;
@@ -16,9 +12,6 @@ public class TaskHistoryDTO {
     private String changedBy;
     private Date changedAt;
     private String comment;
-    
-    // Additional fields for UI display
-    private String previousStateName;
-    private String stateName;
-    private String changedByName;
+    private String changedByName; // Tên người thay đổi
+    private String stateName; // Tên trạng thái
 } 

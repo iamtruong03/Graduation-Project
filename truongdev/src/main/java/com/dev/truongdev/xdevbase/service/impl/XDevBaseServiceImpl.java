@@ -70,7 +70,7 @@ public class XDevBaseServiceImpl <
   }
 
   @Override
-  public List<E> getAll(Long did, String uid) {
+  public List<E> getAll(Long id, String uid) {
     return repo.findAllByStatus(AppConstants.STATUS_ACTIVE);
   }
 

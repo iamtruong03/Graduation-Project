@@ -1,81 +1,25 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Box, TextField, IconButton, CircularProgress } from '@mui/material';
+import React, { useState } from 'react';
+import { Box, TextField, IconButton } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
-import { chatService } from '../../services/chatService';
+import api from '../../services/api';
 
-const MessageInput = ({ selectedUser, onMessageSent }) => {
+const MessageInput = ({ selectedUser }) => {
   const [message, setMessage] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
-  const [isSending, setIsSending] = useState(false);
-  const typingTimeoutRef = useRef(null);
-
-  // Handle typing notifications
-  const handleTyping = () => {
-    if (!isTyping && selectedUser) {
-      setIsTyping(true);
-      chatService.sendTypingNotification(selectedUser.id);
-    }
-
-    // Clear previous timeout
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
-
-    // Set timeout to stop typing notification
-    typingTimeoutRef.current = setTimeout(() => {
-      setIsTyping(false);
-    }, 3000);
-  };
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (message.trim() && selectedUser && !isSending) {
-      setIsSending(true);
+    if (message.trim()) {
       try {
-        // Send message via WebSocket
-        await chatService.sendMessage(selectedUser.id, message.trim(), 'TEXT');
-        
+        await api.post('/api/messages/send', {
+          receiverId: selectedUser.id,
+          content: message.trim()
+        });
         setMessage('');
-        setIsTyping(false);
-        
-        // Clear typing timeout
-        if (typingTimeoutRef.current) {
-          clearTimeout(typingTimeoutRef.current);
-        }
-
-        // Notify parent component that message was sent
-        if (onMessageSent) {
-          onMessageSent();
-        }
       } catch (error) {
         console.error('Lỗi khi gửi tin nhắn:', error);
-        // You could show an error toast here
-      } finally {
-        setIsSending(false);
       }
     }
   };
-
-  const handleInputChange = (e) => {
-    setMessage(e.target.value);
-    handleTyping();
-  };
-
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage(e);
-    }
-  };
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
-    };
-  }, []);
 
   return (
     <Box
@@ -91,11 +35,9 @@ const MessageInput = ({ selectedUser, onMessageSent }) => {
         fullWidth
         multiline
         maxRows={4}
-        placeholder={selectedUser ? `Nhập tin nhắn cho ${selectedUser.name}...` : "Nhập tin nhắn..."}
+        placeholder="Nhập tin nhắn..."
         value={message}
-        onChange={handleInputChange}
-        onKeyPress={handleKeyPress}
-        disabled={!selectedUser || isSending}
+        onChange={(e) => setMessage(e.target.value)}
         sx={{
           '& .MuiOutlinedInput-root': {
             borderRadius: 3,
@@ -118,7 +60,7 @@ const MessageInput = ({ selectedUser, onMessageSent }) => {
       <IconButton
         type="submit"
         color="primary"
-        disabled={!message.trim() || !selectedUser || isSending}
+        disabled={!message.trim()}
         sx={{
           width: 45,
           height: 45,
@@ -133,7 +75,7 @@ const MessageInput = ({ selectedUser, onMessageSent }) => {
           }
         }}
       >
-        {isSending ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
+        <SendIcon />
       </IconButton>
     </Box>
   );

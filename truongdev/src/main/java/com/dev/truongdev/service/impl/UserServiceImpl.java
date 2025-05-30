@@ -17,7 +17,6 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
-import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
@@ -53,7 +52,7 @@ public class UserServiceImpl extends XDevBaseServiceImpl<User, UserFilter, UserR
    * Thiết lập thông tin cơ bản cho entity User.
    * - Gán người tạo và người cập nhật
    * - Đặt trạng thái ACTIVE
-   * - Gán role mặc định là 2
+   * - Gán role mặc định là ROLE_USER
    * 
    * @param e Entity User cần thiết lập
    * @param uid ID người thực hiện
@@ -62,7 +61,7 @@ public class UserServiceImpl extends XDevBaseServiceImpl<User, UserFilter, UserR
     e.setCreateBy(Optional.ofNullable(e.getCreateBy()).orElse(uid));
     e.setUpdateBy(uid);
     e.setStatus(AppConstants.STATUS_ACTIVE);
-    e.setRole("2");
+    e.setRole("ROLE_USER");
   }
 
   /**
@@ -151,7 +150,7 @@ public class UserServiceImpl extends XDevBaseServiceImpl<User, UserFilter, UserR
     User user = userRepo.findById(Long.valueOf(uid))
         .orElseThrow(() -> new RuntimeException("User not found"));
 
-    if (user.getRole().equals("1")) {
+    if (user.getRole().equals("ROLE_ADMIN")) {
       return userRepo.findAllByStatus(AppConstants.STATUS_ACTIVE);
     }
 
@@ -171,7 +170,7 @@ public class UserServiceImpl extends XDevBaseServiceImpl<User, UserFilter, UserR
     User user = userRepo.findById(Long.valueOf(uid))
         .orElseThrow(() -> new RuntimeException("User not found"));
 
-    if (user.getRole().equals("1")) {
+    if (user.getRole().equals("ROLE_ADMIN")) {
       return userRepo.findAllByStatus(AppConstants.STATUS_ACTIVE);
     }
     List<Department> departments = departmentService.getAllSubDepartments(user.getDepartmentId());
@@ -201,7 +200,7 @@ public class UserServiceImpl extends XDevBaseServiceImpl<User, UserFilter, UserR
     User user = userRepo.findById(Long.valueOf(uid))
         .orElseThrow(() -> new RuntimeException("User not found"));
 
-    if (user.getRole().equals("1")) {
+    if (user.getRole().equals("ROLE_ADMIN")) {
       return userRepo.searchUser(
           AppConstants.STATUS_ACTIVE,
           filter.getSearch(),
@@ -247,17 +246,12 @@ public class UserServiceImpl extends XDevBaseServiceImpl<User, UserFilter, UserR
     User user = userRepo.findById(Long.valueOf(uid))
         .orElseThrow(() -> new RuntimeException("User not found"));
 
-    if (user.getRole().equals("1")) {
+    if (user.getRole().equals("ROLE_ADMIN")) {
       return userRepo.findAllByStatus(AppConstants.STATUS_ACTIVE);
     }
     Department department = departmentService.getById(uid, user.getDepartmentId());
 
     return userRepo.findByDepartmentIdAndStatus(department.getParentId(), AppConstants.STATUS_ACTIVE);
-  }
-
-  @Override
-  public List<User> listUserByDep(String uid, Long departmentId){
-    return userRepo.findByDepartmentIdAndStatus(departmentId, AppConstants.STATUS_ACTIVE);
   }
 
   /**
@@ -273,7 +267,7 @@ public class UserServiceImpl extends XDevBaseServiceImpl<User, UserFilter, UserR
     User user = userRepo.findById(Long.valueOf(uid))
         .orElseThrow(() -> new RuntimeException("User not found"));
 
-    if (user.getRole().equals("1")) {
+    if (user.getRole().equals("ROLE_ADMIN")) {
       return userRepo.findAllByPositionIdAndStatus(AppConstants.POSITION_HEAD, AppConstants.STATUS_ACTIVE);
     }
 

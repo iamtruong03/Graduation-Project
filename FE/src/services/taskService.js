@@ -7,90 +7,26 @@ const getAuthHeader = () => ({
 });
 
 const taskService = {
-    // Lấy chi tiết công việc
     getTaskById: async (id) => {
         const response = await api.get(`/api/tasks/${id}`, getAuthHeader());
         return response.data;
     },
 
-    // Lấy lịch sử công việc
     getTaskHistory: async (id) => {
         const response = await api.get(`/api/tasks/${id}/history`, getAuthHeader());
         return response.data;
     },
 
-    // Tạo công việc mới
-    createTask: async (taskData) => {
-        const response = await api.post('/api/tasks/create', taskData, getAuthHeader());
-        return response.data;
-    },
-
-    // Cập nhật công việc
     updateTask: async (id, taskData) => {
-        const response = await api.put(`/api/tasks/${id}/update`, taskData, getAuthHeader());
+        const response = await api.put(`/api/tasks/${id}`, taskData, getAuthHeader());
         return response.data;
     },
 
-    // Tìm kiếm công việc
     searchTasks: (filter, page = 0, size = 10) => {
         return api.post('/api/tasks/search', filter, {
             ...getAuthHeader(),
             params: { page, size }
         });
-    },
-
-    // Gửi yêu cầu phê duyệt
-    submitForApproval: async (id, approverIds) => {
-        const response = await api.post(`/api/tasks/${id}/submit-approval`, approverIds, getAuthHeader());
-        return response.data;
-    },
-
-    // Phê duyệt công việc
-    approveTask: async (id, approvedBy) => {
-        const response = await api.post(`/api/tasks/${id}/approve`, null, {
-            ...getAuthHeader(),
-            params: { approvedBy }
-        });
-        return response.data;
-    },
-
-    // Từ chối công việc
-    rejectTask: async (id, reason) => {
-        const response = await api.post(`/api/tasks/${id}/reject`, null, {
-            ...getAuthHeader(),
-            params: { reason }
-        });
-        return response.data;
-    },
-
-    // Lấy danh sách công việc chờ duyệt
-    getPendingApprovalTasks: (filter, page = 0, size = 10) => {
-        return api.get('/api/tasks/pending-approval', {
-            ...getAuthHeader(),
-            params: { ...filter, page, size }
-        });
-    },
-
-    // Xuất dữ liệu công việc
-    exportTasks: (filter) => {
-        return api.get('/api/tasks/export', {
-            ...getAuthHeader(),
-            responseType: 'blob',
-            params: filter,
-            headers: {
-                'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            }
-        });
-    },
-
-    // Xóa công việc
-    deleteTask: (id) => {
-        return api.delete(`/api/tasks/delete/${id}`, getAuthHeader());
-    },
-
-    // Thay đổi trạng thái
-    changeStatus: (id) => {
-        return api.post(`/api/tasks/change-status/${id}`, null, getAuthHeader());
     }
 };
 

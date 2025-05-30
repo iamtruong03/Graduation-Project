@@ -24,7 +24,7 @@ const staffService = {
 
   // Cập nhật thông tin nhân viên
   updateStaff: (id, staffData) => {
-    return api.put(`/user/update/${id}`, staffData, getAuthHeader());
+    return api.put(`/user/${id}`, staffData, getAuthHeader());
   },
 
   // Xóa nhân viên
@@ -61,14 +61,6 @@ const staffService = {
   // Lấy danh sách user con và user phòng ban chính nó
   listUserChildDep: () => {
     return api.get('/user/list-user-child-dep', getAuthHeader());
-  },
-
-  // Lấy danh sách user theo phòng ban
-  listUserByDep: (departmentId) => {
-    return api.get('/user/list-user-by-dep', {
-      ...getAuthHeader(),
-      params: { departmentId }
-    });
   },
 
   // Lấy thông tin user theo ID

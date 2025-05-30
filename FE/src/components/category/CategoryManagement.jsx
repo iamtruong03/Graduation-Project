@@ -32,7 +32,6 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { Add as AddIcon } from '@mui/icons-material';
 import categoryService from '../../services/categoryService';
-import categoryTypeService from '../../services/categoryTypeService';
 
 const CategoryManagement = () => {
   const [categories, setCategories] = useState([]);
@@ -47,28 +46,21 @@ const CategoryManagement = () => {
   const [error, setError] = useState(null);
   const [page, setPage] = useState(1);
   const rowsPerPage = 10;
-  const [categoryTypes, setCategoryTypes] = useState([]);
 
   // Thêm state mới cho form
   const [formData, setFormData] = useState({
-    categoryTypeId: '',
+    type: '',
     code: '',
     name: '',
     description: ''
   });
   const [formErrors, setFormErrors] = useState({});
 
-  // Thêm hàm helper để lấy tên loại danh mục
-  const getCategoryTypeName = (categoryTypeId) => {
-    const categoryType = categoryTypes.find(type => type.id === categoryTypeId);
-    return categoryType ? categoryType.name : 'Không xác định';
-  };
-
   const handleOpenCreateDialog = () => {
     setDialogType('create');
     setSelectedCategory(null);
     setFormData({
-      categoryTypeId: '',
+      type: '',
       code: '',
       name: '',
       description: ''
@@ -81,7 +73,7 @@ const CategoryManagement = () => {
     setDialogType('edit');
     setSelectedCategory(category);
     setFormData({
-      categoryTypeId: category.categoryTypeId,
+      type: category.type,
       code: category.code,
       name: category.name,
       description: category.description
@@ -99,7 +91,7 @@ const CategoryManagement = () => {
     setOpenDialog(false);
     setSelectedCategory(null);
     setFormData({
-      categoryTypeId: '',
+      type: '',
       code: '',
       name: '',
       description: ''
@@ -112,24 +104,15 @@ const CategoryManagement = () => {
     setSelectedCategory(null);
   };
 
-  const handleDelete = async () => {
-    setLoading(true);
-    try {
-      await categoryService.deleteCategory(selectedCategory.id);
-      
-      // Refresh danh sách sau khi xóa
-      await fetchCategories();
-      handleCloseDeleteDialog();
-    } catch (err) {
-      setError('Có lỗi xảy ra khi xóa danh mục: ' + (err.response?.data?.message || err.message));
-    } finally {
-      setLoading(false);
-    }
+  const handleDelete = () => {
+    // Thực hiện xóa danh mục
+    setOpenDeleteDialog(false);
+    setSelectedCategory(null);
   };
 
   const validateForm = () => {
     const errors = {};
-    if (!formData.categoryTypeId) errors.categoryTypeId = 'Vui lòng chọn loại danh mục';
+    if (!formData.type) errors.type = 'Vui lòng chọn loại danh mục';
     if (!formData.code) errors.code = 'Vui lòng nhập mã danh mục';
     if (!formData.name) errors.name = 'Vui lòng nhập tên danh mục';
     
@@ -142,22 +125,16 @@ const CategoryManagement = () => {
 
     setLoading(true);
     try {
-      const submitData = {
-        ...formData,
-        status: dialogType === 'create' ? 1 : selectedCategory.status // 1 là trạng thái active
-      };
-
-      if (dialogType === 'create') {
-        await categoryService.createCategory(submitData);
-      } else {
-        await categoryService.updateCategory(selectedCategory.id, submitData);
-      }
+      // TODO: Thêm API call để lưu danh mục
+      console.log('Submitting form data:', formData);
       
-      // Refresh danh sách sau khi thêm/sửa
-      await fetchCategories();
+      // Giả lập API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
       handleCloseDialog();
+      // TODO: Refresh danh sách danh mục
     } catch (err) {
-      setError('Có lỗi xảy ra khi lưu danh mục: ' + (err.response?.data?.message || err.message));
+      setError('Có lỗi xảy ra khi lưu danh mục. Vui lòng thử lại.');
     } finally {
       setLoading(false);
     }
@@ -174,19 +151,6 @@ const CategoryManagement = () => {
         ...prev,
         [field]: undefined
       }));
-    }
-  };
-
-  const handleChangeStatus = async (category) => {
-    setLoading(true);
-    try {
-      await categoryService.changeStatus(category.id);
-      // Refresh danh sách sau khi thay đổi trạng thái
-      await fetchCategories();
-    } catch (err) {
-      setError('Có lỗi xảy ra khi thay đổi trạng thái: ' + (err.response?.data?.message || err.message));
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -209,19 +173,8 @@ const CategoryManagement = () => {
     }
   };
 
-  const fetchCategoryTypes = async () => {
-    try {
-      const response = await categoryTypeService.getAllCategoryTypes();
-      setCategoryTypes(response.data || []);
-    } catch (err) {
-      console.error('Lỗi khi lấy danh sách loại danh mục:', err);
-      setError('Không thể tải danh sách loại danh mục');
-    }
-  };
-
   useEffect(() => {
     fetchCategories();
-    fetchCategoryTypes();
     // eslint-disable-next-line
   }, [searchTerm, categoryType, page]);
 
@@ -278,11 +231,8 @@ const CategoryManagement = () => {
               onChange={(e) => setCategoryType(e.target.value)}
             >
               <MenuItem value="all">Tất cả</MenuItem>
-              {categoryTypes.map((type) => (
-                <MenuItem key={type.id} value={type.id}>
-                  {type.name}
-                </MenuItem>
-              ))}
+              <MenuItem value="task_type">Loại công việc</MenuItem>
+              <MenuItem value="department_type">Loại phòng ban</MenuItem>
             </Select>
           </FormControl>
 
@@ -367,10 +317,10 @@ const CategoryManagement = () => {
                     <TableCell>{row.name}</TableCell>
                     <TableCell>
                       <Chip 
-                        label={getCategoryTypeName(row.categoryTypeId)}
+                        label={row.type === 'task_type' ? 'Loại công việc' : 'Loại phòng ban'} 
                         size="small"
                         sx={{ 
-                          backgroundColor: '#1976d2',
+                          backgroundColor: row.type === 'task_type' ? '#1976d2' : '#9c27b0',
                           color: '#fff'
                         }}
                       />
@@ -389,11 +339,9 @@ const CategoryManagement = () => {
                         size="small"
                         color="error"
                         onClick={() => handleOpenDeleteDialog(row)}
-                        sx={{ mr: 1 }}
                       >
                         <DeleteIcon />
                       </IconButton>
-                     
                     </TableCell>
                   </TableRow>
                 ))
@@ -444,22 +392,19 @@ const CategoryManagement = () => {
         <DialogContent sx={{ pt: 3 }}>
           <Grid container spacing={2}>
             <Grid item xs={12}>
-              <FormControl fullWidth size="small" error={!!formErrors.categoryTypeId}>
+              <FormControl fullWidth size="small" error={!!formErrors.type}>
                 <InputLabel>Loại danh mục</InputLabel>
                 <Select
                   label="Loại danh mục"
-                  value={formData.categoryTypeId}
-                  onChange={handleInputChange('categoryTypeId')}
+                  value={formData.type}
+                  onChange={handleInputChange('type')}
                 >
-                  {categoryTypes.map((type) => (
-                    <MenuItem key={type.id} value={type.id}>
-                      {type.name}
-                    </MenuItem>
-                  ))}
+                  <MenuItem value="task_type">Loại công việc</MenuItem>
+                  <MenuItem value="department_type">Loại phòng ban</MenuItem>
                 </Select>
-                {formErrors.categoryTypeId && (
+                {formErrors.type && (
                   <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
-                    {formErrors.categoryTypeId}
+                    {formErrors.type}
                   </Typography>
                 )}
               </FormControl>

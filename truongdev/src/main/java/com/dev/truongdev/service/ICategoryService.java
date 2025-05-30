@@ -6,4 +6,8 @@ import com.dev.truongdev.xdevbase.service.IXDevBaseService;
 import com.dev.truongdev.dto.CategoryDTO;
 
 public interface ICategoryService extends IXDevBaseService<Category, CategoryFilter> {
+  
+    CategoryDTO getCategoryById(Long id);
+
+    CategoryDTO updateCategory(Long id, CategoryDTO categoryDTO);
 } 

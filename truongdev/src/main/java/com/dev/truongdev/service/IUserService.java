@@ -14,8 +14,6 @@ public interface IUserService extends IXDevBaseService<User, UserFilter> {
 
   List<User> listUserDep(String uid);
 
-  List<User> listUserByDep(String uid, Long departmentId);
-
   List<User> listUserChildDep(String uid);
 
   List<User> listUserParentDep(String uid);

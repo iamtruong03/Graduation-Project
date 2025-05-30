@@ -64,13 +64,5 @@ public interface ProjectRepo extends XDevBaseRepo<Project> {
     boolean existsByManagerIdAndState(String managerId, Integer state);
 
     // Check if user is responsible for active projects
-    @Query("SELECT CASE WHEN COUNT(p) > 0 THEN true ELSE false END FROM Project p " +
-           "WHERE p.state = :state AND :userId IN (SELECT r FROM p.responsibleIds r)")
-    boolean existsByResponsibleIdsContainingAndState(@Param("userId") String userId, @Param("state") Integer state);
-
-    List<Project> findByStatus(Integer status);
-
-    List<Project> findByStatusAndDepartmentIdIn(
-        Integer status, List<Long> departmentIds
-    );
+    boolean existsByResponsibleIdsContainingAndState(String userId, Integer state);
 }

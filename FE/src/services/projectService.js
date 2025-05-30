@@ -38,12 +38,12 @@ const projectService = {
       approverIds,
       getAuthHeader()
     );
-    return response;
+    return response.data;
   },
 
   // Phê duyệt dự án
   approveProject: (id, approverId) => {
-    return api.post(`/api/projects/${id}/approve`, { approverId }, getAuthHeader());
+    return api.put(`/api/projects/${id}/approve`, { approverId }, getAuthHeader());
   },
 
   // Cập nhật trạng thái dự án
@@ -86,13 +86,8 @@ const projectService = {
   },
 
   // Xóa dự án
-  deleteProject: async (id) => {
-    try {
-      const response = await api.post(`/api/projects/change-status/${id}`, null, getAuthHeader());
-      return response;
-    } catch (error) {
-      throw error;
-    }
+  deleteProject: (id) => {
+    return api.delete(`/api/projects/${id}`, getAuthHeader());
   },
 
   // Upload tài liệu đính kèm
@@ -111,7 +106,7 @@ const projectService = {
         }
       }
     );
-    return response;
+    return response.data;
   },
 
   // Download tài liệu đính kèm
@@ -123,18 +118,14 @@ const projectService = {
         responseType: 'blob'
       }
     );
-    return response;
+    return response.data;
   },
 
   // Xuất dữ liệu dự án
-  exportProjects: (filter) => {
+  exportProjects: () => {
     return api.get('/api/projects/export', {
       ...getAuthHeader(),
-      responseType: 'blob',
-      params: filter,
-      headers: {
-        'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-      }
+      responseType: 'blob'
     });
   },
 
@@ -166,30 +157,6 @@ const projectService = {
         search: params.search || ''
       }
     });
-  },
-
-  // Cập nhật thông tin dự án
-  updateProject: async (id, projectData) => {
-    try {
-      const response = await api.put(
-        `/api/projects/${id}/update`,
-        projectData,
-        getAuthHeader()
-      );
-      return response;
-    } catch (error) {
-      throw error;
-    }
-  },
-
-  // Lấy danh sách dự án theo phân quyền
-  getProjectList: async () => {
-    try {
-      const response = await api.get('/api/projects/list', getAuthHeader());
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
   }
 };
 

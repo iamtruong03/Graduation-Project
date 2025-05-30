@@ -29,8 +29,6 @@ import {
   Breadcrumbs,
   Link,
   Tooltip,
-  Snackbar,
-  Alert,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -41,13 +39,8 @@ import {
   Folder as FolderIcon,
   Description as FileIcon,
   Search as SearchIcon,
-  Visibility as VisibilityIcon,
-  Close as CloseIcon,
 } from '@mui/icons-material';
 import documentService from '../services/documentService';
-import departmentService from '../services/departmentService';
-import projectService from '../services/projectService';
-import staffService from '../services/staffService';
 
 const DocumentManagement = () => {
   const [documents, setDocuments] = useState([]);
@@ -63,41 +56,6 @@ const DocumentManagement = () => {
   const rowsPerPage = 10;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [uploadForm, setUploadForm] = useState({
-    name: '',
-    code: '',
-    documentTypeId: '',
-    departmentId: '',
-    file: null
-  });
-  const [departments, setDepartments] = useState([]);
-  const [documentTypes] = useState([
-    { id: 1, name: 'Quy định' },
-    { id: 2, name: 'Dự án' },
-    { id: 3, name: 'Báo cáo' }
-  ]);
-  const [openViewDialog, setOpenViewDialog] = useState(false);
-  const [selectedDocumentDetail, setSelectedDocumentDetail] = useState(null);
-  const [projects, setProjects] = useState([]);
-  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
-  const [documentToDelete, setDocumentToDelete] = useState(null);
-  const [openEditDialog, setOpenEditDialog] = useState(false);
-  const [editForm, setEditForm] = useState({
-    name: '',
-    code: '',
-    documentTypeId: '',
-    departmentId: '',
-    description: '',
-    status: 1,
-    filePath: ''
-  });
-  const [isEditing, setIsEditing] = useState(false);
-  const [userNames, setUserNames] = useState({});
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: '',
-    severity: 'success'
-  });
 
   const fetchDocuments = async () => {
     setLoading(true);
@@ -113,7 +71,6 @@ const DocumentManagement = () => {
       setTotalPages(response.data.totalPages);
     } catch (err) {
       setError('Không thể tải danh sách tài liệu');
-      console.error('Error fetching documents:', err);
     } finally {
       setLoading(false);
     }
@@ -121,30 +78,8 @@ const DocumentManagement = () => {
 
   useEffect(() => {
     fetchDocuments();
-    fetchDepartments();
-    fetchProjects();
     // eslint-disable-next-line
   }, [searchTerm, selectedCategory, selectedDepartment, page]);
-
-  const fetchDepartments = async () => {
-    try {
-      const response = await departmentService.getAll();
-      setDepartments(response.data);
-    } catch (err) {
-      console.error('Error fetching departments:', err);
-      setError('Không thể tải danh sách phòng ban');
-    }
-  };
-
-  const fetchProjects = async () => {
-    try {
-      const response = await projectService.getProjectList();
-      setProjects(response);
-    } catch (err) {
-      console.error('Error fetching projects:', err);
-      setError('Không thể tải danh sách dự án');
-    }
-  };
 
   const handleSearch = (event) => {
     setSearchTerm(event.target.value);
@@ -158,144 +93,8 @@ const DocumentManagement = () => {
     setSelectedDepartment(event.target.value);
   };
 
-  const handleUpload = async () => {
-    try {
-      setLoading(true);
-      const response = await documentService.uploadDocument(uploadForm.file, {
-        name: uploadForm.name,
-        code: uploadForm.code,
-        documentTypeId: uploadForm.documentTypeId,
-        departmentId: uploadForm.departmentId
-      });
-      
-      if (response.status === 200) {
-        setOpenUploadDialog(false);
-        setUploadForm({
-          name: '',
-          code: '',
-          documentTypeId: '',
-          departmentId: '',
-          file: null
-        });
-        setSnackbar({
-          open: true,
-          message: 'Tải lên tài liệu thành công',
-          severity: 'success'
-        });
-        fetchDocuments(); // Refresh danh sách
-      }
-    } catch (err) {
-      setError('Không thể tải lên tài liệu');
-      console.error('Error uploading document:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDownload = async (documentId) => {
-    try {
-      setLoading(true);
-      const response = await documentService.downloadDocument(documentId);
-      
-      // Kiểm tra response
-      if (!response) {
-        throw new Error('Không có phản hồi từ server');
-      }
-
-      // Kiểm tra nếu response là error message
-      if (response.data && typeof response.data === 'object' && response.data.message) {
-        setError(response.data.message);
-        return;
-      }
-
-      // Tạo blob từ response data với type là octet-stream
-      const blob = new Blob([response.data], { 
-        type: 'application/octet-stream'
-      });
-
-      // Kiểm tra kích thước blob
-      if (blob.size === 0) {
-        throw new Error('File tải về trống');
-      }
-
-      // Tạo URL từ blob
-      const url = window.URL.createObjectURL(blob);
-
-      // Tạo link tải xuống
-      const link = document.createElement('a');
-      link.href = url;
-
-      // Lấy tên file từ selectedDocumentDetail hoặc sử dụng tên mặc định
-      const filename = selectedDocumentDetail?.name || 'document.pdf';
-      link.setAttribute('download', filename);
-      
-      // Thêm link vào DOM và click
-      document.body.appendChild(link);
-      link.click();
-
-      // Cleanup
-      window.URL.revokeObjectURL(url);
-      link.remove();
-    } catch (err) {
-      console.error('Error downloading document:', err);
-      if (err.response) {
-        // Xử lý lỗi từ server
-        const errorMessage = err.response.data?.message || 'Lỗi từ server';
-        setError(errorMessage);
-      } else if (err.request) {
-        // Xử lý lỗi không có response
-        setError('Không thể kết nối đến server');
-      } else {
-        // Xử lý lỗi khác
-        setError(err.message || 'Không thể tải xuống tài liệu');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleUpdateDocument = async () => {
-    try {
-      setLoading(true);
-      // Giữ nguyên status và filePath từ dữ liệu gốc
-      const updateData = {
-        ...editForm,
-        status: selectedDocumentDetail.status,
-        filePath: selectedDocumentDetail.filePath
-      };
-      const response = await documentService.updateDocument(selectedDocumentDetail.id, updateData);
-      
-      if (response.status === 200) {
-        // Hiển thị thông báo thành công
-        setError(null);
-        setSnackbar({
-          open: true,
-          message: 'Cập nhật tài liệu thành công',
-          severity: 'success'
-        });
-        // Refresh thông tin tài liệu
-        const updatedDoc = await documentService.getDocumentById(selectedDocumentDetail.id);
-        setSelectedDocumentDetail(updatedDoc.data);
-        fetchDocuments(); // Refresh danh sách
-        setIsEditing(false);
-      }
-    } catch (err) {
-      setError('Không thể cập nhật tài liệu');
-      console.error('Error updating document:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleFileChange = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      setUploadForm(prev => ({
-        ...prev,
-        file,
-        name: file.name // Tự động điền tên file
-      }));
-    }
+  const handleUpload = () => {
+    setOpenUploadDialog(true);
   };
 
   const handleShare = (document) => {
@@ -309,109 +108,6 @@ const DocumentManagement = () => {
 
   const handleBreadcrumbClick = (index) => {
     setCurrentPath(currentPath.slice(0, index + 1));
-  };
-
-  const fetchUserName = async (userId) => {
-    if (!userId || userNames[userId]) return;
-    try {
-      const response = await staffService.getUserById(userId);
-      if (response.data) {
-        setUserNames(prev => ({
-          ...prev,
-          [userId]: response.data.name
-        }));
-      }
-    } catch (err) {
-      console.error('Error fetching user name:', err);
-    }
-  };
-
-  const handleViewDocument = async (document) => {
-    try {
-      setLoading(true);
-      const response = await documentService.getDocumentById(document.id);
-      setSelectedDocumentDetail(response.data);
-      setEditForm({
-        name: response.data.name,
-        code: response.data.code,
-        documentTypeId: response.data.documentTypeId,
-        departmentId: response.data.departmentId,
-        description: response.data.description,
-        status: response.data.status,
-        filePath: response.data.filePath
-      });
-      
-      if (response.data.createBy) {
-        fetchUserName(response.data.createBy);
-      }
-      if (response.data.updateBy) {
-        fetchUserName(response.data.updateBy);
-      }
-      
-      setOpenViewDialog(true);
-    } catch (err) {
-      setError('Không thể tải thông tin tài liệu');
-      console.error('Error fetching document details:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDelete = async (documentId) => {
-    try {
-      setLoading(true);
-      const response = await documentService.deleteDocument(documentId);
-      
-      if (response.status === 200) {
-        setOpenDeleteDialog(false);
-        setDocumentToDelete(null);
-        setSnackbar({
-          open: true,
-          message: 'Xóa tài liệu thành công',
-          severity: 'success'
-        });
-        fetchDocuments(); // Refresh danh sách sau khi xóa
-      }
-    } catch (err) {
-      setError('Không thể xóa tài liệu');
-      console.error('Error deleting document:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDeleteClick = (document) => {
-    setDocumentToDelete(document);
-    setOpenDeleteDialog(true);
-  };
-
-  const handleEditClick = (document) => {
-    setEditForm({
-      name: document.name,
-      code: document.code,
-      documentTypeId: document.documentTypeId,
-      departmentId: document.departmentId
-    });
-    setSelectedDocument(document);
-    setOpenEditDialog(true);
-  };
-
-  const handleEdit = async () => {
-    try {
-      setLoading(true);
-      await documentService.updateDocument(selectedDocument.id, editForm);
-      setOpenEditDialog(false);
-      fetchDocuments(); // Refresh danh sách
-    } catch (err) {
-      setError('Không thể cập nhật tài liệu');
-      console.error('Error updating document:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCloseSnackbar = () => {
-    setSnackbar(prev => ({ ...prev, open: false }));
   };
 
   return (
@@ -443,11 +139,9 @@ const DocumentManagement = () => {
                 onChange={handleCategoryChange}
               >
                 <MenuItem value="">Tất cả</MenuItem>
-                {documentTypes.map(type => (
-                  <MenuItem key={type.id} value={type.id}>
-                    {type.name}
-                  </MenuItem>
-                ))}
+                <MenuItem value="Quy định">Quy định</MenuItem>
+                <MenuItem value="Dự án">Dự án</MenuItem>
+                <MenuItem value="Báo cáo">Báo cáo</MenuItem>
               </Select>
             </FormControl>
           </Grid>
@@ -460,11 +154,9 @@ const DocumentManagement = () => {
                 onChange={handleDepartmentChange}
               >
                 <MenuItem value="">Tất cả</MenuItem>
-                {departments.map(dept => (
-                  <MenuItem key={dept.id} value={dept.id}>
-                    {dept.name}
-                  </MenuItem>
-                ))}
+                <MenuItem value="Phòng Nhân sự">Phòng Nhân sự</MenuItem>
+                <MenuItem value="Phòng Kỹ thuật">Phòng Kỹ thuật</MenuItem>
+                <MenuItem value="Phòng Kế toán">Phòng Kế toán</MenuItem>
               </Select>
             </FormControl>
           </Grid>
@@ -473,7 +165,7 @@ const DocumentManagement = () => {
               fullWidth
               variant="contained"
               startIcon={<AddIcon />}
-              onClick={() => setOpenUploadDialog(true)}
+              onClick={handleUpload}
             >
               Tải lên
             </Button>
@@ -513,7 +205,7 @@ const DocumentManagement = () => {
             <React.Fragment key={doc.id}>
               <ListItem
                 button={doc.type === 'folder'}
-                onClick={() => doc.type === 'folder' ? handleNavigate(doc) : handleViewDocument(doc)}
+                onClick={() => doc.type === 'folder' && handleNavigate(doc)}
               >
                 <ListItemIcon>
                   {doc.type === 'folder' ? <FolderIcon color="primary" /> : <FileIcon />}
@@ -529,27 +221,21 @@ const DocumentManagement = () => {
                 <ListItemSecondaryAction>
                   <Stack direction="row" spacing={1}>
                     {doc.type !== 'folder' && (
+                      <>
                         <Tooltip title="Tải xuống">
-                        <IconButton 
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDownload(doc.id);
-                          }}
-                        >
+                          <IconButton size="small">
                             <DownloadIcon />
                           </IconButton>
                         </Tooltip>
+                        <Tooltip title="Chia sẻ">
+                          <IconButton size="small" onClick={() => handleShare(doc)}>
+                            <ShareIcon />
+                          </IconButton>
+                        </Tooltip>
+                      </>
                     )}
                     <Tooltip title="Xóa">
-                      <IconButton 
-                        size="small" 
-                        color="error"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteClick(doc);
-                        }}
-                      >
+                      <IconButton size="small" color="error">
                         <DeleteIcon />
                       </IconButton>
                     </Tooltip>
@@ -579,61 +265,30 @@ const DocumentManagement = () => {
                 fullWidth
                 sx={{ height: 100 }}
               >
-                {uploadForm.file ? uploadForm.file.name : 'Chọn tệp để tải lên'}
-                <input 
-                  type="file" 
-                  hidden 
-                  onChange={handleFileChange}
-                />
+                Chọn tệp để tải lên
+                <input type="file" hidden />
               </Button>
             </Grid>
             <Grid item xs={12}>
-              <TextField 
-                fullWidth 
-                label="Mã tài liệu"
-                value={uploadForm.code}
-                onChange={(e) => setUploadForm(prev => ({ ...prev, code: e.target.value }))}
-                required
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField 
-                fullWidth 
-                label="Tên tài liệu"
-                value={uploadForm.name}
-                onChange={(e) => setUploadForm(prev => ({ ...prev, name: e.target.value }))}
-                required
-              />
+              <TextField fullWidth label="Tên tài liệu" />
             </Grid>
             <Grid item xs={12}>
               <FormControl fullWidth>
                 <InputLabel>Phân loại</InputLabel>
-                <Select 
-                  label="Phân loại"
-                  value={uploadForm.documentTypeId}
-                  onChange={(e) => setUploadForm(prev => ({ ...prev, documentTypeId: e.target.value }))}
-                >
-                  {documentTypes.map(type => (
-                    <MenuItem key={type.id} value={type.id}>
-                      {type.name}
-                    </MenuItem>
-                  ))}
+                <Select label="Phân loại">
+                  <MenuItem value="Quy định">Quy định</MenuItem>
+                  <MenuItem value="Dự án">Dự án</MenuItem>
+                  <MenuItem value="Báo cáo">Báo cáo</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
             <Grid item xs={12}>
               <FormControl fullWidth>
                 <InputLabel>Phòng ban</InputLabel>
-                <Select 
-                  label="Phòng ban"
-                  value={uploadForm.departmentId}
-                  onChange={(e) => setUploadForm(prev => ({ ...prev, departmentId: e.target.value }))}
-                >
-                  {departments.map(dept => (
-                    <MenuItem key={dept.id} value={dept.id}>
-                      {dept.name}
-                    </MenuItem>
-                  ))}
+                <Select label="Phòng ban">
+                  <MenuItem value="Phòng Nhân sự">Phòng Nhân sự</MenuItem>
+                  <MenuItem value="Phòng Kỹ thuật">Phòng Kỹ thuật</MenuItem>
+                  <MenuItem value="Phòng Kế toán">Phòng Kế toán</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -641,367 +296,40 @@ const DocumentManagement = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenUploadDialog(false)}>Hủy</Button>
-          <Button 
-            variant="contained" 
-            onClick={handleUpload}
-            disabled={!uploadForm.file || !uploadForm.name || !uploadForm.documentTypeId || !uploadForm.departmentId || loading}
-          >
-            {loading ? 'Đang tải lên...' : 'Tải lên'}
-          </Button>
+          <Button variant="contained">Tải lên</Button>
         </DialogActions>
       </Dialog>
 
-      {/* Dialog xem chi tiết tài liệu */}
+      {/* Dialog chia sẻ tài liệu */}
       <Dialog
-        open={openViewDialog}
-        onClose={() => {
-          setOpenViewDialog(false);
-          setIsEditing(false);
-        }}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>
-          <Box display="flex" alignItems="center" justifyContent="space-between">
-            <Typography variant="h6">Chi tiết tài liệu</Typography>
-            <Box>
-              {!isEditing && (
-                <Button
-                  variant="outlined"
-                  startIcon={<EditIcon />}
-                  onClick={() => setIsEditing(true)}
-                  sx={{ mr: 1 }}
-                >
-                  Chỉnh sửa
-                </Button>
-              )}
-              <IconButton onClick={() => {
-                setOpenViewDialog(false);
-                setIsEditing(false);
-              }} size="small">
-                <CloseIcon />
-              </IconButton>
-            </Box>
-          </Box>
-        </DialogTitle>
-        <DialogContent>
-          {selectedDocumentDetail && (
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid item xs={12}>
-                <Box sx={{ p: 2, bgcolor: '#f5f5f5', borderRadius: 1 }}>
-                  {isEditing ? (
-                    <Grid container spacing={2}>
-                      <Grid item xs={12} sm={6}>
-                        <TextField
-                          fullWidth
-                          label="Mã tài liệu"
-                          value={editForm.code}
-                          onChange={(e) => setEditForm(prev => ({ ...prev, code: e.target.value }))}
-                          required
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <TextField
-                          fullWidth
-                          label="Tên tài liệu"
-                          value={editForm.name}
-                          onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
-                          required
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <FormControl fullWidth>
-                          <InputLabel>Phân loại</InputLabel>
-                          <Select
-                            label="Phân loại"
-                            value={editForm.documentTypeId}
-                            onChange={(e) => setEditForm(prev => ({ ...prev, documentTypeId: e.target.value }))}
-                          >
-                            {documentTypes.map(type => (
-                              <MenuItem key={type.id} value={type.id}>
-                                {type.name}
-                              </MenuItem>
-                            ))}
-                          </Select>
-                        </FormControl>
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <FormControl fullWidth>
-                          <InputLabel>Phòng ban</InputLabel>
-                          <Select
-                            label="Phòng ban"
-                            value={editForm.departmentId}
-                            onChange={(e) => setEditForm(prev => ({ ...prev, departmentId: e.target.value }))}
-                          >
-                            {departments.map(dept => (
-                              <MenuItem key={dept.id} value={dept.id}>
-                                {dept.name}
-                              </MenuItem>
-                            ))}
-                          </Select>
-                        </FormControl>
-                      </Grid>
-                      <Grid item xs={12}>
-                        <TextField
-                          fullWidth
-                          label="Mô tả"
-                          multiline
-                          rows={4}
-                          value={editForm.description}
-                          onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
-                        />
-                      </Grid>
-                    </Grid>
-                  ) : (
-                    <Grid container spacing={2}>
-                      <Grid item xs={12} sm={6}>
-                        <Typography variant="subtitle2" color="text.secondary">
-                          Mã tài liệu
-                        </Typography>
-                        <Typography variant="body1">
-                          {selectedDocumentDetail.code || 'N/A'}
-                        </Typography>
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <Typography variant="subtitle2" color="text.secondary">
-                          Tên tài liệu
-                        </Typography>
-                        <Typography variant="body1">
-                          {selectedDocumentDetail.name}
-                        </Typography>
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <Typography variant="subtitle2" color="text.secondary">
-                          Loại tài liệu
-                        </Typography>
-                        <Typography variant="body1">
-                          {documentTypes.find(type => type.id === selectedDocumentDetail.documentTypeId)?.name || 'N/A'}
-                        </Typography>
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <Typography variant="subtitle2" color="text.secondary">
-                          Phòng ban
-                        </Typography>
-                        <Typography variant="body1">
-                          {departments.find(dept => dept.id === selectedDocumentDetail.departmentId)?.name || 'N/A'}
-                        </Typography>
-                      </Grid>
-                      <Grid item xs={12}>
-                        <Typography variant="subtitle2" color="text.secondary">
-                          Mô tả
-                        </Typography>
-                        <Typography variant="body1">
-                          {selectedDocumentDetail.description || 'Không có mô tả'}
-                        </Typography>
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <Typography variant="subtitle2" color="text.secondary">
-                          Dự án
-                        </Typography>
-                        <Typography variant="body1">
-                          {selectedDocumentDetail.projectId ? 
-                            projects.find(project => project.id === selectedDocumentDetail.projectId)?.name || 'N/A' 
-                            : 'N/A'}
-                        </Typography>
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <Typography variant="subtitle2" color="text.secondary">
-                          Người tạo
-                        </Typography>
-                        <Typography variant="body1">
-                          {userNames[selectedDocumentDetail.createBy] || 'Đang tải...'}
-                        </Typography>
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <Typography variant="subtitle2" color="text.secondary">
-                          Ngày tạo
-                        </Typography>
-                        <Typography variant="body1">
-                          {selectedDocumentDetail.createDate ? new Date(selectedDocumentDetail.createDate).toLocaleString('vi-VN') : 'N/A'}
-                        </Typography>
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <Typography variant="subtitle2" color="text.secondary">
-                          Người cập nhật
-                        </Typography>
-                        <Typography variant="body1">
-                          {userNames[selectedDocumentDetail.updateBy] || 'Đang tải...'}
-                        </Typography>
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <Typography variant="subtitle2" color="text.secondary">
-                          Ngày cập nhật
-                        </Typography>
-                        <Typography variant="body1">
-                          {selectedDocumentDetail.modifiedDate ? new Date(selectedDocumentDetail.modifiedDate).toLocaleString('vi-VN') : 'N/A'}
-                        </Typography>
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <Typography variant="subtitle2" color="text.secondary">
-                          Phiên bản
-                        </Typography>
-                        <Typography variant="body1">
-                          {selectedDocumentDetail.version || '0'}
-                        </Typography>
-                      </Grid>
-                    </Grid>
-                  )}
-                </Box>
-              </Grid>
-            </Grid>
-          )}
-        </DialogContent>
-        <DialogActions>
-          {isEditing ? (
-            <>
-              <Button 
-                onClick={() => {
-                  setIsEditing(false);
-                  setEditForm({
-                    name: selectedDocumentDetail.name,
-                    code: selectedDocumentDetail.code,
-                    documentTypeId: selectedDocumentDetail.documentTypeId,
-                    departmentId: selectedDocumentDetail.departmentId,
-                    description: selectedDocumentDetail.description,
-                    status: selectedDocumentDetail.status,
-                    filePath: selectedDocumentDetail.filePath
-                  });
-                }}
-              >
-                Hủy
-              </Button>
-              <Button 
-                variant="contained" 
-                onClick={handleUpdateDocument}
-                disabled={loading || !editForm.name || !editForm.code || !editForm.documentTypeId || !editForm.departmentId}
-              >
-                {loading ? 'Đang cập nhật...' : 'Lưu thay đổi'}
-              </Button>
-            </>
-          ) : (
-            <Button 
-              variant="contained" 
-              startIcon={<DownloadIcon />}
-              onClick={() => handleDownload(selectedDocumentDetail?.id)}
-            >
-              Tải xuống
-            </Button>
-          )}
-        </DialogActions>
-      </Dialog>
-
-      <Dialog
-        open={openDeleteDialog}
-        onClose={() => setOpenDeleteDialog(false)}
+        open={openShareDialog}
+        onClose={() => setOpenShareDialog(false)}
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>Xác nhận xóa</DialogTitle>
+        <DialogTitle>Chia sẻ tài liệu</DialogTitle>
         <DialogContent>
-          <Typography>
-            Bạn có chắc chắn muốn xóa tài liệu "{documentToDelete?.name}" không?
+          <Typography variant="subtitle1" gutterBottom>
+            {selectedDocument?.name}
           </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenDeleteDialog(false)}>Hủy</Button>
-          <Button 
-            variant="contained" 
-            color="error" 
-            onClick={() => handleDelete(documentToDelete?.id)}
-            disabled={loading}
-          >
-            {loading ? 'Đang xóa...' : 'Xóa'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      <Dialog
-        open={openEditDialog}
-        onClose={() => setOpenEditDialog(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Sửa tài liệu</DialogTitle>
-        <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={12}>
-              <TextField 
-                fullWidth 
-                label="Mã tài liệu"
-                value={editForm.code}
-                onChange={(e) => setEditForm(prev => ({ ...prev, code: e.target.value }))}
-                required
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField 
-                fullWidth 
-                label="Tên tài liệu"
-                value={editForm.name}
-                onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
-                required
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <FormControl fullWidth>
-                <InputLabel>Phân loại</InputLabel>
-                <Select 
-                  label="Phân loại"
-                  value={editForm.documentTypeId}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, documentTypeId: e.target.value }))}
-                >
-                  {documentTypes.map(type => (
-                    <MenuItem key={type.id} value={type.id}>
-                      {type.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12}>
-              <FormControl fullWidth>
-                <InputLabel>Phòng ban</InputLabel>
+          <FormControl fullWidth sx={{ mt: 2 }}>
+            <InputLabel>Chia sẻ với</InputLabel>
             <Select
-                  label="Phòng ban"
-                  value={editForm.departmentId}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, departmentId: e.target.value }))}
-                >
-                  {departments.map(dept => (
-                    <MenuItem key={dept.id} value={dept.id}>
-                      {dept.name}
-                    </MenuItem>
-                  ))}
+              multiple
+              label="Chia sẻ với"
+              value={[]}
+            >
+              <MenuItem value="Phòng Nhân sự">Phòng Nhân sự</MenuItem>
+              <MenuItem value="Phòng Kỹ thuật">Phòng Kỹ thuật</MenuItem>
+              <MenuItem value="Phòng Kế toán">Phòng Kế toán</MenuItem>
             </Select>
           </FormControl>
-            </Grid>
-          </Grid>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenEditDialog(false)}>Hủy</Button>
-          <Button 
-            variant="contained" 
-            onClick={handleEdit}
-            disabled={loading || !editForm.name || !editForm.code || !editForm.documentTypeId || !editForm.departmentId}
-          >
-            {loading ? 'Đang cập nhật...' : 'Cập nhật'}
-          </Button>
+          <Button onClick={() => setOpenShareDialog(false)}>Hủy</Button>
+          <Button variant="contained">Chia sẻ</Button>
         </DialogActions>
       </Dialog>
-
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-      >
-        <Alert 
-          onClose={handleCloseSnackbar} 
-          severity={snackbar.severity}
-          sx={{ width: '100%' }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 };

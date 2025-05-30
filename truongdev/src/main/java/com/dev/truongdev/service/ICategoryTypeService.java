@@ -7,5 +7,9 @@ import com.dev.truongdev.dto.CategoryTypeDTO;
 
 public interface ICategoryTypeService extends IXDevBaseService<CategoryType, CategoryTypeFilter> {
 
+    CategoryTypeDTO getCategoryTypeById(Long id);
+
+    CategoryTypeDTO updateCategoryType(Long id, CategoryTypeDTO categoryTypeDTO);
+
 }
  

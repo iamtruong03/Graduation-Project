@@ -6,19 +6,17 @@ class ChatService {
   constructor() {
     this.stompClient = null;
     this.messageHandlers = new Set();
-    this.typingHandlers = new Set();
-    this.readReceiptHandlers = new Set();
-    this.userStatusHandlers = new Set();
-    this.errorHandlers = new Set();
-    this.isConnected = false;
+    this.onlineUsersHandlers = new Set();
+    this.departmentMessageHandlers = new Set();
+    this.companyMessageHandlers = new Set();
   }
 
   connect() {
     const socket = new SockJS('http://localhost:8080/ws');
     this.stompClient = Stomp.over(() => socket);
     this.stompClient.reconnect_delay = 5000;
-    this.stompClient.heartbeat.outgoing = 20000;
-    this.stompClient.heartbeat.incoming = 20000;
+    this.stompClient.heartbeat.outgoing = 20000; // 20 seconds
+    this.stompClient.heartbeat.incoming = 20000; // 20 seconds
 
     return new Promise((resolve, reject) => {
       const token = localStorage.getItem('token');
@@ -34,13 +32,11 @@ class ChatService {
       this.stompClient.connect(headers, 
         () => {
           console.log('WebSocket kết nối thành công');
-          this.isConnected = true;
           this.subscribeToTopics();
           resolve();
         },
         (error) => {
           console.error('Lỗi kết nối WebSocket:', error);
-          this.isConnected = false;
           reject(error);
           setTimeout(() => this.connect(), 5000);
         }
@@ -49,252 +45,136 @@ class ChatService {
   }
 
   subscribeToTopics() {
-    if (!this.stompClient || !this.isConnected) return;
-
-    // Subscribe to personal messages
+    // Đăng ký nhận tin nhắn cá nhân
     this.stompClient.subscribe('/user/queue/messages', (message) => {
       const messageData = JSON.parse(message.body);
-      console.log('Received message:', messageData);
       this.messageHandlers.forEach(handler => handler(messageData));
     });
 
-    // Subscribe to typing notifications
-    this.stompClient.subscribe('/user/queue/typing', (message) => {
-      const typingData = JSON.parse(message.body);
-      console.log('Received typing notification:', typingData);
-      this.typingHandlers.forEach(handler => handler(typingData));
+    // Đăng ký nhận cập nhật danh sách người dùng trực tuyến
+    this.stompClient.subscribe('/topic/online-users', (message) => {
+      const users = JSON.parse(message.body);
+      this.onlineUsersHandlers.forEach(handler => handler(users));
     });
 
-    // Subscribe to read receipts
-    this.stompClient.subscribe('/user/queue/read-receipts', (message) => {
-      const readData = JSON.parse(message.body);
-      console.log('Received read receipt:', readData);
-      this.readReceiptHandlers.forEach(handler => handler(readData));
-    });
+    // Đăng ký nhận tin nhắn phòng ban
+    const departmentId = localStorage.getItem('departmentId');
+    if (departmentId) {
+      this.stompClient.subscribe(`/topic/department/${departmentId}`, (message) => {
+        const messageData = JSON.parse(message.body);
+        this.departmentMessageHandlers.forEach(handler => handler(messageData));
+      });
+    }
 
-    // Subscribe to error messages
-    this.stompClient.subscribe('/user/queue/errors', (message) => {
-      const errorData = JSON.parse(message.body);
-      console.error('Received error:', errorData);
-      this.errorHandlers.forEach(handler => handler(errorData));
-    });
-
-    // Subscribe to public messages (user join/leave)
-    this.stompClient.subscribe('/topic/public', (message) => {
-      const publicData = JSON.parse(message.body);
-      console.log('Received public message:', publicData);
-      this.userStatusHandlers.forEach(handler => handler(publicData));
-    });
+    // Đăng ký nhận tin nhắn toàn công ty
+    const cid = localStorage.getItem('cid');
+    if (cid) {
+      this.stompClient.subscribe(`/topic/company/${cid}`, (message) => {
+        const messageData = JSON.parse(message.body);
+        this.companyMessageHandlers.forEach(handler => handler(messageData));
+      });
+    }
   }
 
   disconnect() {
-    if (this.stompClient && this.isConnected) {
+    if (this.stompClient) {
       this.stompClient.disconnect();
-      this.isConnected = false;
     }
   }
 
-  // Send message via WebSocket
-  sendMessage(receiverId, content, messageType = 'TEXT') {
-    if (!this.stompClient || !this.isConnected) {
-      console.error('WebSocket not connected');
-      return Promise.reject(new Error('WebSocket not connected'));
-    }
-
-    const currentUserId = localStorage.getItem('code');
-    const departmentId = localStorage.getItem('departmentId');
-
-    const message = {
-      senderId: currentUserId,
-      receiverId: receiverId.toString(),
-      content: content,
-      messageType: messageType,
-      departmentId: departmentId ? parseInt(departmentId) : null,
-      timestamp: new Date()
-    };
-
-    console.log('Sending message via WebSocket:', message);
-    this.stompClient.send('/app/chat.sendMessage', {}, JSON.stringify(message));
-    return Promise.resolve();
-  }
-
-  // Send typing notification
-  sendTypingNotification(receiverId) {
-    if (!this.stompClient || !this.isConnected) return;
-
-    const currentUserId = localStorage.getItem('code');
-    const typingData = {
-      senderId: currentUserId,
-      receiverId: receiverId.toString(),
-      action: 'TYPING'
-    };
-
-    console.log('Sending typing notification:', typingData);
-    this.stompClient.send('/app/chat.typing', {}, JSON.stringify(typingData));
-  }
-
-  // Mark messages as read
-  markMessagesAsRead(senderId) {
-    if (!this.stompClient || !this.isConnected) return;
-
-    const currentUserId = localStorage.getItem('code');
-    const readData = {
-      senderId: senderId.toString(),
-      receiverId: currentUserId
-    };
-
-    console.log('Marking messages as read:', readData);
-    this.stompClient.send('/app/chat.markAsRead', {}, JSON.stringify(readData));
-  }
-
-  // Send user status (online/offline)
-  sendUserStatus(status) {
-    if (!this.stompClient || !this.isConnected) return;
-
-    const currentUserId = localStorage.getItem('code');
-    const userName = localStorage.getItem('userName') || 'Unknown User';
-    
-    const statusData = {
-      senderId: currentUserId,
-      senderName: userName,
-      action: status // 'ONLINE' or 'OFFLINE'
-    };
-
-    console.log('Sending user status:', statusData);
-    this.stompClient.send('/app/chat.userStatus', {}, JSON.stringify(statusData));
-  }
-
-  // Join chat (announce user presence)
-  joinChat() {
-    if (!this.stompClient || !this.isConnected) return;
-
-    const currentUserId = localStorage.getItem('code');
-    const userName = localStorage.getItem('userName') || 'Unknown User';
-    
-    const joinData = {
-      senderId: currentUserId,
-      senderName: userName,
-      action: 'JOIN'
-    };
-
-    console.log('Joining chat:', joinData);
-    this.stompClient.send('/app/chat.addUser', {}, JSON.stringify(joinData));
-  }
-
-  // REST API methods for loading data
-
-  // Get conversation with pagination
-  async getConversation(otherUserId, page = 0, size = 20) {
-    try {
-      const response = await api.get(`/api/messages/conversation/${otherUserId}`, {
-        params: { page, size }
+  sendMessage(receiverId, content, type = 'PERSONAL', groupId = null) {
+    if (!this.stompClient || !this.stompClient.connected) {
+      return this.connect().then(() => {
+        this._sendMessage(receiverId, content, type, groupId);
       });
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching conversation:', error);
-      throw error;
     }
+    this._sendMessage(receiverId, content, type, groupId);
   }
 
-  // Get recent conversations
-  async getRecentConversations() {
+  _sendMessage(receiverId, content, type = 'PERSONAL', groupId = null) {
+    const message = {
+      receiverId,
+      content,
+      timestamp: new Date(),
+      type,
+      groupId
+    };
+
+    let destination = '/app/chat';
+    if (type === 'DEPARTMENT') {
+      destination = '/app/chat/department';
+    } else if (type === 'COMPANY') {
+      destination = '/app/chat/company';
+    }
+
+    this.stompClient.send(destination, {}, JSON.stringify(message));
+  }
+
+  // Lấy lịch sử tin nhắn
+  async getMessageHistory(userId) {
     try {
-      const response = await api.get('/api/messages/recent-conversations');
+      const response = await api.get(`/api/messages/history/${userId}`);
       return response.data;
     } catch (error) {
-      console.error('Error fetching recent conversations:', error);
+      console.error('Lỗi khi lấy lịch sử tin nhắn:', error);
       throw error;
     }
   }
 
-  // Get unread messages
+  // Lấy tin nhắn chưa đọc
   async getUnreadMessages() {
     try {
-      const response = await api.get('/api/messages/unread-ws');
+      const response = await api.get('/api/messages/unread');
       return response.data;
     } catch (error) {
-      console.error('Error fetching unread messages:', error);
+      console.error('Lỗi khi lấy tin nhắn chưa đọc:', error);
       throw error;
     }
   }
 
-  // Count unread messages
-  async countUnreadMessages() {
+  // Đánh dấu tin nhắn đã đọc
+  async markMessageAsRead(messageId) {
     try {
-      const response = await api.get('/api/messages/unread/count');
+      await api.put(`/api/messages/${messageId}/read`);
+    } catch (error) {
+      console.error('Lỗi khi đánh dấu tin nhắn đã đọc:', error);
+      throw error;
+    }
+  }
+
+  // Lấy danh sách người dùng chat gần đây
+  async getRecentChatUsers() {
+    try {
+      const response = await api.get('/api/messages/recent-users');
       return response.data;
     } catch (error) {
-      console.error('Error counting unread messages:', error);
+      console.error('Lỗi khi lấy danh sách người dùng chat gần đây:', error);
       throw error;
     }
   }
 
-  // Mark messages as read via REST API
-  async markMessagesAsReadREST(otherUserId) {
-    try {
-      await api.put(`/api/messages/mark-read/${otherUserId}`);
-    } catch (error) {
-      console.error('Error marking messages as read:', error);
-      throw error;
-    }
-  }
-
-  // Delete message
-  async deleteMessage(messageId) {
-    try {
-      await api.delete(`/api/messages/${messageId}`);
-    } catch (error) {
-      console.error('Error deleting message:', error);
-      throw error;
-    }
-  }
-
-  // Get chat room ID
-  async getChatRoomId(otherUserId) {
-    try {
-      const response = await api.get(`/api/messages/room/${otherUserId}`);
-      return response.data;
-    } catch (error) {
-      console.error('Error getting chat room ID:', error);
-      throw error;
-    }
-  }
-
-  // Event listeners
-
-  // Subscribe to new messages
+  // Đăng ký lắng nghe tin nhắn mới
   onMessage(handler) {
     this.messageHandlers.add(handler);
     return () => this.messageHandlers.delete(handler);
   }
 
-  // Subscribe to typing notifications
-  onTyping(handler) {
-    this.typingHandlers.add(handler);
-    return () => this.typingHandlers.delete(handler);
+  // Đăng ký lắng nghe tin nhắn phòng ban
+  onDepartmentMessage(handler) {
+    this.departmentMessageHandlers.add(handler);
+    return () => this.departmentMessageHandlers.delete(handler);
   }
 
-  // Subscribe to read receipts
-  onReadReceipt(handler) {
-    this.readReceiptHandlers.add(handler);
-    return () => this.readReceiptHandlers.delete(handler);
+  // Đăng ký lắng nghe tin nhắn toàn công ty
+  onCompanyMessage(handler) {
+    this.companyMessageHandlers.add(handler);
+    return () => this.companyMessageHandlers.delete(handler);
   }
 
-  // Subscribe to user status changes
-  onUserStatus(handler) {
-    this.userStatusHandlers.add(handler);
-    return () => this.userStatusHandlers.delete(handler);
-  }
-
-  // Subscribe to errors
-  onError(handler) {
-    this.errorHandlers.add(handler);
-    return () => this.errorHandlers.delete(handler);
-  }
-
-  // Check if connected
-  isWebSocketConnected() {
-    return this.isConnected && this.stompClient && this.stompClient.connected;
+  // Đăng ký lắng nghe cập nhật danh sách người dùng trực tuyến
+  onOnlineUsersUpdate(handler) {
+    this.onlineUsersHandlers.add(handler);
+    return () => this.onlineUsersHandlers.delete(handler);
   }
 }
 

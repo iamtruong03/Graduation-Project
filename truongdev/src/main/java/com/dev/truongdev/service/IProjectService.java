@@ -12,9 +12,10 @@ import org.springframework.data.domain.Pageable;
 public interface IProjectService extends IXDevBaseService<Project, ProjectFilter> {
     ProjectDTO createProject(String uid, ProjectDTO projectDTO);
     ProjectDTO submitForApproval(String uid, Long id, List<Long> approverIds);
-    ProjectDTO approveProject(String uid, Long id);
+    ProjectDTO approveProject(String uid, Long id, String approvedBy);
     ProjectDTO updateProjectState(String uid, Long id, Integer newState, String changedBy, String comment);
     void checkAndUpdateProjectCompletion(Long projectId);
+    ProjectDTO getProjectById(Long id);
     ProjectDTO updateProject(Long id, ProjectDTO projectDTO);
     List<ProjectHistoryDTO> getProjectHistory(Long projectId);
     void addProjectHistory(Long projectId, Integer previousState, Integer newState, String changedBy, String comment);

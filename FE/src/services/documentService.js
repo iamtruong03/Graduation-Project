@@ -56,15 +56,64 @@ const documentService = {
   },
 
   // Tải xuống tài liệu
-  downloadDocument: (id) => {
-    return api.get(`/api/documents/${id}/download`, {
-      ...getAuthHeader(),
-      responseType: 'blob',
-      headers: {
-        ...getAuthHeader().headers,
-        'Accept': 'application/octet-stream'
+  downloadDocument: async (id) => {
+    try {
+      // Lấy thông tin tài liệu trước
+      const docInfo = await api.get(`/api/documents/${id}`, getAuthHeader());
+      const document = docInfo.data;
+      
+      if (!document) {
+        throw new Error('Không tìm thấy thông tin tài liệu');
       }
-    });
+
+      // Tải file
+      const response = await api.get(`/api/documents/download/${id}`, {
+        ...getAuthHeader(),
+        responseType: 'blob'
+      });
+
+      if (!response || !response.data) {
+        throw new Error('Không nhận được dữ liệu từ server');
+      }
+
+      // Kiểm tra nếu response là error message (thường có kích thước nhỏ)
+      if (response.data instanceof Blob && response.data.size < 1000) {
+        const reader = new FileReader();
+        const text = await new Promise((resolve) => {
+          reader.onload = () => resolve(reader.result);
+          reader.readAsText(response.data);
+        });
+        try {
+          const error = JSON.parse(text);
+          if (error.error) {
+            throw new Error(error.error);
+          }
+        } catch (e) {
+          // Nếu không parse được JSON, có thể là file thật
+          console.log('Not an error message, proceeding with download');
+        }
+      }
+
+      // Tạo URL từ blob
+      const blob = new Blob([response.data], { type: document.mimeType || 'application/octet-stream' });
+      const url = window.URL.createObjectURL(blob);
+      
+      // Tạo link tải xuống
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = document.name;
+      document.body.appendChild(link);
+      link.click();
+      
+      // Dọn dẹp
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(link);
+      
+      return response;
+    } catch (error) {
+      console.error('Error downloading document:', error);
+      throw error;
+    }
   }
 };
 

@@ -10,25 +10,25 @@ const taskService = {
     // Lấy chi tiết công việc
     getTaskById: async (id) => {
         const response = await api.get(`/api/tasks/${id}`, getAuthHeader());
-        return response.data;
+        return response;
     },
 
     // Lấy lịch sử công việc
     getTaskHistory: async (id) => {
         const response = await api.get(`/api/tasks/${id}/history`, getAuthHeader());
-        return response.data;
+        return response;
     },
 
     // Tạo công việc mới
     createTask: async (taskData) => {
         const response = await api.post('/api/tasks/create', taskData, getAuthHeader());
-        return response.data;
+        return response;
     },
 
     // Cập nhật công việc
     updateTask: async (id, taskData) => {
         const response = await api.put(`/api/tasks/${id}/update`, taskData, getAuthHeader());
-        return response.data;
+        return response;
     },
 
     // Tìm kiếm công việc
@@ -39,19 +39,12 @@ const taskService = {
         });
     },
 
-    // Gửi yêu cầu phê duyệt
-    submitForApproval: async (id, approverIds) => {
-        const response = await api.post(`/api/tasks/${id}/submit-approval`, approverIds, getAuthHeader());
-        return response.data;
-    },
-
     // Phê duyệt công việc
-    approveTask: async (id, approvedBy) => {
+    approveTask: async (id) => {
         const response = await api.post(`/api/tasks/${id}/approve`, null, {
-            ...getAuthHeader(),
-            params: { approvedBy }
+            ...getAuthHeader()
         });
-        return response.data;
+        return response;
     },
 
     // Từ chối công việc
@@ -60,7 +53,7 @@ const taskService = {
             ...getAuthHeader(),
             params: { reason }
         });
-        return response.data;
+        return response;
     },
 
     // Lấy danh sách công việc chờ duyệt
@@ -91,6 +84,16 @@ const taskService = {
     // Thay đổi trạng thái
     changeStatus: (id) => {
         return api.post(`/api/tasks/change-status/${id}`, null, getAuthHeader());
+    },
+
+    // Lấy danh sách task theo projectId
+    getTasksByProjectId: (projectId) => {
+        return api.get(`/api/tasks/project/${projectId}`, getAuthHeader());
+    },
+
+    // Lấy danh sách task theo riskId
+    getTasksByRiskId: (riskId) => {
+        return api.get(`/api/tasks/risk/${riskId}`, getAuthHeader());
     }
 };
 

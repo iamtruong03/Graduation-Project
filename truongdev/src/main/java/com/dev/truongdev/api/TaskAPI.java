@@ -50,13 +50,23 @@ public class TaskAPI extends XDevBaseAPI<Task, TaskFilter> {
         }
     }
 
-    @PostMapping("/{id}/submit-approval")
-    public ResponseEntity<ApiResponse<TaskDTO>> submitForApproval(
-            @RequestAttribute String uid,
-            @PathVariable Long id,
-            @RequestBody List<Long> approverIds) {
+    @GetMapping("/project/{projectId}")
+    public ResponseEntity<ApiResponse<List<Task>>> getTasksByProjectId(
+        @RequestAttribute String uid,
+        @PathVariable Long projectId) {
         try {
-            return ApiResponse.ok(taskService.submitForApproval(uid, id, approverIds));
+            return ApiResponse.ok(taskService.getTasksByProjectId(uid, projectId));
+        } catch (Exception e) {
+            return ApiResponse.error(e.getMessage());
+        }
+    }
+
+    @GetMapping("/risk/{riskId}")
+    public ResponseEntity<ApiResponse<List<Task>>> getTasksByRiskId(
+        @RequestAttribute String uid,
+        @PathVariable Long riskId) {
+        try {
+            return ApiResponse.ok(taskService.getTasksByRiskId(uid, riskId));
         } catch (Exception e) {
             return ApiResponse.error(e.getMessage());
         }
@@ -65,10 +75,9 @@ public class TaskAPI extends XDevBaseAPI<Task, TaskFilter> {
     @PostMapping("/{id}/approve")
     public ResponseEntity<ApiResponse<TaskDTO>> approveTask(
             @RequestAttribute String uid,
-            @PathVariable Long id,
-            @RequestParam String approvedBy) {
+            @PathVariable Long id) {
         try {
-            return ApiResponse.ok(taskService.approveTask(uid, id, approvedBy));
+            return ApiResponse.ok(taskService.approveTask(uid, id));
         } catch (Exception e) {
             return ApiResponse.error(e.getMessage());
         }
@@ -93,7 +102,7 @@ public class TaskAPI extends XDevBaseAPI<Task, TaskFilter> {
             @RequestBody TaskDTO taskDTO) {
         try {
             taskDTO.setUpdateBy(uid);
-            return ApiResponse.ok(taskService.updateTask(id, taskDTO));
+            return ApiResponse.ok(taskService.updateTask(uid, id, taskDTO));
         } catch (Exception e) {
             return ApiResponse.error(e.getMessage());
         }

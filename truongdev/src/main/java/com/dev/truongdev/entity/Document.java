@@ -31,4 +31,7 @@ public class Document extends XDevBaseEntity {
   Long departmentId;
 
   Long projectId;
+
+  @Column(name = "mime_type")
+  String mimeType;
 }

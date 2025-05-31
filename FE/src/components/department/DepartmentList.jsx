@@ -19,7 +19,8 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Alert,
+  Alert as MuiAlert,
+  Snackbar,
   CircularProgress
 } from '@mui/material';
 import { Add as AddIcon } from '@mui/icons-material';
@@ -39,6 +40,11 @@ const DepartmentList = () => {
   const rowsPerPage = 10;
   const [totalPages, setTotalPages] = useState(1);
   const navigate = useNavigate();
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
 
   useEffect(() => {
     fetchDepartments();
@@ -82,14 +88,29 @@ const DepartmentList = () => {
     }
   };
 
+  const handleCloseSnackbar = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
+
   const handleDelete = async () => {
     try {
       await departmentService.deleteDepartment(selectedDepartment.id);
       setDepartments(departments.filter(dept => dept.id !== selectedDepartment.id));
       setOpenDeleteDialog(false);
-      setError(null);
+      setSnackbar({
+        open: true,
+        message: 'Xóa phòng ban thành công',
+        severity: 'success'
+      });
     } catch (err) {
-      setError('Có lỗi xảy ra khi xóa phòng ban');
+      setSnackbar({
+        open: true,
+        message: err.response?.data?.message || 'Có lỗi xảy ra khi xóa phòng ban',
+        severity: 'error'
+      });
       console.error('Error deleting department:', err);
     }
   };
@@ -159,7 +180,7 @@ const DepartmentList = () => {
         </Stack>
     
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
+          <MuiAlert severity="error" sx={{ mb: 2 }}>{error}</MuiAlert>
         )}
 
         <TableContainer 
@@ -274,6 +295,23 @@ const DepartmentList = () => {
           </DialogActions>
         </Dialog>
       </Paper>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <MuiAlert
+          elevation={6}
+          variant="filled"
+          onClose={handleCloseSnackbar}
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </MuiAlert>
+      </Snackbar>
     </Box>
   );
 };

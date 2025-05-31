@@ -62,49 +62,38 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
         this.userRepo = userRepo;
     }
 
-    /**
-     * Cập nhật thông tin công việc, chỉ cho phép khi đang ở trạng thái ĐANG THỰC HIỆN.
-     * - Kiểm tra trạng thái công việc
-     * - Cập nhật thông tin
-     * - Ghi lịch sử thay đổi
-     * 
-     * @param id ID công việc cần cập nhật
-     * @param taskDTO Thông tin công việc mới
-     * @return TaskDTO sau khi cập nhật
-     */
     @Override
     @Transactional
-    public TaskDTO updateTask(Long id, TaskDTO taskDTO) {
+    public TaskDTO updateTask(String uid, Long id, TaskDTO taskDTO) {
         validateTaskDTO(taskDTO);
-        validateId(id);
 
         Task task = taskRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Task not found"));
 
+        // Kiểm tra quyền cập nhật
+        if (!uid.equals(task.getApproverId()) && !uid.equals(task.getAssigneeId())) {
+            throw new RuntimeException("Không có quyền cập nhật");
+        }
+
         if (task.getState() != AppConstants.STATUS_IN_PROGRESS) {
-            throw new RuntimeException("Chỉ có thể cập nhật task khi đang trong trạng thái thực hiện");
+            throw new RuntimeException("Chỉ có thể cập nhật công việc khi đang trong trạng thái thực hiện");
         }
 
         Integer previousState = task.getState();
-        
-        BeanUtils.copyProperties(taskDTO, task, "id", "createBy", "createDate", "state");
+        if (taskDTO.getState() == AppConstants.STATUS_COMPLETE){
+            task.setCompletedDate(new Date());
+        }
+
+        BeanUtils.copyProperties(taskDTO, task, "id", "createBy", "createDate","modifiedDate");
         task = taskRepo.save(task);
         
         handleStateChange(id, previousState, task.getState(), taskDTO);
         
+        checkAndUpdateTaskCompletion(id);
+        
         return convertToDTO(task);
     }
 
-    /**
-     * Tạo mới một công việc và khởi tạo quy trình phê duyệt.
-     * - Đặt trạng thái ban đầu là CHỜ DUYỆT
-     * - Xác định người phê duyệt phù hợp theo phòng ban
-     * - Ghi lịch sử tạo công việc
-     * 
-     * @param uid ID người tạo công việc
-     * @param taskDTO Thông tin công việc
-     * @return TaskDTO vừa tạo
-     */
     @Override
     @Transactional
     public TaskDTO createTask(String uid, TaskDTO taskDTO) {
@@ -112,83 +101,62 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
 
         Task task = new Task();
         BeanUtils.copyProperties(taskDTO, task);
-        
-        task.setState(AppConstants.STATUS_PENDING);
+
+        task.setStatus(AppConstants.STATUS_ACTIVE);
         task.setCreateBy(uid);
-
-        User currentUser = userService.getById(uid, Long.valueOf(uid));
-        String[] approverInfo = determineApprover(uid, currentUser, task.getDepartmentId());
-        
-        task.setApproverId(approverInfo[0]);
-        Task savedTask = taskRepo.save(task);
-        
-        addTaskHistory(savedTask.getId(), null, AppConstants.STATUS_PENDING, 
-            uid, "Tạo mới task và gửi phê duyệt tới " + approverInfo[1]);
-        
-        return convertToDTO(savedTask);
-    }
-
-    /**
-     * Gửi công việc đi phê duyệt, chỉ định người phê duyệt.
-     * @param uid ID người gửi phê duyệt
-     * @param id ID công việc
-     * @param approverIds Danh sách ID người phê duyệt (lấy phần tử đầu)
-     * @return TaskDTO sau khi cập nhật
-     */
-    @Override
-    @Transactional
-    public TaskDTO submitForApproval(String uid, Long id, List<Long> approverIds) {
-        validateSubmitForApproval(uid, id, approverIds);
-        
-        Task task = taskRepo.findById(id)
-            .orElseThrow(() -> new RuntimeException("Không tìm thấy task"));
-            
-        task.setApproverId(approverIds.get(0).toString());
         task.setUpdateBy(uid);
-        
-        Task savedTask = taskRepo.save(task);
-        
-        addTaskHistory(id, AppConstants.STATUS_PENDING, AppConstants.STATUS_PENDING, 
-            uid, "Đã chỉ định người phê duyệt: " + task.getApproverId());
-        
-        return convertToDTO(savedTask);
+
+        if (taskDTO.getTaskTypeId() == 1 || taskDTO.getTaskTypeId() == 2) {
+            task.setState(AppConstants.STATUS_IN_PROGRESS);
+            task.setIsApproved(true);
+            task.setApproverId(uid);
+            
+            Task savedTask = taskRepo.save(task);
+
+            addTaskHistory(savedTask.getId(), null, AppConstants.STATUS_IN_PROGRESS, 
+                uid, "Tạo mới công việc và chuyển sang trạng thái đang thực hiện");
+            
+            return convertToDTO(savedTask);
+        } else {
+
+            task.setState(AppConstants.STATUS_PENDING);
+            task.setIsApproved(false);
+
+            User currentUser = userService.getById(uid, Long.valueOf(uid));
+            String[] approverInfo = determineApprover(uid, currentUser, task.getDepartmentId());
+            
+            task.setApproverId(approverInfo[0]);
+            Task savedTask = taskRepo.save(task);
+            
+            addTaskHistory(savedTask.getId(), null, AppConstants.STATUS_PENDING, 
+                uid, "Tạo mới Công việc và gửi phê duyệt tới " + approverInfo[1]);
+            
+            return convertToDTO(savedTask);
+        }
     }
 
-    /**
-     * Phê duyệt công việc, chuyển trạng thái sang ĐÃ DUYỆT và tự động sang ĐANG THỰC HIỆN.
-     * @param uid ID người phê duyệt
-     * @param id ID công việc
-     * @param approvedBy Thông tin người phê duyệt
-     * @return TaskDTO sau khi phê duyệt
-     */
     @Override
     @Transactional
-    public TaskDTO approveTask(String uid, Long id, String approvedBy) {
+    public TaskDTO approveTask(String uid, Long id) {
         validateApproval(uid, id);
         
         Task task = taskRepo.findById(id)
             .orElseThrow(() -> new RuntimeException("Không tìm thấy task"));
         
-        task.setState(AppConstants.STATUS_APPROVED);
+        task.setState(AppConstants.STATUS_IN_PROGRESS);
+        task.setIsApproved(true);
         task.setUpdateBy(uid);
         
         Task savedTask = taskRepo.save(task);
         
-        addTaskHistory(id, AppConstants.STATUS_PENDING, AppConstants.STATUS_APPROVED, 
+        addTaskHistory(id, AppConstants.STATUS_PENDING, AppConstants.STATUS_IN_PROGRESS,
             uid, "Phê duyệt task");
 
-        updateTaskState(uid, id, AppConstants.STATUS_IN_PROGRESS, uid, "Tự động chuyển sang trạng thái đang thực hiện");
+        updateTaskState(uid, id, AppConstants.STATUS_IN_PROGRESS, "Chuyển sang trạng thái đang thực hiện");
         
         return convertToDTO(savedTask);
     }
 
-    /**
-     * Từ chối công việc, chuyển trạng thái sang ĐÃ TỪ CHỐI.
-     * @param uid ID người từ chối
-     * @param id ID công việc
-     * @param reason Lý do từ chối
-     * @return TaskDTO sau khi bị từ chối
-     */
     @Override
     @Transactional
     public TaskDTO rejectTask(String uid, Long id, String reason) {
@@ -198,6 +166,7 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
             .orElseThrow(() -> new RuntimeException("Không tìm thấy task"));
         
         task.setState(AppConstants.STATUS_REJECTED);
+        task.setIsApproved(false);
         task.setUpdateBy(uid);
         
         Task savedTask = taskRepo.save(task);
@@ -211,12 +180,10 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
     /**
      * Kiểm tra và cập nhật trạng thái hoàn thành công việc dựa vào thời hạn.
      * Nếu công việc đang thực hiện và đã quá hạn thì chuyển sang QUÁ HẠN.
-     * @param taskId ID công việc cần kiểm tra
      */
     @Override
     @Transactional
     public void checkAndUpdateTaskCompletion(Long taskId) {
-        validateId(taskId);
         Task task = taskRepo.findById(taskId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy task"));
                 
@@ -225,40 +192,32 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
         }
 
         if (isOverdue(task)) {
-            updateTaskState(AppConstants.SYSTEM, taskId, AppConstants.STATUS_OVERDUE, 
-                AppConstants.SYSTEM, "Tự động cập nhật trạng thái quá hạn do đã vượt thời hạn task");
+            task.setCompletedDate(new Date());
+            updateTaskState(AppConstants.SYSTEM, taskId, AppConstants.STATUS_OVERDUE,
+                "Tự động cập nhật trạng thái quá hạn do đã vượt thời hạn task");
         }
     }
 
     /**
      * Xóa mềm công việc (chuyển trạng thái sang INACTIVE), chỉ cho phép khi công việc ở trạng thái CHỜ DUYỆT hoặc ĐÃ TỪ CHỐI.
-     * @param uid ID người thực hiện xóa
-     * @param id ID công việc cần xóa
      */
     @Override
     public void changeStatus(String uid, Long id) {
-        validateId(id);
         Task task = taskRepo.findById(id)
-            .orElseThrow(() -> new RuntimeException("Không tìm thấy task"));
+            .orElseThrow(() -> new RuntimeException("Không tìm thấy công việc"));
             
-        if (!canDelete(task.getState())) {
-            throw new RuntimeException("Chỉ có thể xóa task ở trạng thái chờ duyệt hoặc từ chối");
+        // Kiểm tra quyền xóa
+        if (!uid.equals(task.getApproverId())) {
+            throw new RuntimeException("Không có quyền xóa");
         }
 
         task.setStatus(AppConstants.STATUS_INACTIVE);
         task.setUpdateBy(uid);
         taskRepo.save(task);
         
-        addTaskHistory(id, task.getState(), task.getState(), uid, "Xóa task");
+        addTaskHistory(id, task.getState(), task.getState(), uid, "Xóa công việc");
     }
 
-    /**
-     * Lấy danh sách công việc đang chờ phê duyệt của một người.
-     * @param approverId ID người phê duyệt
-     * @param filter Bộ lọc tìm kiếm
-     * @param pageable Thông tin phân trang
-     * @return Danh sách công việc chờ phê duyệt
-     */
     @Override
     public Page<Task> getPendingApprovalTasks(String approverId, TaskFilter filter, Pageable pageable) {
         return taskRepo.findPendingApprovalTasks(
@@ -274,33 +233,34 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
      * Tìm kiếm công việc theo phòng ban, kiểm soát truy cập theo quyền.
      * - Admin và trưởng phòng ban gốc có thể xem tất cả công việc
      * - Người dùng khác chỉ xem được công việc trong phòng ban và phòng ban con
-     * 
-     * @param departmentId ID phòng ban
-     * @param uid ID người dùng
-     * @param filter Bộ lọc tìm kiếm
-     * @param pageable Thông tin phân trang
-     * @return Danh sách công việc phù hợp
      */
     @Override
     public Page<Task> searchAll(Long departmentId, String uid, TaskFilter filter, Pageable pageable) {
-        
         User user = userService.getById(uid, Long.valueOf(uid));
 
+        Page<Task> taskPage;
         if (hasFullAccess(user, departmentId)) {
-            return taskRepo.searchByCodeOrName(
+            taskPage = taskRepo.searchByCodeOrName(
                 AppConstants.STATUS_ACTIVE,
                 filter.getSearch(),
                 pageable
             );
+        } else {
+            List<Long> departmentIds = getDepartmentAndSubDepartmentIds(departmentId);
+            taskPage = taskRepo.searchByCodeOrNameAndDepartments(
+                AppConstants.STATUS_ACTIVE,
+                filter.getSearch(),
+                departmentIds,
+                pageable
+            );
         }
 
-        List<Long> departmentIds = getDepartmentAndSubDepartmentIds(departmentId);
-        return taskRepo.searchByCodeOrNameAndDepartments(
-            AppConstants.STATUS_ACTIVE,
-            filter.getSearch(),
-            departmentIds,
-            pageable
-        );
+        // Kiểm tra và cập nhật trạng thái cho từng task
+        for (Task task : taskPage.getContent()) {
+            checkAndUpdateTaskCompletion(task.getId());
+        }
+
+        return taskPage;
     }
 
     @Override
@@ -318,47 +278,19 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
 
     @Override
     public List<TaskHistoryDTO> getTaskHistory(Long taskId) {
-        validateId(taskId);
         List<TaskHistory> histories = taskHistoryRepo.findByTaskIdOrderByChangedAtDesc(taskId);
         return histories.stream()
             .map(this::convertHistoryToDTO)
             .collect(Collectors.toList());
     }
 
-    // Private helper methods
-
     /**
      * Kiểm tra tính hợp lệ của dữ liệu TaskDTO.
-     * @throws IllegalArgumentException nếu dữ liệu không hợp lệ
      */
     private void validateTaskDTO(TaskDTO taskDTO) {
         if (taskDTO == null) {
             throw new IllegalArgumentException("Task data cannot be null");
         }
-        if (taskDTO.getState() == null) {
-            throw new IllegalArgumentException("Task state cannot be null");
-        }
-    }
-
-    /**
-     * Kiểm tra ID có hợp lệ (dương và không null).
-     * @throws IllegalArgumentException nếu ID không hợp lệ
-     */
-    private void validateId(Long id) {
-        if (id == null || id <= 0) {
-            throw new IllegalArgumentException("Invalid ID");
-        }
-    }
-
-    /**
-     * Kiểm tra việc gửi phê duyệt công việc.
-     * Xác nhận danh sách người phê duyệt và trạng thái công việc.
-     */
-    private void validateSubmitForApproval(String uid, Long id, List<Long> approverIds) {
-        if (approverIds == null || approverIds.isEmpty()) {
-            throw new RuntimeException("Phải chỉ định người phê duyệt");
-        }
-        validateId(id);
     }
 
     /**
@@ -366,12 +298,11 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
      * Xác nhận trạng thái công việc và quyền của người phê duyệt.
      */
     private void validateApproval(String uid, Long id) {
-        validateId(id);
         Task task = taskRepo.findById(id)
             .orElseThrow(() -> new RuntimeException("Không tìm thấy task"));
             
         if (task.getState() != AppConstants.STATUS_PENDING) {
-            throw new RuntimeException("Task phải ở trạng thái chờ duyệt");
+            throw new RuntimeException("Công việc phải ở trạng thái chờ duyệt");
         }
         
         if (!uid.equals(task.getApproverId())) {
@@ -384,12 +315,11 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
      * Xác nhận trạng thái công việc và quyền của người từ chối.
      */
     private void validateRejection(String uid, Long id) {
-        validateId(id);
         Task task = taskRepo.findById(id)
-            .orElseThrow(() -> new RuntimeException("Không tìm thấy task"));
+            .orElseThrow(() -> new RuntimeException("Không tìm thấy Công việc"));
             
         if (task.getState() != AppConstants.STATUS_PENDING) {
-            throw new RuntimeException("Task phải ở trạng thái chờ duyệt để có thể từ chối");
+            throw new RuntimeException("Công việc phải ở trạng thái chờ duyệt để có thể từ chối");
         }
         
         if (!uid.equals(task.getApproverId())) {
@@ -402,8 +332,6 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
      * - Admin: tự phê duyệt
      * - Phòng ban con: tự phê duyệt
      * - Cùng phòng ban: trưởng phòng ban cha phê duyệt
-     * 
-     * @return Mảng String [approverId, approverName]
      */
     private String[] determineApprover(String uid, User currentUser, Long departmentId) {
         String approverId;
@@ -423,18 +351,32 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
                 approverId = uid;
                 approverName = userService.getUserDisplayName(uid);
             } else if (taskDepartment.getId().equals(userDepartment.getId())) {
-                Department parentDepartment = departmentRepo.findById(taskDepartment.getParentId())
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy phòng ban cha"));
-                
-                User departmentHead = userRepo.findByDepartmentIdAndPositionIdAndStatus(
-                    parentDepartment.getId(),
-                    AppConstants.POSITION_HEAD,
-                    AppConstants.STATUS_ACTIVE
-                ).stream().findFirst()
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy trưởng phòng ban cha"));
-                
-                approverId = departmentHead.getId().toString();
-                approverName = userService.getUserDisplayName(approverId);
+                if (userDepartment.getParentId() == null) {
+                    // Nếu user thuộc phòng ban root, tìm trưởng phòng của chính phòng ban đó
+                    User departmentHead = userRepo.findByDepartmentIdAndPositionIdAndStatus(
+                        userDepartment.getId(),
+                        AppConstants.POSITION_HEAD,
+                        AppConstants.STATUS_ACTIVE
+                    ).stream().findFirst()
+                        .orElseThrow(() -> new RuntimeException("Không tìm thấy trưởng phòng ban"));
+                    
+                    approverId = departmentHead.getId().toString();
+                    approverName = userService.getUserDisplayName(approverId);
+                } else {
+                    // Nếu không phải phòng ban root, tìm trưởng phòng ban cha
+                    Department parentDepartment = departmentRepo.findById(taskDepartment.getParentId())
+                        .orElseThrow(() -> new RuntimeException("Không tìm thấy phòng ban cha"));
+                    
+                    User departmentHead = userRepo.findByDepartmentIdAndPositionIdAndStatus(
+                        parentDepartment.getId(),
+                        AppConstants.POSITION_HEAD,
+                        AppConstants.STATUS_ACTIVE
+                    ).stream().findFirst()
+                        .orElseThrow(() -> new RuntimeException("Không tìm thấy trưởng phòng ban cha"));
+                    
+                    approverId = departmentHead.getId().toString();
+                    approverName = userService.getUserDisplayName(approverId);
+                }
             } else {
                 throw new RuntimeException("Không có quyền tạo task cho phòng ban này");
             }
@@ -445,15 +387,11 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
 
     /**
      * Xử lý thay đổi trạng thái và ghi lịch sử.
-     * @param id ID công việc
-     * @param previousState Trạng thái trước
-     * @param newState Trạng thái mới
-     * @param taskDTO Thông tin công việc
      */
     private void handleStateChange(Long id, Integer previousState, Integer newState, TaskDTO taskDTO) {
         if (!Objects.equals(previousState, newState)) {
             String stateChangeComment = String.format(
-                "State changed from %s to %s%s",
+                "Cập nhật trạng thái %s sang %s%s",
                 StateNameUtils.getTaskStateName(previousState),
                 StateNameUtils.getTaskStateName(newState),
                 taskDTO.getComment() != null ? " - " + taskDTO.getComment() : ""
@@ -475,14 +413,6 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
      */
     private boolean isOverdue(Task task) {
         return task.getDueDate() != null && new Date().after(task.getDueDate());
-    }
-
-    /**
-     * Kiểm tra công việc có thể xóa dựa vào trạng thái.
-     * @return true nếu công việc ở trạng thái CHỜ DUYỆT hoặc ĐÃ TỪ CHỐI
-     */
-    private boolean canDelete(Integer state) {
-        return state == AppConstants.STATUS_PENDING || state == AppConstants.STATUS_REJECTED;
     }
 
     /**
@@ -513,19 +443,14 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
 
     /**
      * Cập nhật trạng thái công việc với kiểm tra và ghi lịch sử.
-     * @param uid ID người thay đổi
-     * @param id ID công việc
-     * @param newState Trạng thái mới
-     * @param changedBy Người thay đổi
-     * @param comment Ghi chú thay đổi
      */
-    private void updateTaskState(String uid, Long id, Integer newState, String changedBy, String comment) {
+    private void updateTaskState(String uid, Long id, Integer newState, String comment) {
         Task task = taskRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy task"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy Công việc"));
                 
         Integer previousState = task.getState();
         task.setState(newState);
-        task.setUpdateBy(changedBy);
+        task.setUpdateBy(uid);
         
         if (newState == AppConstants.STATUS_COMPLETE) {
             task.setCompletedDate(new Date());
@@ -533,7 +458,7 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
         
         taskRepo.save(task);
         
-        addTaskHistory(id, previousState, newState, changedBy, comment);
+        addTaskHistory(id, previousState, newState, uid, comment);
     }
 
     /**
@@ -561,7 +486,6 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
         dto.setPriorityId(task.getPriorityId());
         dto.setStartDate(task.getStartDate());
         dto.setDueDate(task.getDueDate());
-        dto.setCompletedDate(task.getCompletedDate());
         dto.setAssigneeId(task.getAssigneeId());
         dto.setApproverId(task.getApproverId());
         
@@ -590,9 +514,44 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
         dto.setStateName(StateNameUtils.getTaskStateName(history.getNewState()));
         
         if (history.getChangedBy() != null) {
-            dto.setChangedByName(userService.getUserDisplayName(history.getChangedBy()));
+            if (history.getChangedBy().equals(AppConstants.SYSTEM)) {
+                dto.setChangedByName("Hệ thống");
+            } else {
+                dto.setChangedByName(userService.getUserDisplayName(history.getChangedBy()));
+            }
         }
         
         return dto;
+    }
+
+    @Override
+    public List<Task> getTasksByProjectId(String uid, Long projectId) {
+        List<Task> tasks = taskRepo.findByProjectIdAndStatus(projectId, 1);
+        
+        // Kiểm tra và cập nhật trạng thái cho từng task
+        for (Task task : tasks) {
+            checkAndUpdateTaskCompletion(task.getId());
+        }
+        
+        return tasks;
+    }
+
+    @Override
+    public List<Task> getTasksByRiskId(String uid, Long riskId) {
+        List<Task> tasks = taskRepo.findByRiskIdAndStatus(riskId, 1);
+        
+        // Kiểm tra và cập nhật trạng thái cho từng task
+        for (Task task : tasks) {
+            checkAndUpdateTaskCompletion(task.getId());
+        }
+        
+        return tasks;
+    }
+
+    @Override
+    public Task getById(String uid, Long id) {
+        Task task = super.getById(uid, id);
+        checkAndUpdateTaskCompletion(id);
+        return task;
     }
 } 

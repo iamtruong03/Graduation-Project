@@ -25,7 +25,8 @@ import {
   Grid,
   Chip,
   CircularProgress,
-  Alert
+  Snackbar,
+  Alert as MuiAlert
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import EditIcon from '@mui/icons-material/Edit';
@@ -48,6 +49,11 @@ const CategoryManagement = () => {
   const [page, setPage] = useState(1);
   const rowsPerPage = 10;
   const [categoryTypes, setCategoryTypes] = useState([]);
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
 
   // Thêm state mới cho form
   const [formData, setFormData] = useState({
@@ -112,16 +118,27 @@ const CategoryManagement = () => {
     setSelectedCategory(null);
   };
 
+  const handleCloseSnackbar = () => {
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
+
   const handleDelete = async () => {
     setLoading(true);
     try {
       await categoryService.deleteCategory(selectedCategory.id);
-      
-      // Refresh danh sách sau khi xóa
       await fetchCategories();
       handleCloseDeleteDialog();
+      setSnackbar({
+        open: true,
+        message: 'Xóa danh mục thành công',
+        severity: 'success'
+      });
     } catch (err) {
-      setError('Có lỗi xảy ra khi xóa danh mục: ' + (err.response?.data?.message || err.message));
+      setSnackbar({
+        open: true,
+        message: 'Có lỗi xảy ra khi xóa danh mục: ' + (err.response?.data?.message || err.message),
+        severity: 'error'
+      });
     } finally {
       setLoading(false);
     }
@@ -144,20 +161,33 @@ const CategoryManagement = () => {
     try {
       const submitData = {
         ...formData,
-        status: dialogType === 'create' ? 1 : selectedCategory.status // 1 là trạng thái active
+        status: dialogType === 'create' ? 1 : selectedCategory.status
       };
 
       if (dialogType === 'create') {
         await categoryService.createCategory(submitData);
+        setSnackbar({
+          open: true,
+          message: 'Thêm danh mục thành công',
+          severity: 'success'
+        });
       } else {
         await categoryService.updateCategory(selectedCategory.id, submitData);
+        setSnackbar({
+          open: true,
+          message: 'Cập nhật danh mục thành công',
+          severity: 'success'
+        });
       }
       
-      // Refresh danh sách sau khi thêm/sửa
       await fetchCategories();
       handleCloseDialog();
     } catch (err) {
-      setError('Có lỗi xảy ra khi lưu danh mục: ' + (err.response?.data?.message || err.message));
+      setSnackbar({
+        open: true,
+        message: 'Có lỗi xảy ra khi lưu danh mục: ' + (err.response?.data?.message || err.message),
+        severity: 'error'
+      });
     } finally {
       setLoading(false);
     }
@@ -193,7 +223,6 @@ const CategoryManagement = () => {
   // Fetch API
   const fetchCategories = async () => {
     setLoading(true);
-    setError(null);
     try {
       const filter = {
         search: searchTerm,
@@ -203,7 +232,11 @@ const CategoryManagement = () => {
       setCategories(response.data.content);
       setTotalPages(response.data.totalPages);
     } catch (err) {
-      setError('Không thể tải danh sách danh mục');
+      setSnackbar({
+        open: true,
+        message: 'Không thể tải danh sách danh mục',
+        severity: 'error'
+      });
     } finally {
       setLoading(false);
     }
@@ -214,8 +247,11 @@ const CategoryManagement = () => {
       const response = await categoryTypeService.getAllCategoryTypes();
       setCategoryTypes(response.data || []);
     } catch (err) {
-      console.error('Lỗi khi lấy danh sách loại danh mục:', err);
-      setError('Không thể tải danh sách loại danh mục');
+      setSnackbar({
+        open: true,
+        message: 'Không thể tải danh sách loại danh mục',
+        severity: 'error'
+      });
     }
   };
 
@@ -325,7 +361,7 @@ const CategoryManagement = () => {
               {error ? (
                 <TableRow>
                   <TableCell colSpan={7}>
-                    <Alert 
+                    <MuiAlert 
                       severity="error" 
                       sx={{ 
                         mb: 2,
@@ -335,7 +371,7 @@ const CategoryManagement = () => {
                       }}
                     >
                       {error}
-                    </Alert>
+                    </MuiAlert>
                   </TableCell>
                 </TableRow>
               ) : loading ? (
@@ -578,6 +614,21 @@ const CategoryManagement = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <MuiAlert 
+          onClose={handleCloseSnackbar} 
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </MuiAlert>
+      </Snackbar>
     </Box>
   );
 };

@@ -19,7 +19,8 @@ import {
   Grid,
   Chip,
   CircularProgress,
-  Alert,
+  Snackbar,
+  Alert as MuiAlert,
   Stack
 } from '@mui/material';
 import {
@@ -51,6 +52,12 @@ const CategoryTypeManagement = () => {
 
   const [formErrors, setFormErrors] = useState({});
 
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
+
   const fetchCategoryTypes = async () => {
     setLoading(true);
     setError(null);
@@ -63,6 +70,11 @@ const CategoryTypeManagement = () => {
       setTotalPages(response.data.totalPages);
     } catch (err) {
       setError('Không thể tải danh sách loại danh mục');
+      setSnackbar({
+        open: true,
+        message: 'Không thể tải danh sách loại danh mục',
+        severity: 'error'
+      });
     } finally {
       setLoading(false);
     }
@@ -127,6 +139,10 @@ const CategoryTypeManagement = () => {
     return Object.keys(errors).length === 0;
   };
 
+  const handleCloseSnackbar = () => {
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
+
   const handleSubmit = async () => {
     if (!validateForm()) return;
 
@@ -134,20 +150,33 @@ const CategoryTypeManagement = () => {
     try {
       const submitData = {
         ...formData,
-        status: dialogType === 'create' ? 1 : selectedCategory.status // 1 là trạng thái active
+        status: dialogType === 'create' ? 1 : selectedCategory.status
       };
 
       if (dialogType === 'create') {
         await categoryTypeService.createCategoryType(submitData);
+        setSnackbar({
+          open: true,
+          message: 'Thêm loại danh mục thành công',
+          severity: 'success'
+        });
       } else {
         await categoryTypeService.updateCategoryType(selectedCategory.id, submitData);
+        setSnackbar({
+          open: true,
+          message: 'Cập nhật loại danh mục thành công',
+          severity: 'success'
+        });
       }
       
-      // Refresh danh sách sau khi thêm/sửa
       await fetchCategoryTypes();
       handleCloseDialog();
     } catch (err) {
-      setError('Có lỗi xảy ra khi lưu loại danh mục: ' + (err.response?.data?.message || err.message));
+      setSnackbar({
+        open: true,
+        message: 'Có lỗi xảy ra khi lưu loại danh mục: ' + (err.response?.data?.message || err.message),
+        severity: 'error'
+      });
     } finally {
       setLoading(false);
     }
@@ -157,12 +186,19 @@ const CategoryTypeManagement = () => {
     setLoading(true);
     try {
       await categoryTypeService.deleteCategoryType(selectedCategory.id);
-      
-      // Refresh danh sách sau khi xóa
       await fetchCategoryTypes();
       handleCloseDeleteDialog();
+      setSnackbar({
+        open: true,
+        message: 'Xóa loại danh mục thành công',
+        severity: 'success'
+      });
     } catch (err) {
-      setError('Có lỗi xảy ra khi xóa loại danh mục: ' + (err.response?.data?.message || err.message));
+      setSnackbar({
+        open: true,
+        message: 'Có lỗi xảy ra khi xóa loại danh mục: ' + (err.response?.data?.message || err.message),
+        severity: 'error'
+      });
     } finally {
       setLoading(false);
     }
@@ -250,13 +286,13 @@ const CategoryTypeManagement = () => {
         </Stack>
 
         {error && (
-          <Alert 
+          <MuiAlert 
             severity="error" 
             onClose={() => setError(null)}
             sx={{ mb: 2 }}
           >
             {error}
-          </Alert>
+          </MuiAlert>
         )}
 
         <TableContainer 
@@ -485,6 +521,21 @@ const CategoryTypeManagement = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <MuiAlert 
+          onClose={handleCloseSnackbar} 
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </MuiAlert>
+      </Snackbar>
     </Box>
   );
 };

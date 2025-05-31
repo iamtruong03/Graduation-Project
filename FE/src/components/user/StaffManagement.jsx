@@ -25,6 +25,8 @@ import {
   DialogActions,
   CircularProgress,
   Pagination,
+  Alert as MuiAlert,
+  Snackbar,
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -35,7 +37,6 @@ import {
 import { useNavigate } from 'react-router-dom';
 import staffService from '../../services/staffService';
 import departmentService from '../../services/departmentService';
-import { Alert } from '@mui/material';
 import { Stack } from '@mui/material';
 
 const StaffManagement = () => {
@@ -52,6 +53,11 @@ const StaffManagement = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
 
   const positionOptions = [
     { id: 1, name: 'Quản lý' },
@@ -163,16 +169,32 @@ const StaffManagement = () => {
     setOpenDeleteDialog(true);
   };
 
-  const handleDeleteConfirm = () => {
+  const handleCloseSnackbar = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
+
+  const handleDeleteConfirm = async () => {
     try {
+      await staffService.deleteStaff(selectedStaff.id);
       setStaffList((prev) =>
         prev.filter((staff) => staff.id !== selectedStaff.id)
       );
       setOpenDeleteDialog(false);
-      setError(null);
+      setSnackbar({
+        open: true,
+        message: 'Xóa nhân viên thành công',
+        severity: 'success'
+      });
     } catch (err) {
       console.error('Lỗi khi xóa:', err);
-      setError('Có lỗi xảy ra khi xóa nhân viên');
+      setSnackbar({
+        open: true,
+        message: err.response?.data?.message || 'Có lỗi xảy ra khi xóa nhân viên',
+        severity: 'error'
+      });
     }
   };
 
@@ -194,10 +216,10 @@ const StaffManagement = () => {
   return (
     <Box sx={{ p: 4, backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
       <Paper elevation={3} sx={{ p: 3, borderRadius: 2 }}>
-        <Typography 
-          variant="h5" 
-          sx={{ 
-            mb: 4, 
+        <Typography
+          variant="h5"
+          sx={{
+            mb: 4,
             fontWeight: 600,
             color: '#1976d2',
             borderBottom: '2px solid #1976d2',
@@ -207,10 +229,10 @@ const StaffManagement = () => {
           QUẢN LÝ NHÂN SỰ
         </Typography>
 
-        <Stack 
-          direction="row" 
-          spacing={2} 
-          sx={{ 
+        <Stack
+          direction="row"
+          spacing={2}
+          sx={{
             mb: 3,
             flexWrap: 'wrap',
             gap: 2
@@ -222,16 +244,16 @@ const StaffManagement = () => {
             size="small"
             value={searchTerm}
             onChange={handleSearch}
-            sx={{ 
+            sx={{
               width: { xs: '100%', sm: 250 },
               backgroundColor: 'white'
             }}
             placeholder="Tìm theo tên hoặc mã nhân viên"
           />
 
-          <FormControl 
-            size="small" 
-            sx={{ 
+          <FormControl
+            size="small"
+            sx={{
               width: { xs: '100%', sm: 200 },
               backgroundColor: 'white'
             }}
@@ -251,9 +273,9 @@ const StaffManagement = () => {
             </Select>
           </FormControl>
 
-          <FormControl 
-            size="small" 
-            sx={{ 
+          <FormControl
+            size="small"
+            sx={{
               width: { xs: '100%', sm: 200 },
               backgroundColor: 'white'
             }}
@@ -276,7 +298,7 @@ const StaffManagement = () => {
           <Button
             variant="contained"
             onClick={() => navigate('/staff/create')}
-            sx={{ 
+            sx={{
               ml: 'auto',
               backgroundColor: '#1976d2',
               '&:hover': {
@@ -288,9 +310,9 @@ const StaffManagement = () => {
           </Button>
         </Stack>
 
-        <TableContainer 
-          component={Paper} 
-          sx={{ 
+        <TableContainer
+          component={Paper}
+          sx={{
             borderRadius: 1,
             boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
             overflow: 'hidden'
@@ -313,9 +335,9 @@ const StaffManagement = () => {
               {error ? (
                 <TableRow>
                   <TableCell colSpan={10}>
-                    <Alert 
-                      severity="error" 
-                      sx={{ 
+                    <MuiAlert
+                      severity="error"
+                      sx={{
                         mb: 2,
                         '& .MuiAlert-icon': {
                           color: '#d32f2f'
@@ -323,7 +345,7 @@ const StaffManagement = () => {
                       }}
                     >
                       {error}
-                    </Alert>
+                    </MuiAlert>
                   </TableCell>
                 </TableRow>
               ) : loading ? (
@@ -343,10 +365,10 @@ const StaffManagement = () => {
               ) : (
                 filteredStaff.map((staff, index) => (
                   // Sửa lại thứ tự hiển thị trong TableRow
-                  <TableRow 
+                  <TableRow
                     key={staff.id}
-                    sx={{ 
-                      '&:hover': { 
+                    sx={{
+                      '&:hover': {
                         backgroundColor: '#f5f5f5'
                       }
                     }}
@@ -355,7 +377,10 @@ const StaffManagement = () => {
                     <TableCell>{staff.name}</TableCell>
                     <TableCell>{staff.email}</TableCell>
                     <TableCell>{staff.phoneNumber}</TableCell>
-                    <TableCell>{staff.department}</TableCell>
+                    <TableCell>
+                      {/* Map department ID to department name */}
+                      {departmentList.find(dept => dept.id === staff.department)?.name || staff.department}
+                    </TableCell>
                     <TableCell>{staff.position}</TableCell>
                     <TableCell>{staff.joinDate}</TableCell>
                     <TableCell align="center">
@@ -383,9 +408,9 @@ const StaffManagement = () => {
         </TableContainer>
       </Paper>
 
-      <Box sx={{ 
-        mt: 2, 
-        p: 2, 
+      <Box sx={{
+        mt: 2,
+        p: 2,
         backgroundColor: '#fff',
         borderRadius: 1,
         boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)'
@@ -431,6 +456,23 @@ const StaffManagement = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <MuiAlert
+          elevation={6}
+          variant="filled"
+          onClose={handleCloseSnackbar}
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </MuiAlert>
+      </Snackbar>
     </Box>
   );
 };

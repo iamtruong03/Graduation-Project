@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Box, CircularProgress, Typography, Alert, Button } from '@mui/material';
+import { Box, CircularProgress, Typography, Button, Snackbar, Alert as MuiAlert } from '@mui/material';
 import ChatWindow from './ChatWindow';
 import { chatService } from '../../services/chatService';
 
@@ -7,6 +7,15 @@ const Chat = () => {
   const [isConnecting, setIsConnecting] = useState(true);
   const [error, setError] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
+
+  const handleCloseSnackbar = () => {
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
 
   useEffect(() => {
     const connectWebSocket = async () => {
@@ -24,12 +33,22 @@ const Chat = () => {
 
         await chatService.connect();
         setIsConnected(true);
+        setSnackbar({
+          open: true,
+          message: 'Kết nối thành công',
+          severity: 'success'
+        });
         console.log('Chat service connected successfully');
         
       } catch (error) {
         console.error('Lỗi kết nối WebSocket:', error);
         setError(error.message || 'Không thể kết nối đến máy chủ chat. Vui lòng thử lại sau.');
         setIsConnected(false);
+        setSnackbar({
+          open: true,
+          message: error.message || 'Không thể kết nối đến máy chủ chat',
+          severity: 'error'
+        });
       } finally {
         setIsConnecting(false);
       }
@@ -56,10 +75,20 @@ const Chat = () => {
         await chatService.connect();
         setIsConnected(true);
         setError(null);
+        setSnackbar({
+          open: true,
+          message: 'Kết nối lại thành công',
+          severity: 'success'
+        });
       } catch (error) {
         console.error('Reconnection failed:', error);
         setError(error.message || 'Không thể kết nối lại. Vui lòng thử lại.');
         setIsConnected(false);
+        setSnackbar({
+          open: true,
+          message: error.message || 'Không thể kết nối lại',
+          severity: 'error'
+        });
       } finally {
         setIsConnecting(false);
       }
@@ -95,7 +124,7 @@ const Chat = () => {
         gap: 3,
         p: 3
       }}>
-        <Alert 
+        <MuiAlert 
           severity="error" 
           sx={{ 
             maxWidth: 500,
@@ -105,7 +134,7 @@ const Chat = () => {
           }}
         >
           {error}
-        </Alert>
+        </MuiAlert>
         <Button 
           variant="contained" 
           onClick={handleReconnect}
@@ -149,6 +178,21 @@ const Chat = () => {
       overflow: 'hidden'
     }}>
       <ChatWindow />
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <MuiAlert 
+          onClose={handleCloseSnackbar} 
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </MuiAlert>
+      </Snackbar>
     </Box>
   );
 };

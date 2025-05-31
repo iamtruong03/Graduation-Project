@@ -15,24 +15,24 @@ import vi from 'date-fns/locale/vi';
 
 const getStatusColor = (state) => {
   switch (state) {
-    case 1: return 'warning'; // Chờ duyệt
-    case 2: return 'success'; // Đã duyệt
-    case 3: return 'error';   // Từ chối
-    case 4: return 'info';    // Đang thực hiện
-    case 5: return 'success'; // Hoàn thành
-    case 6: return 'error';   // Quá hạn
+    case 0: return 'warning'; // Chờ duyệt
+    case 1: return 'error';   // Từ chối
+    case 2: return 'info';    // Đang thực hiện
+    case 3: return 'success'; // Hoàn thành
+    case 4: return 'error';   // Quá hạn
+    case 5: return 'error';   // Đã hủy
     default: return 'grey';
   }
 };
 
 const getStatusName = (state) => {
   switch (state) {
-    case 1: return 'Chờ duyệt';
-    case 2: return 'Đã duyệt';
-    case 3: return 'Từ chối';
-    case 4: return 'Đang thực hiện';
-    case 5: return 'Hoàn thành';
-    case 6: return 'Quá hạn';
+    case 0: return 'Chờ duyệt';
+    case 1: return 'Từ chối';
+    case 2: return 'Đang thực hiện';
+    case 3: return 'Hoàn thành';
+    case 4: return 'Quá hạn';
+    case 5: return 'Đã hủy';
     default: return 'Không xác định';
   }
 };

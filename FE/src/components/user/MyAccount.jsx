@@ -10,7 +10,8 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Alert,
+  Alert as MuiAlert,
+  Snackbar,
   Stack,
   CircularProgress,
   FormControl,
@@ -24,6 +25,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { format, parse, isValid } from 'date-fns';
+import AddressSelect from '../common/AddressSelect';
 
 const MyAccount = () => {
   const [user, setUser] = useState(null);
@@ -37,6 +39,11 @@ const MyAccount = () => {
     confirmPassword: ''
   });
   const [alert, setAlert] = useState(null);
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
 
   const positionOptions = [
     { id: 1, name: 'Quản lý' },
@@ -137,19 +144,70 @@ const MyAccount = () => {
     setFormData(user);
   };
 
+  const validateEmail = (email) => {
+    const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
+    return emailRegex.test(email);
+  };
+
+  const validatePhone = (phone) => {
+    const phoneRegex = /^[0-9]{10}$/;
+    return phoneRegex.test(phone);
+  };
+
   const handleInputChange = (field, value) => {
+    let error = '';
+    
+    if (field === 'email' && value && !validateEmail(value)) {
+      error = 'Email không đúng định dạng';
+    }
+    
+    if (field === 'phone' && value && !validatePhone(value)) {
+      error = 'Số điện thoại phải có 10 chữ số';
+    }
+
     setFormData(prev => ({
       ...prev,
-      [field]: value
+      [field]: value,
+      [`${field}Error`]: error
     }));
   };
 
+  const handleCloseSnackbar = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
+
   const handleUpdateProfile = async () => {
+    if (formData.email && !validateEmail(formData.email)) {
+      setSnackbar({
+        open: true,
+        message: 'Email không đúng định dạng',
+        severity: 'error'
+      });
+      return;
+    }
+
+    if (formData.phone && !validatePhone(formData.phone)) {
+      setSnackbar({
+        open: true,
+        message: 'Số điện thoại phải có 10 chữ số',
+        severity: 'error'
+      });
+      return;
+    }
+
     try {
       const userId = user.id;
       
       if (!userId) {
-        throw new Error('Không tìm thấy ID người dùng');
+        setSnackbar({
+          open: true,
+          message: 'Không tìm thấy ID người dùng',
+          severity: 'error'
+        });
+        return;
       }
       
       const formattedBirthday = formData.birthday ? format(formData.birthday, 'yyyy-MM-dd') : null;
@@ -174,24 +232,27 @@ const MyAccount = () => {
       
       setUser(formData);
       setIsEditing(false);
-      setAlert({
-        type: 'success',
-        message: 'Cập nhật thông tin thành công!'
+      setSnackbar({
+        open: true,
+        message: 'Cập nhật thông tin thành công!',
+        severity: 'success'
       });
     } catch (error) {
       console.error('Error updating profile:', error);
-      setAlert({
-        type: 'error',
-        message: error.response?.data?.message || 'Cập nhật thông tin thất bại. Vui lòng thử lại sau.'
+      setSnackbar({
+        open: true,
+        message: error.response?.data?.message || 'Cập nhật thông tin thất bại. Vui lòng thử lại sau.',
+        severity: 'error'
       });
     }
   };
 
   const handleChangePassword = async () => {
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      setAlert({
-        type: 'error',
-        message: 'Mật khẩu mới không khớp!'
+      setSnackbar({
+        open: true,
+        message: 'Mật khẩu mới không khớp!',
+        severity: 'error'
       });
       return;
     }
@@ -207,9 +268,10 @@ const MyAccount = () => {
         }
       });
 
-      setAlert({
-        type: 'success',
-        message: 'Đổi mật khẩu thành công!'
+      setSnackbar({
+        open: true,
+        message: 'Đổi mật khẩu thành công!',
+        severity: 'success'
       });
       setOpenPasswordDialog(false);
       setPasswordForm({
@@ -219,9 +281,10 @@ const MyAccount = () => {
       });
     } catch (error) {
       console.error('Error changing password:', error);
-      setAlert({
-        type: 'error',
-        message: error.response?.data?.message || 'Đổi mật khẩu thất bại. Vui lòng thử lại sau.'
+      setSnackbar({
+        open: true,
+        message: error.response?.data?.message || 'Đổi mật khẩu thất bại. Vui lòng thử lại sau.',
+        severity: 'error'
       });
     }
   };
@@ -267,9 +330,9 @@ const MyAccount = () => {
       </Box>
       
       {alert && (
-        <Alert severity={alert.type} sx={{ mb: 2 }} onClose={() => setAlert(null)}>
+        <MuiAlert severity={alert.type} sx={{ mb: 2 }} onClose={() => setAlert(null)}>
           {alert.message}
-        </Alert>
+        </MuiAlert>
       )}
 
       {loading ? (
@@ -305,6 +368,8 @@ const MyAccount = () => {
                 value={formData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
                 disabled={!isEditing}
+                error={!!formData.emailError}
+                helperText={formData.emailError}
               />
             </Grid>
             <Grid item xs={12} md={6}>
@@ -314,6 +379,8 @@ const MyAccount = () => {
                 value={formData.phone}
                 onChange={(e) => handleInputChange('phone', e.target.value)}
                 disabled={!isEditing}
+                error={!!formData.phoneError}
+                helperText={formData.phoneError}
               />
             </Grid>
             <Grid item xs={12} md={6}>
@@ -375,15 +442,20 @@ const MyAccount = () => {
               />
             </Grid>
             <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Địa chỉ"
-                value={formData.address}
-                onChange={(e) => handleInputChange('address', e.target.value)}
-                multiline
-                rows={2}
-                disabled={!isEditing}
-              />
+              {isEditing ? (
+                <AddressSelect
+                  value={formData.address}
+                  onChange={(value) => handleInputChange('address', value)}
+                  disabled={!isEditing}
+                />
+              ) : (
+                <TextField
+                  fullWidth
+                  label="Địa chỉ"
+                  value={formData.address || '---'}
+                  disabled
+                />
+              )}
             </Grid>
           </Grid>
 
@@ -399,7 +471,7 @@ const MyAccount = () => {
           )}
         </Paper>
       ) : (
-        <Alert severity="error">Không thể tải thông tin người dùng</Alert>
+        <MuiAlert severity="error">Không thể tải thông tin người dùng</MuiAlert>
       )}
 
       <Dialog open={openPasswordDialog} onClose={() => setOpenPasswordDialog(false)}>
@@ -447,6 +519,23 @@ const MyAccount = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <MuiAlert
+          elevation={6}
+          variant="filled"
+          onClose={handleCloseSnackbar}
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </MuiAlert>
+      </Snackbar>
     </Box>
   );
 };

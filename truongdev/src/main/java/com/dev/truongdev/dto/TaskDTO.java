@@ -14,12 +14,13 @@ public class TaskDTO {
     private Integer priorityId;
     private Date startDate;
     private Date dueDate;
-    private Date completedDate;
     private String assigneeId;
     private String approverId;
     private String updateBy;
     private String description;
     private String comment;
+    Integer taskTypeId;
+    private Boolean isApproved;
     
     // Additional fields for UI display
     private String departmentName;

@@ -7,8 +7,8 @@ const getAuthHeader = () => ({
 });
 
 const staffService = {
-  // Lấy danh sách tất cả nhân viên
-  getAllStaff: () => {
+  // Lấy danh sách tất cả nhân viên theo phân quyền
+  getListUser: () => {
     return api.get('/user/list', getAuthHeader());
   },
 
@@ -29,7 +29,7 @@ const staffService = {
 
   // Xóa nhân viên
   deleteStaff: (id) => {
-    return api.delete(`/user/${id}`, getAuthHeader());
+    return api.delete(`/user/delete/${id}`, getAuthHeader());
   },
 
   // Lấy danh sách nhân viên theo trạng thái
@@ -58,7 +58,7 @@ const staffService = {
     });
   },
 
-  // Lấy danh sách user con và user phòng ban chính nó
+  // Lấy danh sách user con cháu
   listUserChildDep: () => {
     return api.get('/user/list-user-child-dep', getAuthHeader());
   },

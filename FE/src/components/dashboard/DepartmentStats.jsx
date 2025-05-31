@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Card, Row, Col, Statistic, Table, Progress, Select, Spin, Empty, Menu, Modal } from 'antd';
 import { TeamOutlined, ProjectOutlined, DollarOutlined, CheckCircleOutlined, ClockCircleOutlined, UserOutlined, BarChartOutlined } from "@ant-design/icons";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from "recharts";
+import { Snackbar, Alert as MuiAlert } from '@mui/material';
 import './../../styles/dashboard.css';
 
 const DepartmentStats = () => {
@@ -9,6 +10,11 @@ const DepartmentStats = () => {
   const [loading, setLoading] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [showEmployeeModal, setShowEmployeeModal] = useState(false);
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
 
   // Dữ liệu mẫu cho các phòng ban
   const departments = [
@@ -98,13 +104,43 @@ const DepartmentStats = () => {
 
   const COLORS = ['#faad14', '#52c41a'];
 
+  const handleCloseSnackbar = () => {
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
+
   const handleDepartmentSelect = (key) => {
-    setSelectedDepartment(key);
+    try {
+      setSelectedDepartment(key);
+      setSnackbar({
+        open: true,
+        message: 'Đã cập nhật thông tin phòng ban',
+        severity: 'success'
+      });
+    } catch (err) {
+      setSnackbar({
+        open: true,
+        message: 'Không thể cập nhật thông tin phòng ban',
+        severity: 'error'
+      });
+    }
   };
 
   const handleEmployeeClick = (employee) => {
-    setSelectedEmployee(employee);
-    setShowEmployeeModal(true);
+    try {
+      setSelectedEmployee(employee);
+      setShowEmployeeModal(true);
+      setSnackbar({
+        open: true,
+        message: 'Đã tải thông tin nhân viên',
+        severity: 'success'
+      });
+    } catch (err) {
+      setSnackbar({
+        open: true,
+        message: 'Không thể tải thông tin nhân viên',
+        severity: 'error'
+      });
+    }
   };
 
   const employeeColumns = [
@@ -412,6 +448,21 @@ const DepartmentStats = () => {
 
       {renderContent()}
       {renderEmployeePerformanceModal()}
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <MuiAlert 
+          onClose={handleCloseSnackbar} 
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </MuiAlert>
+      </Snackbar>
     </div>
   );
 };

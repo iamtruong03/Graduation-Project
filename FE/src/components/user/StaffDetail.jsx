@@ -12,7 +12,8 @@ import {
   Select,
   MenuItem,
   Stack,
-  Alert,
+  Alert as MuiAlert,
+  Snackbar,
   CircularProgress,
   Chip,
   Divider
@@ -35,6 +36,8 @@ import {
 } from '@mui/icons-material';
 import staffService from '../../services/staffService';
 import departmentService from '../../services/departmentService';
+import { validateEmail, validatePhone, getEmailError, getPhoneError } from '../../utils/validation';
+import AddressSelect from '../common/AddressSelect';
 
 const StaffDetail = () => {
   const { id } = useParams();
@@ -57,6 +60,15 @@ const StaffDetail = () => {
     address: '',
     startDate: '',
     role: ''
+  });
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
+  const [formErrors, setFormErrors] = useState({
+    email: '',
+    phoneNumber: ''
   });
 
   const positionOptions = [
@@ -129,6 +141,20 @@ const StaffDetail = () => {
       ...prev,
       [name]: value
     }));
+
+    // Validate email and phone
+    if (name === 'email') {
+      setFormErrors(prev => ({
+        ...prev,
+        email: getEmailError(value)
+      }));
+    }
+    if (name === 'phoneNumber') {
+      setFormErrors(prev => ({
+        ...prev,
+        phoneNumber: getPhoneError(value)
+      }));
+    }
   };
 
   const handleEdit = () => {
@@ -153,25 +179,67 @@ const StaffDetail = () => {
     });
   };
 
+  const handleCloseSnackbar = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
+
   const handleSave = async () => {
+    // Validate before saving
+    const emailError = getEmailError(formData.email);
+    const phoneError = getPhoneError(formData.phoneNumber);
+
+    if (emailError || phoneError) {
+      setFormErrors({
+        email: emailError,
+        phoneNumber: phoneError
+      });
+      setSnackbar({
+        open: true,
+        message: 'Vui lòng kiểm tra lại thông tin',
+        severity: 'error'
+      });
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
 
       const { role, ...updateData } = formData;
+      // Địa chỉ đã được format từ AddressSelect
       const response = await staffService.updateStaff(id, updateData);
       
       if (response.status === 200) {
         setIsEditing(false);
         await fetchStaffDetail();
+        setSnackbar({
+          open: true,
+          message: 'Cập nhật thông tin nhân viên thành công',
+          severity: 'success'
+        });
       } else {
-        setError(response.message || 'Có lỗi xảy ra khi cập nhật nhân viên');
+        setSnackbar({
+          open: true,
+          message: response.message || 'Có lỗi xảy ra khi cập nhật nhân viên',
+          severity: 'error'
+        });
       }
     } catch (err) {
       if (err.response?.data?.message) {
-        setError(err.response.data.message);
+        setSnackbar({
+          open: true,
+          message: err.response.data.message,
+          severity: 'error'
+        });
       } else {
-        setError('Không thể cập nhật nhân viên. Vui lòng thử lại sau.');
+        setSnackbar({
+          open: true,
+          message: 'Không thể cập nhật nhân viên. Vui lòng thử lại sau.',
+          severity: 'error'
+        });
       }
       console.error('Error updating staff:', err);
     } finally {
@@ -190,7 +258,7 @@ const StaffDetail = () => {
   if (!staff) {
     return (
       <Box sx={{ p: 3 }}>
-        <Alert severity="error">Không tìm thấy thông tin nhân viên</Alert>
+        <MuiAlert severity="error">Không tìm thấy thông tin nhân viên</MuiAlert>
       </Box>
     );
   }
@@ -241,13 +309,13 @@ const StaffDetail = () => {
         </Stack>
 
         {error && (
-          <Alert 
+          <MuiAlert 
             severity="error" 
             onClose={() => setError(null)}
             sx={{ mb: 3 }}
           >
             {error}
-          </Alert>
+          </MuiAlert>
         )}
 
         <Grid container spacing={3}>
@@ -548,6 +616,8 @@ const StaffDetail = () => {
                       value={formData.email}
                       onChange={handleInputChange}
                       size="small"
+                      error={!!formErrors.email}
+                      helperText={formErrors.email}
                     />
                   ) : (
                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
@@ -566,6 +636,8 @@ const StaffDetail = () => {
                       value={formData.phoneNumber}
                       onChange={handleInputChange}
                       size="small"
+                      error={!!formErrors.phoneNumber}
+                      helperText={formErrors.phoneNumber}
                     />
                   ) : (
                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
@@ -578,14 +650,9 @@ const StaffDetail = () => {
                     Địa chỉ
                   </Typography>
                   {isEditing ? (
-                    <TextField
-                      fullWidth
-                      multiline
-                      rows={2}
-                      name="address"
+                    <AddressSelect
                       value={formData.address}
-                      onChange={handleInputChange}
-                      size="small"
+                      onChange={(value) => handleInputChange({ target: { name: 'address', value } })}
                     />
                   ) : (
                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
@@ -598,6 +665,23 @@ const StaffDetail = () => {
           </Grid>
         </Grid>
       </Paper>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <MuiAlert
+          elevation={6}
+          variant="filled"
+          onClose={handleCloseSnackbar}
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </MuiAlert>
+      </Snackbar>
     </Box>
   );
 };

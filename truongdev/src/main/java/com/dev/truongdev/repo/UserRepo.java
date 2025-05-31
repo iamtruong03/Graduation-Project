@@ -22,7 +22,6 @@ public interface UserRepo extends XDevBaseRepo<User> {
     Boolean existsByCodeIgnoreCase(String code);
 
     Optional<User> findByCode(String code);
-    Optional<User> findByEmail(String email);
 
     List<User> findByDepartmentIdAndStatus(Long did, Integer status);
 

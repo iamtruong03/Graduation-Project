@@ -163,10 +163,12 @@ const RiskList = () => {
 
   const getStateName = (stateId) => {
     switch (stateId) {
-      case 1: return 'Mới ghi nhận';
-      case 2: return 'Đang xử lý';
-      case 3: return 'Đã xử lý';
-      case 4: return 'Đã đóng';
+      case 0: return 'Chờ duyệt';
+      case 1: return 'Từ chối';
+      case 2: return 'Đang thực hiện';
+      case 3: return 'Hoàn thành';
+      case 4: return 'Quá hạn';
+      case 5: return 'Đã hủy';
       default: return 'Chưa xác định';
     }
   };
@@ -558,12 +560,18 @@ const getRiskLevelColor = (level) => {
 
 const getRiskStageColor = (stage) => {
   switch (stage) {
-    case 'Đang xử lý':
-      return '#1976d2'; // Blue
-    case 'Mới ghi nhận':
+    case 'Chờ duyệt':
       return '#ed6c02'; // Orange
-    case 'Đã đóng':
+    case 'Từ chối':
+      return '#d32f2f'; // Red
+    case 'Đang thực hiện':
+      return '#1976d2'; // Blue
+    case 'Hoàn thành':
       return '#2e7d32'; // Green
+    case 'Quá hạn':
+      return '#d32f2f'; // Red
+    case 'Đã hủy':
+      return '#d32f2f'; // Red
     default:
       return '#757575'; // Grey
   }

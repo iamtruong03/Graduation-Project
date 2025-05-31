@@ -52,9 +52,10 @@ public class DepartmentServiceImpl extends
     }
 
     // Kiểm tra phòng ban có task đang thực hiện không
-    boolean hasActiveTasks = taskRepo.existsByDepartmentIdAndState(
+    boolean hasActiveTasks = taskRepo.existsByDepartmentIdAndStateAndStatus(
         id,
-        AppConstants.STATUS_IN_PROGRESS
+        AppConstants.STATUS_IN_PROGRESS,
+        1
     );
     if (hasActiveTasks) {
       throw new RuntimeException("Không thể xóa phòng ban đang có task đang thực hiện");
@@ -71,9 +72,10 @@ public class DepartmentServiceImpl extends
         throw new RuntimeException("Không thể xóa phòng ban có phòng ban con đang có dự án đang thực hiện");
       }
 
-      hasActiveTasks = taskRepo.existsByDepartmentIdAndState(
+      hasActiveTasks = taskRepo.existsByDepartmentIdAndStateAndStatus(
           subDept.getId(),
-          AppConstants.STATUS_IN_PROGRESS
+          AppConstants.STATUS_IN_PROGRESS,
+          1
       );
       if (hasActiveTasks) {
         throw new RuntimeException("Không thể xóa phòng ban có phòng ban con đang có task đang thực hiện");

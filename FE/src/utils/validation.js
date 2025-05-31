@@ -57,4 +57,26 @@ export const taskSchema = yup.object().shape({
     .string()
     .required('Trạng thái là bắt buộc')
     .oneOf(['NEW', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'], 'Trạng thái không hợp lệ')
-}); 
+});
+
+export const validateEmail = (email) => {
+  const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
+  return emailRegex.test(email);
+};
+
+export const validatePhone = (phone) => {
+  const phoneRegex = /^[0-9]{10}$/;
+  return phoneRegex.test(phone);
+};
+
+export const getEmailError = (email) => {
+  if (!email) return 'Email không được để trống';
+  if (!validateEmail(email)) return 'Email không đúng định dạng';
+  return '';
+};
+
+export const getPhoneError = (phone) => {
+  if (!phone) return 'Số điện thoại không được để trống';
+  if (!validatePhone(phone)) return 'Số điện thoại phải có 10 chữ số';
+  return '';
+}; 

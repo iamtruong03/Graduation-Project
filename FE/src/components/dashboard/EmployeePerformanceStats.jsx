@@ -28,7 +28,9 @@ import {
   useTheme,
   Chip,
   Tooltip,
-  CircularProgress
+  CircularProgress,
+  Snackbar,
+  Alert as MuiAlert
 } from '@mui/material';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import CloseIcon from '@mui/icons-material/Close';
@@ -94,6 +96,11 @@ const EmployeePerformanceStats = () => {
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
 
   // Simulate loading
   React.useEffect(() => {
@@ -103,11 +110,30 @@ const EmployeePerformanceStats = () => {
     return () => clearTimeout(timer);
   }, []);
 
+  const handleCloseSnackbar = () => {
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
+
   const handleValueChange = (event) => {
-    setSelectedValue(event.target.value);
-    setLoading(true);
-    // Simulate API call
-    setTimeout(() => setLoading(false), 500);
+    try {
+      setSelectedValue(event.target.value);
+      setLoading(true);
+      // Simulate API call
+      setTimeout(() => {
+        setLoading(false);
+        setSnackbar({
+          open: true,
+          message: 'Đã cập nhật thông tin dự án',
+          severity: 'success'
+        });
+      }, 500);
+    } catch (err) {
+      setSnackbar({
+        open: true,
+        message: 'Không thể cập nhật thông tin dự án',
+        severity: 'error'
+      });
+    }
   };
 
   const handleChangePage = (event, newPage) => {
@@ -151,8 +177,21 @@ const EmployeePerformanceStats = () => {
   ];
 
   const handleEmployeeClick = (employee) => {
-    setSelectedEmployee(employee);
-    setOpenDetailDialog(true);
+    try {
+      setSelectedEmployee(employee);
+      setOpenDetailDialog(true);
+      setSnackbar({
+        open: true,
+        message: 'Đã tải thông tin chi tiết nhân viên',
+        severity: 'success'
+      });
+    } catch (err) {
+      setSnackbar({
+        open: true,
+        message: 'Không thể tải thông tin chi tiết nhân viên',
+        severity: 'error'
+      });
+    }
   };
 
   if (error) {
@@ -584,6 +623,21 @@ const EmployeePerformanceStats = () => {
             </DialogContent>
           </Dialog>
         </Paper>
+
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={3000}
+          onClose={handleCloseSnackbar}
+          anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        >
+          <MuiAlert 
+            onClose={handleCloseSnackbar} 
+            severity={snackbar.severity}
+            sx={{ width: '100%' }}
+          >
+            {snackbar.message}
+          </MuiAlert>
+        </Snackbar>
       </Box>
     </Fade>
   );

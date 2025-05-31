@@ -17,7 +17,6 @@ public interface IRiskService extends IXDevBaseService<Risk, RiskFilter> {
     
     // Add approval flow methods
     RiskDTO createRisk(String uid, RiskDTO riskDTO);
-    RiskDTO submitForApproval(String uid, Long id, List<Long> approverIds);
     RiskDTO approveRisk(String uid, Long id, String approvedBy);
     RiskDTO rejectRisk(String uid, Long id, String reason);
     void checkAndUpdateRiskStatus(Long riskId);

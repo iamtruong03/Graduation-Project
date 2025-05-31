@@ -45,16 +45,6 @@ const riskService = {
     return api.delete(`api/risks/${id}`, getAuthHeader());
   },
 
-  // Lấy danh sách loại rủi ro
-  getRiskTypes: () => {
-    return api.get('api/risks-types', getAuthHeader());
-  },
-
-  // Lấy danh sách mức độ rủi ro
-  getRiskLevels: () => {
-    return api.get('api/risks-levels', getAuthHeader());
-  },
-
   // Thêm lịch sử thay đổi trạng thái
   addRiskHistory: async (id, previousState, newState, changedBy, comment) => {
     const response = await api.post(`api/risks/${id}/history`, null, {

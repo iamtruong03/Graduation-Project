@@ -14,27 +14,33 @@ import { format, parseISO } from 'date-fns';
 import vi from 'date-fns/locale/vi';
 
 const getStatusColor = (status) => {
+  if (!status) return 'grey';
+  
   switch (status) {
-    case 'Chưa bắt đầu':
+    case 'Chờ duyệt':
     case 'pending':
+    case 0:
+      return 'warning';
+    case 'Từ chối':
+    case 'rejected':
     case 1:
-      return 'warning'; // Chưa bắt đầu
+      return 'error';
     case 'Đang thực hiện':
     case 'in_progress':
     case 2:
-      return 'info'; // Đang thực hiện
+      return 'info';
     case 'Hoàn thành':
     case 'completed':
     case 3:
-      return 'success'; // Hoàn thành
-    case 'Tạm dừng':
-    case 'paused':
+      return 'success';
+    case 'Quá hạn':
+    case 'overdue':
     case 4:
-      return 'warning'; // Tạm dừng
+      return 'error';
     case 'Đã hủy':
     case 'cancelled':
     case 5:
-      return 'error'; // Đã hủy
+      return 'error';
     default:
       return 'grey';
   }
@@ -42,9 +48,12 @@ const getStatusColor = (status) => {
 
 const getStatusName = (status) => {
   switch (status) {
-    case 1:
+    case 0:
     case 'pending':
-      return 'Chưa bắt đầu';
+      return 'Chờ duyệt';
+    case 1:
+    case 'rejected':
+      return 'Từ chối';
     case 2:
     case 'in_progress':
       return 'Đang thực hiện';
@@ -52,8 +61,8 @@ const getStatusName = (status) => {
     case 'completed':
       return 'Hoàn thành';
     case 4:
-    case 'paused':
-      return 'Tạm dừng';
+    case 'overdue':
+      return 'Quá hạn';
     case 5:
     case 'cancelled':
       return 'Đã hủy';
@@ -125,19 +134,22 @@ const TaskHistory = ({ history = [], error = null }) => {
             <TimelineItem key={item.id || index}>
               <TimelineOppositeContent color="text.secondary">
                 <Typography variant="caption">
-                  {formatDate(item.changedAt || item.updatedAt)}
+                  {formatDate(item.changedAt)}
                 </Typography>
               </TimelineOppositeContent>
               <TimelineSeparator>
-                <TimelineDot variant="outlined" color={getStatusColor(item.newStatus || item.status)} />
+                <TimelineDot 
+                  variant="outlined" 
+                  color={getStatusColor(item.newState)} 
+                />
                 {index < history.length - 1 && <TimelineConnector />}
               </TimelineSeparator>
               <TimelineContent>
                 <Typography variant="body2" component="span">
-                  {item.statusName || getStatusName(item.newStatus || item.status)}
+                  {item.stateName}
                 </Typography>
                 <Typography variant="caption" color="text.secondary" display="block">
-                  bởi {getChangedByName(item.changedBy || item.updatedBy, item.changedByName || item.updatedByName)}
+                  bởi {item.changedByName}
                 </Typography>
                 {item.comment && (
                   <Typography variant="caption" color="text.secondary" display="block">

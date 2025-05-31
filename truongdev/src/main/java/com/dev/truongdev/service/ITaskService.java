@@ -11,15 +11,18 @@ import org.springframework.data.domain.Pageable;
 
 public interface ITaskService extends IXDevBaseService<Task, TaskFilter> {
 
-    TaskDTO updateTask(Long id, TaskDTO taskDTO);
+    TaskDTO updateTask(String uid, Long id, TaskDTO taskDTO);
     List<TaskHistoryDTO> getTaskHistory(Long taskId);
     void addTaskHistory(Long taskId, Integer previousState, Integer newState, String changedBy, String comment);
     
     // Add approval flow methods
     TaskDTO createTask(String uid, TaskDTO taskDTO);
-    TaskDTO submitForApproval(String uid, Long id, List<Long> approverIds);
-    TaskDTO approveTask(String uid, Long id, String approvedBy);
+    TaskDTO approveTask(String uid, Long id);
     TaskDTO rejectTask(String uid, Long id, String reason);
     void checkAndUpdateTaskCompletion(Long taskId);
     Page<Task> getPendingApprovalTasks(String approverId, TaskFilter filter, Pageable pageable);
+
+    // Add methods to get tasks by project and risk
+    List<Task> getTasksByProjectId(String uid, Long projectId);
+    List<Task> getTasksByRiskId(String uid, Long riskId);
 } 

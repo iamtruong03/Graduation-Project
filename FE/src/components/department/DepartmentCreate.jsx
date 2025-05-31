@@ -12,7 +12,8 @@ import {
   Select,
   MenuItem,
   Stack,
-  Alert,
+  Alert as MuiAlert,
+  Snackbar,
   CircularProgress
 } from '@mui/material';
 import { Save as SaveIcon, ArrowBack as ArrowBackIcon } from '@mui/icons-material';
@@ -30,6 +31,11 @@ const DepartmentCreate = () => {
     parentId: ''
   });
   const [formErrors, setFormErrors] = useState({});
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
 
   useEffect(() => {
     fetchDepartments();
@@ -80,6 +86,13 @@ const DepartmentCreate = () => {
     }
   };
 
+  const handleCloseSnackbar = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -98,16 +111,27 @@ const DepartmentCreate = () => {
       const response = await departmentService.createDepartment(departmentData);
       
       if (response.status === 200 || response.status === 201) {
-        navigate('/department/list');
+        setSnackbar({
+          open: true,
+          message: 'Tạo phòng ban thành công',
+          severity: 'success'
+        });
+        setTimeout(() => {
+          navigate('/department/list');
+        }, 1000);
       } else {
-        setError(response.message || 'Có lỗi xảy ra khi tạo phòng ban');
+        setSnackbar({
+          open: true,
+          message: response.message || 'Có lỗi xảy ra khi tạo phòng ban',
+          severity: 'error'
+        });
       }
     } catch (err) {
-      if (err.response?.data?.message) {
-        setError(err.response.data.message);
-      } else {
-        setError('Không thể tạo phòng ban. Vui lòng thử lại sau.');
-      }
+      setSnackbar({
+        open: true,
+        message: err.response?.data?.message || 'Không thể tạo phòng ban. Vui lòng thử lại sau.',
+        severity: 'error'
+      });
       console.error('Error creating department:', err);
     } finally {
       setLoading(false);
@@ -136,13 +160,13 @@ const DepartmentCreate = () => {
         </Stack>
 
         {error && (
-          <Alert 
+          <MuiAlert 
             severity="error" 
             onClose={() => setError(null)}
             sx={{ mb: 3 }}
           >
             {error}
-          </Alert>
+          </MuiAlert>
         )}
 
         <form onSubmit={handleSubmit}>
@@ -276,6 +300,23 @@ const DepartmentCreate = () => {
           </Box>
         </form>
       </Paper>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <MuiAlert
+          elevation={6}
+          variant="filled"
+          onClose={handleCloseSnackbar}
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </MuiAlert>
+      </Snackbar>
     </Box>
   );
 };

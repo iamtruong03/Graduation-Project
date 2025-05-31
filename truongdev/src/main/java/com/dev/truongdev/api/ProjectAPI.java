@@ -53,18 +53,6 @@ public class ProjectAPI extends XDevBaseAPI<Project, ProjectFilter> {
         }
     }
 
-    @PostMapping("/{id}/submit-approval")
-    public ResponseEntity<ApiResponse<ProjectDTO>> submitForApproval(
-            @RequestAttribute String uid,
-            @PathVariable Long id,
-            @RequestBody List<Long> approverIds) {
-        try {
-            return ApiResponse.ok(projectService.submitForApproval(uid, id, approverIds));
-        } catch (Exception e) {
-            return ApiResponse.error(e.getMessage());
-        }
-    }
-
     @PostMapping("/{id}/approve")
     public ResponseEntity<ApiResponse<ProjectDTO>> approveProject(
             @RequestAttribute String uid,
@@ -95,7 +83,7 @@ public class ProjectAPI extends XDevBaseAPI<Project, ProjectFilter> {
             @RequestBody ProjectDTO projectDTO) {
         try {
             projectDTO.setUpdateBy(uid);
-            return ApiResponse.ok(projectService.updateProject(id, projectDTO));
+            return ApiResponse.ok(projectService.updateProject(uid, id, projectDTO));
         } catch (Exception e) {
             return ApiResponse.error(e.getMessage());
         }
@@ -117,10 +105,9 @@ public class ProjectAPI extends XDevBaseAPI<Project, ProjectFilter> {
             @RequestAttribute String uid,
             @PathVariable Long id,
             @RequestParam Integer newState,
-            @RequestParam String changedBy,
             @RequestParam(required = false) String comment) {
         try {
-            return ApiResponse.ok(projectService.updateProjectState(uid, id, newState, changedBy, comment));
+            return ApiResponse.ok(projectService.updateProjectState(uid, id, newState, comment));
         } catch (Exception e) {
             return ApiResponse.error(e.getMessage());
         }

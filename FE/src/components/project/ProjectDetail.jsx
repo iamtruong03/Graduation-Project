@@ -24,7 +24,8 @@ import {
   Select,
   MenuItem,
   CircularProgress,
-  Alert,
+  Alert as MuiAlert,
+  Snackbar,
   Stack,
   Divider
 } from '@mui/material';
@@ -48,6 +49,8 @@ import departmentService from '../../services/departmentService';
 import staffService from '../../services/staffService';
 import { PROJECT_STATES, PROJECT_TYPES } from '../../utils/constants';
 import ProjectHistory from './ProjectHistory';
+import TaskProjectList from './TaskProjectList';
+import taskService from '../../services/taskService';
 
 const ProjectDetail = () => {
   const { id } = useParams();
@@ -58,12 +61,13 @@ const ProjectDetail = () => {
     attachments: [],
     tasks: []
   });
-  const [departments, setDepartments] = useState({});
-  const [managers, setManagers] = useState({});
+  const [departments, setDepartments] = useState([]);
+  const [managers, setManagers] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
   const [editedProject, setEditedProject] = useState({
     attachments: [],
-    tasks: []
+    tasks: [],
+    completedDate: null
   });
   const [openTaskDialog, setOpenTaskDialog] = useState(false);
   const [openAttachmentDialog, setOpenAttachmentDialog] = useState(false);
@@ -84,54 +88,64 @@ const ProjectDetail = () => {
   const [selectedTask, setSelectedTask] = useState(null);
   const [selectedAttachment, setSelectedAttachment] = useState(null);
   const [projectHistory, setProjectHistory] = useState([]);
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [projectResponse, deptResponse, userResponse, historyResponse] = await Promise.all([
+        const [projectResponse, historyResponse, tasksResponse] = await Promise.all([
           projectService.getProjectById(id),
-          departmentService.getAll(),
-          staffService.listUserChildDep(),
-          projectService.getProjectHistory(id)
+          projectService.getProjectHistory(id),
+          taskService.getTasksByProjectId(id)
         ]);
 
-        console.log('History Response:', historyResponse);
+        console.log('Project Response:', projectResponse);
+        console.log('Tasks Response:', tasksResponse);
 
         if (projectResponse && projectResponse.status === 200) {
           const projectData = {
             ...projectResponse.data,
             attachments: projectResponse.data.attachments || [],
-            tasks: projectResponse.data.tasks || []
+            tasks: tasksResponse?.data || []
           };
           setProject(projectData);
           setEditedProject(projectData);
+
+          // Lấy thông tin phòng ban và danh sách người phụ trách
+          if (projectData.departmentId) {
+            try {
+              const [deptResponse, userResponse] = await Promise.all([
+                departmentService.getDepartmentById(projectData.departmentId),
+                staffService.listUserByDep(projectData.departmentId)
+              ]);
+
+              console.log('Department Response:', deptResponse);
+              console.log('User Response:', userResponse);
+
+              if (deptResponse && deptResponse.data) {
+                setDepartments([deptResponse.data]);
+              }
+
+              if (userResponse && userResponse.data) {
+                console.log('Setting managers:', userResponse.data);
+                setManagers(userResponse.data);
+              }
+            } catch (err) {
+              console.error('Error fetching department and managers:', err);
+            }
+          }
         } else {
           setError('Không thể tải thông tin dự án');
         }
 
-        if (deptResponse.data) {
-          const deptMap = {};
-          deptResponse.data.forEach(dept => {
-            deptMap[dept.id] = dept.name;
-          });
-          setDepartments(deptMap);
-        }
-
-        if (userResponse.data) {
-          const userMap = {};
-          userResponse.data.forEach(user => {
-            userMap[user.id] = user.name;
-          });
-          setManagers(userMap);
-        }
-
-        console.log('History Response:', historyResponse);
         if (Array.isArray(historyResponse)) {
-          console.log('Setting project history with data:', historyResponse);
           setProjectHistory(historyResponse);
         } else {
-          console.log('Invalid history response, setting empty array');
           setProjectHistory([]);
         }
       } catch (err) {
@@ -147,12 +161,12 @@ const ProjectDetail = () => {
 
   const getStatusColor = (state) => {
     switch (state) {
-      case 1: return '#ed6c02'; // Chờ duyệt
-      case 2: return '#2e7d32'; // Đã duyệt
-      case 3: return '#d32f2f'; // Từ chối
-      case 4: return '#1976d2'; // Đang thực hiện
-      case 5: return '#2e7d32'; // Hoàn thành
-      case 6: return '#d32f2f'; // Quá hạn
+      case 0: return '#ed6c02'; // Chờ duyệt
+      case 1: return '#d32f2f'; // Từ chối
+      case 2: return '#1976d2'; // Đang thực hiện
+      case 3: return '#2e7d32'; // Hoàn thành
+      case 4: return '#d32f2f'; // Quá hạn
+      case 5: return '#d32f2f'; // Đã hủy
       default: return '#757575';
     }
   };
@@ -197,28 +211,23 @@ const ProjectDetail = () => {
     setSelectedTask(null);
   };
 
-  const handleCreateTask = () => {
-    // Thêm task mới vào danh sách
-    const newTaskWithId = {
-      ...newTask,
-      id: project.tasks.length + 1,
-      startDate: new Date(newTask.startDate).toISOString(),
-      endDate: new Date(newTask.endDate).toISOString(),
-    };
-    setProject({
-      ...project,
-      tasks: [...project.tasks, newTaskWithId],
-    });
-    handleCloseTaskDialog();
-  };
-
   const handleEdit = () => {
+    // Kiểm tra trạng thái project
+    if (project.state !== 2) {
+      setSnackbar({
+        open: true,
+        message: 'Chỉ có thể chỉnh sửa dự án khi đang ở trạng thái "Đang thực hiện"',
+        severity: 'error'
+      });
+      return;
+    }
     setIsEditing(true);
     // Chuyển đổi chuỗi ngày thành đối tượng Date
     const editedProjectData = {
       ...project,
       startDate: project.startDate ? new Date(project.startDate) : null,
-      endDate: project.endDate ? new Date(project.endDate) : null
+      endDate: project.endDate ? new Date(project.endDate) : null,
+      completedDate: project.completedDate ? new Date(project.completedDate) : null
     };
     setEditedProject(editedProjectData);
   };
@@ -228,36 +237,74 @@ const ProjectDetail = () => {
     setEditedProject({ ...project });
   };
 
+  const handleCloseSnackbar = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
+
   const handleSave = async () => {
     try {
       setLoading(true);
-      // Chuyển đổi đối tượng Date thành chuỗi ISO trước khi gửi lên server
       const projectDataToSave = {
         ...editedProject,
         startDate: editedProject.startDate ? editedProject.startDate.toISOString() : null,
         endDate: editedProject.endDate ? editedProject.endDate.toISOString() : null,
-        updateBy: localStorage.getItem('userId') // Thêm userId của người cập nhật
+        completedDate: editedProject.completedDate ? editedProject.completedDate.toISOString() : null,
+        updateBy: localStorage.getItem('userId')
       };
 
       const response = await projectService.updateProject(id, projectDataToSave);
 
-      if (response.data.status === 200 || response.data.message === "Success") {
-        setProject(projectDataToSave);
-        setIsEditing(false);
-        setError({
-          type: 'success',
-          message: 'Cập nhật dự án thành công'
-        });
+      if (response.status === 200 || response.message === "Success") {
+        // Gọi lại API getProjectById và getProjectHistory
+        try {
+          const [projectResponse, historyResponse] = await Promise.all([
+            projectService.getProjectById(id),
+            projectService.getProjectHistory(id)
+          ]);
+
+          if (projectResponse && projectResponse.status === 200) {
+            const projectData = {
+              ...projectResponse.data,
+              attachments: projectResponse.data.attachments || [],
+              tasks: projectResponse.data.tasks || []
+            };
+            setProject(projectData);
+            setEditedProject(projectData);
+          }
+
+          if (Array.isArray(historyResponse)) {
+            setProjectHistory(historyResponse);
+          }
+
+          setIsEditing(false);
+          setSnackbar({
+            open: true,
+            message: 'Cập nhật dự án thành công!',
+            severity: 'success'
+          });
+        } catch (fetchError) {
+          console.error('Error fetching updated data:', fetchError);
+          setSnackbar({
+            open: true,
+            message: 'Cập nhật thành công nhưng không thể tải lại dữ liệu',
+            severity: 'warning'
+          });
+        }
       } else {
-        setError({
-          type: 'error',
-          message: response.data.message || 'Có lỗi xảy ra khi cập nhật dự án'
+        setSnackbar({
+          open: true,
+          message: response.message || 'Có lỗi xảy ra khi cập nhật dự án',
+          severity: 'error'
         });
       }
     } catch (error) {
-      setError({
-        type: 'error',
-        message: error.response?.data?.message || 'Không thể cập nhật dự án'
+      setSnackbar({
+        open: true,
+        message: error.response?.message || 'Không thể cập nhật dự án',
+        severity: 'error'
       });
       console.error('Error updating project:', error);
     } finally {
@@ -265,12 +312,38 @@ const ProjectDetail = () => {
     }
   };
 
-  const handleProjectChange = (event) => {
+  const handleProjectChange = async (event) => {
     const { name, value } = event.target;
     setEditedProject(prev => ({
       ...prev,
       [name]: value
     }));
+
+    // Nếu thay đổi phòng ban, cập nhật lại danh sách người quản lý
+    if (name === 'departmentId') {
+      try {
+        const [deptResponse, userResponse] = await Promise.all([
+          departmentService.getDepartmentById(value),
+          staffService.listUserByDep(value)
+        ]);
+
+        if (deptResponse) {
+          setDepartments([deptResponse.data]);
+        }
+
+        if (userResponse) {
+          setManagers(userResponse.data);
+          // Reset người quản lý khi đổi phòng ban
+          setEditedProject(prev => ({
+            ...prev,
+            managerId: ''
+          }));
+        }
+      } catch (err) {
+        console.error('Error fetching department and managers:', err);
+        setError('Không thể tải danh sách người quản lý');
+      }
+    }
   };
 
   const handleDateChange = (name, value) => {
@@ -306,12 +379,16 @@ const ProjectDetail = () => {
       ...project,
       attachments: updatedAttachments
     });
+    setSnackbar({
+      open: true,
+      message: 'Xóa tài liệu thành công',
+      severity: 'success'
+    });
   };
 
   const handleSaveAttachment = () => {
     let updatedAttachments;
     if (selectedAttachment) {
-      // Cập nhật tài liệu hiện có
       updatedAttachments = project.attachments.map(doc =>
         doc.id === selectedAttachment.id
           ? {
@@ -325,7 +402,6 @@ const ProjectDetail = () => {
           : doc
       );
     } else {
-      // Thêm tài liệu mới
       const newDoc = {
         ...newAttachment,
         id: project.attachments.length + 1,
@@ -340,6 +416,11 @@ const ProjectDetail = () => {
       attachments: updatedAttachments
     });
     handleCloseAttachmentDialog();
+    setSnackbar({
+      open: true,
+      message: selectedAttachment ? 'Cập nhật tài liệu thành công' : 'Thêm tài liệu mới thành công',
+      severity: 'success'
+    });
   };
 
   const handleCloseAttachmentDialog = () => {
@@ -353,81 +434,195 @@ const ProjectDetail = () => {
     setSelectedAttachment(null);
   };
 
-  const handleEditTask = (task) => {
-    setSelectedTask(task);
-    setNewTask({
-      name: task.name,
-      assignee: task.assignee,
-      startDate: task.startDate,
-      endDate: task.endDate,
-      priority: task.priority,
-      status: task.status
-    });
-    setOpenTaskDialog(true);
-  };
-
-  const handleDeleteTask = (taskId) => {
-    const updatedTasks = project.tasks.filter(task => task.id !== taskId);
-    setProject({
-      ...project,
-      tasks: updatedTasks
-    });
-  };
-
-  const handleSaveTask = () => {
-    let updatedTasks;
-    if (selectedTask) {
-      // Cập nhật công việc hiện có
-      updatedTasks = project.tasks.map(task =>
-        task.id === selectedTask.id
-          ? { ...newTask, id: task.id }
-          : task
-      );
-    } else {
-      // Thêm công việc mới
-      const newTaskWithId = {
-        ...newTask,
-        id: project.tasks.length + 1
-      };
-      updatedTasks = [...project.tasks, newTaskWithId];
-    }
-
-    setProject({
-      ...project,
-      tasks: updatedTasks
-    });
-    handleCloseTaskDialog();
-  };
-
-  const handleSubmitApproval = async () => {
+  const handleDeleteTask = async (taskId) => {
     try {
       setLoading(true);
-      const response = await projectService.submitForApproval(id, project.approvers);
-      if (response.success) {
-        setProject(response.data);
-      } else {
-        setError(response.message);
-      }
+      await taskService.changeStatus(taskId);
+      
+      // Cập nhật lại danh sách task
+      const updatedTasks = project.tasks.filter(task => task.id !== taskId);
+      setProject({
+        ...project,
+        tasks: updatedTasks
+      });
+
+      setSnackbar({
+        open: true,
+        message: 'Xóa công việc thành công',
+        severity: 'success'
+      });
     } catch (error) {
-      setError('Không thể gửi phê duyệt');
-      console.error('Error submitting approval:', error);
+      console.error('Error deleting task:', error);
+      setSnackbar({
+        open: true,
+        message: error.response?.data?.message || 'Không thể xóa công việc',
+        severity: 'error'
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleApprove = async () => {
+  const handleEditTask = async (task) => {
+    try {
+      // Kiểm tra trạng thái task
+      if (task.state !== 2) {
+        setSnackbar({
+          open: true,
+          message: 'Chỉ có thể chỉnh sửa công việc khi đang ở trạng thái thực hiện',
+          severity: 'error'
+        });
+        return;
+      }
+
+      setSelectedTask(task);
+      setNewTask({
+        code: task.code || '',
+        name: task.name,
+        departmentId: project.departmentId,
+        assigneeId: task.assigneeId || '',
+        priorityId: task.priorityId || '',
+        taskTypeId: 2,
+        projectId: id,
+        state: task.state || '',
+        description: task.description || '',
+        startDate: task.startDate ? format(new Date(task.startDate), 'yyyy-MM-dd') : '',
+        dueDate: task.dueDate ? format(new Date(task.dueDate), 'yyyy-MM-dd') : '',
+      });
+
+      // Lấy danh sách người thực hiện theo phòng ban của dự án
+      if (project.departmentId) {
+        const response = await staffService.listUserByDep(project.departmentId);
+        if (response && response.data) {
+          setManagers(response.data);
+        }
+      }
+
+      // Gọi API lấy thông tin task mới nhất
+      const taskResponse = await taskService.getTaskById(task.id);
+      if (taskResponse && taskResponse.data) {
+        setSelectedTask(taskResponse.data);
+        setNewTask({
+          ...taskResponse.data,
+          startDate: taskResponse.data.startDate ? format(new Date(taskResponse.data.startDate), 'yyyy-MM-dd') : '',
+          dueDate: taskResponse.data.dueDate ? format(new Date(taskResponse.data.dueDate), 'yyyy-MM-dd') : '',
+        });
+      }
+
+      setOpenTaskDialog(true);
+    } catch (error) {
+      console.error('Error in handleEditTask:', error);
+      setSnackbar({
+        open: true,
+        message: 'Không thể tải thông tin công việc',
+        severity: 'error'
+      });
+    }
+  };
+
+  const handleAddTask = () => {
+    setSelectedTask(null);
+    setNewTask({
+      code: '',
+      name: '',
+      departmentId: project.departmentId,
+      assigneeId: '',
+      priorityId: '',
+      taskTypeId: 2,
+      projectId: id,
+      description: '',
+      startDate: '',
+      dueDate: '',
+    });
+    // Lấy danh sách người thực hiện theo phòng ban của dự án
+    if (project.departmentId) {
+      staffService.listUserByDep(project.departmentId)
+        .then(response => {
+          if (response.data) {
+            setManagers(response.data);
+          }
+        })
+        .catch(err => {
+          console.error('Error fetching assignees:', err);
+        });
+    }
+    setOpenTaskDialog(true);
+  };
+
+  const handleSaveTask = async () => {
     try {
       setLoading(true);
-      const response = await projectService.approveProject(id, 'CURRENT_USER'); // Thay thế bằng user thực tế
-      if (response.success) {
-        setProject(response.data);
+      const taskData = {
+        code: newTask.code || '',
+        name: newTask.name || '',
+        taskTypeId: 2,
+        departmentId: project.departmentId,
+        assigneeId: newTask.assigneeId,
+        priorityId: newTask.priorityId || 2,
+        projectId: id,
+        state: newTask.state || 2,
+        description: newTask.description || '',
+        startDate: newTask.startDate || '',
+        dueDate: newTask.dueDate || '',
+      };
+
+      // Log dữ liệu để debug
+      console.log('Task data being sent:', taskData);
+
+      // Validate dữ liệu trước khi gửi
+      if (!taskData.name || !taskData.assigneeId || !taskData.startDate || !taskData.dueDate) {
+        setSnackbar({
+          open: true,
+          message: 'Vui lòng điền đầy đủ thông tin bắt buộc',
+          severity: 'error'
+        });
+        return;
+      }
+
+      // Đảm bảo các trường số là number
+      taskData.taskTypeId = Number(taskData.taskTypeId);
+      taskData.departmentId = Number(taskData.departmentId);
+      taskData.assigneeId = Number(taskData.assigneeId);
+      taskData.priorityId = Number(taskData.priorityId);
+      taskData.projectId = Number(taskData.projectId);
+
+      let response;
+      if (selectedTask) {
+        // Xử lý cập nhật task
+        console.log('Updating task with ID:', selectedTask.id);
+        response = await taskService.updateTask(selectedTask.id, taskData);
       } else {
-        setError(response.message);
+        // Xử lý thêm task mới
+        console.log('Creating new task');
+        response = await taskService.createTask(taskData);
+      }
+
+      if (response && response.data) {
+        // Cập nhật lại danh sách task
+        const updatedTasks = selectedTask 
+          ? project.tasks.map(task => task.id === selectedTask.id ? response.data : task)
+          : [...project.tasks, response.data];
+        
+        setProject({
+          ...project,
+          tasks: updatedTasks
+        });
+
+        handleCloseTaskDialog();
+        setSnackbar({
+          open: true,
+          message: selectedTask ? 'Cập nhật công việc thành công' : 'Thêm công việc mới thành công',
+          severity: 'success'
+        });
       }
     } catch (error) {
-      setError('Không thể phê duyệt dự án');
-      console.error('Error approving project:', error);
+      console.error('Error saving task:', error);
+      console.error('Error response data:', error.response?.data);
+      setSnackbar({
+        open: true,
+        message: error.response?.data?.message || 'Không thể lưu công việc',
+        severity: 'error'
+      });
     } finally {
       setLoading(false);
     }
@@ -443,9 +638,45 @@ const ProjectDetail = () => {
           >
             <CloseIcon />
           </IconButton>
-          <Typography variant="h5" sx={{ fontWeight: 600 }}>Chi tiết dự án</Typography>
+          <Stack direction="row" alignItems="center" spacing={2}>
+            <Typography variant="h5" sx={{ fontWeight: 600 }}>Chi tiết dự án</Typography>
+            {isEditing ? (
+              <FormControl size="small" sx={{ minWidth: 150 }}>
+                <Select
+                  name="state"
+                  value={editedProject.state}
+                  onChange={handleProjectChange}
+                  sx={{
+                    bgcolor: getStatusColor(editedProject.state),
+                    color: 'white',
+                    fontWeight: 500,
+                    fontSize: '0.875rem',
+                    height: '32px',
+                    '& .MuiSelect-select': {
+                      py: 0.5
+                    }
+                  }}
+                >
+                  <MenuItem value={2}>Đang thực hiện</MenuItem>
+                  <MenuItem value={3}>Hoàn thành</MenuItem>
+                </Select>
+              </FormControl>
+            ) : (
+              <Chip
+                label={PROJECT_STATES[project.state]}
+                size="small"
+                sx={{
+                  bgcolor: getStatusColor(project.state),
+                  color: 'white',
+                  fontWeight: 500,
+                  fontSize: '0.875rem',
+                  height: '32px'
+                }}
+              />
+            )}
+          </Stack>
           <Box sx={{ flexGrow: 1 }} />
-          {project.state === 4 && isEditing ? (
+          {project.state === 2 && isEditing ? (
             <>
               <Button
                 variant="outlined"
@@ -477,7 +708,7 @@ const ProjectDetail = () => {
                 LƯU
               </Button>
             </>
-          ) : project.state === 4 && (
+          ) : project.state === 2 && (
             <Button
               variant="contained"
               startIcon={<EditIcon />}
@@ -539,16 +770,31 @@ const ProjectDetail = () => {
                     Người phụ trách
                   </Typography>
                   {isEditing ? (
-                    <TextField
-                      fullWidth
-                      name="managerId"
-                      value={editedProject.managerId}
-                      onChange={handleProjectChange}
-                      size="small"
-                      sx={{ mt: 1 }}
-                    />
+                    <FormControl fullWidth size="small" sx={{ mt: 1 }}>
+                      <Select
+                        name="managerId"
+                        value={editedProject.managerId || ''}
+                        onChange={handleProjectChange}
+                      >
+                        <MenuItem value="">-- Chọn người phụ trách --</MenuItem>
+                        {managers && managers.length > 0 && managers.map((user) => (
+                          <MenuItem key={user.id} value={user.id}>
+                            {user.name}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
                   ) : (
-                    <Typography variant="body1">{managers[project.managerId] || project.managerId}</Typography>
+                    <Typography variant="body1">
+                      {(() => {
+                        console.log('Managers:', managers);
+                        console.log('Project Manager ID:', project.managerId);
+                        const manager = managers && managers.length > 0 ? 
+                          managers.find(m => String(m.id) === String(project.managerId)) : null;
+                        console.log('Found Manager:', manager);
+                        return manager ? manager.name : 'Chưa có người phụ trách';
+                      })()}
+                    </Typography>
                   )}
                 </Grid>
 
@@ -557,16 +803,28 @@ const ProjectDetail = () => {
                     Phòng ban thực hiện
                   </Typography>
                   {isEditing ? (
-                    <TextField
-                      fullWidth
-                      name="departmentId"
-                      value={editedProject.departmentId}
-                      onChange={handleProjectChange}
-                      size="small"
-                      sx={{ mt: 1 }}
-                    />
+                    <FormControl fullWidth size="small" required>
+                      <InputLabel>Phòng ban</InputLabel>
+                      <Select
+                        name="departmentId"
+                        value={project.departmentId}
+                        label="Phòng ban"
+                        disabled
+                        sx={{
+                          '& .MuiSelect-select': {
+                            color: 'text.primary'
+                          }
+                        }}
+                      >
+                        <MenuItem value={project.departmentId}>
+                          {departments.find(d => d.id === project.departmentId)?.name || 'Chưa có phòng ban'}
+                        </MenuItem>
+                      </Select>
+                    </FormControl>
                   ) : (
-                    <Typography variant="body1"> {departments[project.departmentId] || project.departmentId}</Typography>
+                    <Typography variant="body1">
+                      {departments.find(d => d.id === project.departmentId)?.name || 'Chưa có phòng ban'}
+                    </Typography>
                   )}
                 </Grid>
 
@@ -641,30 +899,11 @@ const ProjectDetail = () => {
 
                 <Grid item xs={12} sm={6}>
                   <Typography variant="subtitle2" color="text.secondary">
-                    Trạng thái
+                    Ngày hoàn thành thực tế
                   </Typography>
-                  {isEditing ? (
-                    <FormControl fullWidth size="small" sx={{ mt: 1 }}>
-                      <Select
-                        name="state"
-                        value={editedProject.state}
-                        onChange={handleProjectChange}
-                      >
-                        <MenuItem value={4}>Đang thực hiện</MenuItem>
-                        <MenuItem value={5}>Hoàn thành</MenuItem>
-                      </Select>
-                    </FormControl>
-                  ) : (
-                    <Chip
-                      label={PROJECT_STATES[project.state]}
-                      size="small"
-                      sx={{
-                        bgcolor: getStatusColor(project.state),
-                        color: 'white',
-                        mt: 0.5,
-                      }}
-                    />
-                  )}
+                  <Typography variant="body1">
+                    {formatDate(project.completedDate)}
+                  </Typography>
                 </Grid>
 
                 <Grid item xs={12}>
@@ -696,7 +935,7 @@ const ProjectDetail = () => {
                 <Typography variant="h6" sx={{ color: 'primary.main', fontWeight: 600 }}>
                   Tài liệu đính kèm
                 </Typography>
-                {project.state === 4 && (
+                {project.state === 2 && (
                   <Button
                     variant="contained"
                     startIcon={<CloudUploadIcon />}
@@ -724,7 +963,7 @@ const ProjectDetail = () => {
                       <TableCell sx={{ fontWeight: 600 }}>Tệp đính kèm</TableCell>
                       <TableCell sx={{ fontWeight: 600 }}>Người cập nhật</TableCell>
                       <TableCell sx={{ fontWeight: 600 }}>Ngày tải lên</TableCell>
-                      {project.state === 4 && (
+                      {project.state === 2 && (
                         <TableCell align="center" sx={{ fontWeight: 600 }}>Thao tác</TableCell>
                       )}
                     </TableRow>
@@ -751,7 +990,7 @@ const ProjectDetail = () => {
                         </TableCell>
                         <TableCell>{doc.updatedBy}</TableCell>
                         <TableCell>{formatDate(doc.uploadDate)}</TableCell>
-                        {project.state === 4 && (
+                        {project.state === 2 && (
                           <TableCell align="center">
                             <Stack direction="row" spacing={1} justifyContent="center">
                               <IconButton
@@ -784,167 +1023,26 @@ const ProjectDetail = () => {
             <ProjectHistory history={projectHistory} />
 
             {/* Phần danh sách công việc */}
-            <Paper elevation={1} sx={{ p: 3, borderRadius: 2, mt: 3 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <Typography variant="h6" sx={{ color: 'primary.main', fontWeight: 600 }}>
-                  Danh sách công việc
-                </Typography>
-                {project.state === 4 && (
-                  <Button
-                    variant="contained"
-                    size="small"
-                    startIcon={<AddIcon />}
-                    onClick={() => {
-                      setSelectedTask(null);
-                      setOpenTaskDialog(true);
-                    }}
-                    sx={{
-                      backgroundColor: '#2e7d32',
-                      '&:hover': {
-                        backgroundColor: '#1b5e20'
-                      }
-                    }}
-                  >
-                    THÊM
-                  </Button>
-                )}
-              </Box>
-
-              <Stack spacing={2}>
-                {project.tasks.map((task) => (
-                  <Paper
-                    key={task.id}
-                    elevation={0}
-                    sx={{
-                      p: 2,
-                      borderRadius: 1,
-                      bgcolor: '#f8f9fa',
-                      border: '1px solid #e0e0e0',
-                      '&:hover': {
-                        bgcolor: '#f5f5f5',
-                        borderColor: '#bdbdbd'
-                      }
-                    }}
-                  >
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
-                      <Typography
-                        variant="subtitle1"
-                        sx={{
-                          fontWeight: 600,
-                          color: '#2196f3',
-                          cursor: 'pointer',
-                          '&:hover': {
-                            color: '#1976d2',
-                            textDecoration: 'underline'
-                          }
-                        }}
-                        onClick={() => navigate(`/task/detail/${task.id}`)}
-                      >
-                        {task.name}
-                      </Typography>
-                      {project.state === 4 && (
-                        <Stack direction="row" spacing={1}>
-                          <IconButton
-                            size="small"
-                            onClick={() => handleEditTask(task)}
-                            sx={{
-                              color: 'primary.main',
-                              p: 0.5,
-                              '&:hover': {
-                                bgcolor: 'rgba(33, 150, 243, 0.08)'
-                              }
-                            }}
-                          >
-                            <EditIcon fontSize="small" />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            onClick={() => handleDeleteTask(task.id)}
-                            sx={{
-                              color: 'error.main',
-                              p: 0.5,
-                              '&:hover': {
-                                bgcolor: 'rgba(244, 67, 54, 0.08)'
-                              }
-                            }}
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </Stack>
-                      )}
-                    </Box>
-
-                    <Stack spacing={1}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography variant="body2" color="text.secondary" sx={{ minWidth: 85 }}>
-                          Thực hiện:
-                        </Typography>
-                        <Typography variant="body2">
-                          {task.assignee}
-                        </Typography>
-                      </Box>
-
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography variant="body2" color="text.secondary" sx={{ minWidth: 85 }}>
-                          Thời gian:
-                        </Typography>
-                        <Typography variant="body2">
-                          {formatDate(task.startDate)} - {formatDate(task.endDate)}
-                        </Typography>
-                      </Box>
-
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography variant="body2" color="text.secondary" sx={{ minWidth: 85 }}>
-                          Trạng thái:
-                        </Typography>
-                        <Chip
-                          label={task.status}
-                          size="small"
-                          sx={{
-                            height: '24px',
-                            fontSize: '0.75rem',
-                            bgcolor: getStatusColor(task.status),
-                            color: 'white',
-                            '& .MuiChip-label': {
-                              px: 1
-                            }
-                          }}
-                        />
-                      </Box>
-
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography variant="body2" color="text.secondary" sx={{ minWidth: 85 }}>
-                          Độ ưu tiên:
-                        </Typography>
-                        <Chip
-                          label={task.priority}
-                          size="small"
-                          sx={{
-                            height: '24px',
-                            fontSize: '0.75rem',
-                            bgcolor: getPriorityColor(task.priority),
-                            color: 'white',
-                            '& .MuiChip-label': {
-                              px: 1
-                            }
-                          }}
-                        />
-                      </Box>
-                    </Stack>
-                  </Paper>
-                ))}
-              </Stack>
-            </Paper>
+            <TaskProjectList
+              tasks={project.tasks}
+              projectState={project.state}
+              onAddTask={handleAddTask}
+              onEditTask={handleEditTask}
+              onDeleteTask={handleDeleteTask}
+              formatDate={formatDate}
+              getPriorityColor={getPriorityColor}
+              managers={managers}
+            />
           </Grid>
         </Grid>
       </Paper>
 
       {/* Dialog thêm/sửa công việc */}
-      {project.state === 4 && (
+      {project.state === 2 && (
         <Dialog
           open={openTaskDialog}
           onClose={handleCloseTaskDialog}
-          maxWidth="sm"
+          maxWidth="md"
           fullWidth
         >
           <DialogTitle sx={{
@@ -956,71 +1054,123 @@ const ProjectDetail = () => {
             {selectedTask ? 'Chỉnh sửa công việc' : 'Thêm công việc mới'}
           </DialogTitle>
           <DialogContent sx={{ pt: 3 }}>
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
+            <Grid container spacing={3}>
+              <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
+                  size="small"
+                  label="Mã công việc"
+                  name="code"
+                  value={newTask.code || ''}
+                  onChange={(e) => setNewTask({ ...newTask, code: e.target.value })}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  size="small"
                   label="Tên công việc"
-                  value={newTask.name}
+                  name="name"
+                  value={newTask.name || ''}
                   onChange={(e) => setNewTask({ ...newTask, name: e.target.value })}
+                  required
                 />
               </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Người thực hiện"
-                  value={newTask.assignee}
-                  onChange={(e) => setNewTask({ ...newTask, assignee: e.target.value })}
-                />
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth size="small" required>
+                  <InputLabel>Phòng ban</InputLabel>
+                  <Select
+                    name="departmentId"
+                    value={project.departmentId}
+                    label="Phòng ban"
+                    disabled
+                    sx={{
+                      '& .MuiSelect-select': {
+                        color: 'text.primary'
+                      }
+                    }}
+                  >
+                    <MenuItem value={project.departmentId}>
+                      {departments.find(d => d.id === project.departmentId)?.name || 'Chưa có phòng ban'}
+                    </MenuItem>
+                  </Select>
+                </FormControl>
               </Grid>
-              <Grid item xs={6}>
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth size="small" required>
+                  <InputLabel>Người thực hiện</InputLabel>
+                  <Select
+                    name="assigneeId"
+                    value={newTask.assigneeId || ''}
+                    label="Người thực hiện"
+                    onChange={(e) => setNewTask({ ...newTask, assigneeId: e.target.value })}
+                  >
+                    <MenuItem value="">-- Chọn người thực hiện --</MenuItem>
+                    {managers.map((user) => (
+                      <MenuItem key={user.id} value={user.id}>
+                        {user.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth size="small" required>
+                  <InputLabel>Mức độ ưu tiên</InputLabel>
+                  <Select
+                    name="priorityId"
+                    value={newTask.priorityId || 2}
+                    label="Mức độ ưu tiên"
+                    onChange={(e) => setNewTask({ ...newTask, priorityId: e.target.value })}
+                  >
+                    <MenuItem value={3}>Cao</MenuItem>
+                    <MenuItem value={2}>Trung bình</MenuItem>
+                    <MenuItem value={1}>Thấp</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
+                  size="small"
                   type="date"
                   label="Ngày bắt đầu"
-                  value={newTask.startDate}
+                  name="startDate"
+                  value={newTask.startDate || ''}
                   onChange={(e) => setNewTask({ ...newTask, startDate: e.target.value })}
                   InputLabelProps={{ shrink: true }}
+                  required
                 />
               </Grid>
-              <Grid item xs={6}>
+              <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
+                  size="small"
                   type="date"
                   label="Ngày kết thúc"
-                  value={newTask.endDate}
-                  onChange={(e) => setNewTask({ ...newTask, endDate: e.target.value })}
+                  name="dueDate"
+                  value={newTask.dueDate || ''}
+                  onChange={(e) => setNewTask({ ...newTask, dueDate: e.target.value })}
                   InputLabelProps={{ shrink: true }}
+                  required
                 />
               </Grid>
-              <Grid item xs={6}>
-                <FormControl fullWidth>
-                  <InputLabel>Độ ưu tiên</InputLabel>
-                  <Select
-                    value={newTask.priority}
-                    label="Độ ưu tiên"
-                    onChange={(e) => setNewTask({ ...newTask, priority: e.target.value })}
-                  >
-                    <MenuItem value="HIGH">Cao</MenuItem>
-                    <MenuItem value="MEDIUM">Trung bình</MenuItem>
-                    <MenuItem value="LOW">Thấp</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={6}>
-                <FormControl fullWidth>
-                  <InputLabel>Trạng thái</InputLabel>
-                  <Select
-                    value={newTask.status}
-                    label="Trạng thái"
-                    onChange={(e) => setNewTask({ ...newTask, status: e.target.value })}
-                  >
-                    <MenuItem value="NEW">Mới</MenuItem>
-                    <MenuItem value="IN_PROGRESS">Đang thực hiện</MenuItem>
-                    <MenuItem value="COMPLETED">Hoàn thành</MenuItem>
-                    <MenuItem value="CANCELLED">Đã hủy</MenuItem>
-                  </Select>
-                </FormControl>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  multiline
+                  minRows={4}
+                  placeholder="Mô tả chi tiết công việc"
+                  name="description"
+                  value={newTask.description || ''}
+                  onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      fontFamily: 'inherit'
+                    }
+                  }}
+                />
               </Grid>
             </Grid>
           </DialogContent>
@@ -1031,7 +1181,7 @@ const ProjectDetail = () => {
             <Button
               variant="contained"
               onClick={handleSaveTask}
-              disabled={!newTask.name || !newTask.assignee || !newTask.startDate || !newTask.endDate}
+              disabled={!newTask.name || !newTask.assigneeId || !newTask.startDate || !newTask.dueDate}
             >
               {selectedTask ? 'LƯU' : 'THÊM'}
             </Button>
@@ -1040,7 +1190,7 @@ const ProjectDetail = () => {
       )}
 
       {/* Dialog thêm/sửa tài liệu */}
-      {project.state === 4 && (
+      {project.state === 2 && (
         <Dialog
           open={openAttachmentDialog}
           onClose={handleCloseAttachmentDialog}
@@ -1110,6 +1260,23 @@ const ProjectDetail = () => {
           </DialogActions>
         </Dialog>
       )}
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={1000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <MuiAlert
+          elevation={6}
+          variant="filled"
+          onClose={handleCloseSnackbar}
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </MuiAlert>
+      </Snackbar>
     </Box>
   );
 };

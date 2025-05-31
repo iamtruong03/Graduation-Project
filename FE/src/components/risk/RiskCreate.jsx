@@ -12,8 +12,9 @@ import {
   IconButton,
   Paper,
   Divider,
-  Alert,
-  Stack
+  Alert as MuiAlert,
+  Stack,
+  Snackbar
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import SaveIcon from '@mui/icons-material/Save';
@@ -23,40 +24,66 @@ import projectService from '../../services/projectService';
 import departmentService from '../../services/departmentService';
 import staffService from '../../services/staffService';
 import riskService from '../../services/riskService';
+import categoryService from '../../services/categoryService';
 
 const RiskCreate = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     code: '',
     name: '',
-    type: '',
-    impactScope: '',
-    projectName: '',
-    department: '',
-    analyst: '',
-    analysisDate: '',
-    description: ''
+    description: '',
+    riskTypeId: '',
+    projectId: '',
+    departmentId: '',
+    impactLevelId: '',
+    scopeId: '',
+    possibilityId: '',
+    priorityId: '',
+    reflectorId: '',
+    rootCause: '',
+    impactAnalysis: '',
+    remedy: '',
+    precautions: '',
+    reflectionDay: ''
   });
   const [projects, setProjects] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [users, setUsers] = useState([]);
   const [errors, setErrors] = useState({});
+  const [riskTypes, setRiskTypes] = useState([]);
+  const [impactLevels, setImpactLevels] = useState([]);
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
 
   useEffect(() => {
     const fetchData = async () => {
       try {
+        // Lấy danh sách loại rủi ro
+        const riskTypesResponse = await categoryService.getCategoriesByType('riskTypeId');
+        if (riskTypesResponse && riskTypesResponse.data) {
+          setRiskTypes(riskTypesResponse.data);
+        }
+
+        // Lấy danh sách mức độ ảnh hưởng
+        const impactLevelsResponse = await categoryService.getCategoriesByType('impactLevelId');
+        if (impactLevelsResponse && impactLevelsResponse.data) {
+          setImpactLevels(impactLevelsResponse.data);
+        }
+
         // Lấy danh sách dự án
         const projectResponse = await projectService.getProjectList();
         setProjects(projectResponse || []);
 
         // Lấy danh sách phòng ban
         const departmentResponse = await departmentService.getAll();
-        // Kiểm tra và chuyển đổi dữ liệu thành mảng
         const departmentData = departmentResponse?.data || [];
         setDepartments(Array.isArray(departmentData) ? departmentData : []);
       } catch (error) {
         console.error('Lỗi khi lấy dữ liệu:', error);
-        setDepartments([]); // Đặt mảng rỗng nếu có lỗi
+        setDepartments([]);
       }
     };
     fetchData();
@@ -64,9 +91,9 @@ const RiskCreate = () => {
 
   useEffect(() => {
     const fetchUsers = async () => {
-      if (formData.department) {
+      if (formData.departmentId) {
         try {
-          const response = await staffService.listUserByDep(formData.department);
+          const response = await staffService.listUserByDep(formData.departmentId);
           const userData = response?.data || [];
           setUsers(Array.isArray(userData) ? userData : []);
         } catch (error) {
@@ -78,7 +105,7 @@ const RiskCreate = () => {
       }
     };
     fetchUsers();
-  }, [formData.department]);
+  }, [formData.departmentId]);
 
   const handleFormChange = (event) => {
     const { name, value } = event.target;
@@ -86,7 +113,7 @@ const RiskCreate = () => {
       ...prev,
       [name]: value,
       // Reset người phản ánh khi đổi phòng ban
-      ...(name === 'department' && { analyst: '' })
+      ...(name === 'departmentId' && { reflectorId: '' })
     }));
     // Clear error when field is changed
     if (errors[name]) {
@@ -99,7 +126,7 @@ const RiskCreate = () => {
 
   const validateForm = () => {
     const newErrors = {};
-    const requiredFields = ['code', 'name', 'type', 'impactScope', 'projectName', 'department', 'analyst', 'analysisDate'];
+    const requiredFields = ['code', 'name', 'riskTypeId', 'impactLevelId', 'scopeId', 'projectId', 'departmentId', 'reflectorId', 'reflectionDay'];
     
     requiredFields.forEach(field => {
       if (!formData[field]) {
@@ -111,27 +138,36 @@ const RiskCreate = () => {
     return Object.keys(newErrors).length === 0;
   };
 
+  const handleCloseSnackbar = () => {
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
+
   const handleSubmit = async () => {
     if (validateForm()) {
       try {
-        // Chuẩn bị dữ liệu gửi lên server
         const riskData = {
           ...formData,
-          projectId: formData.projectName, // Đổi tên field để khớp với API
-          departmentId: formData.department, // Đổi tên field để khớp với API
-          analystId: formData.analyst, // Đổi tên field để khớp với API
         };
 
         await riskService.createRisk(riskData);
         
-        // Hiển thị thông báo thành công
-        alert('Tạo rủi ro thành công!');
+        setSnackbar({
+          open: true,
+          message: 'Tạo rủi ro thành công!',
+          severity: 'success'
+        });
         
-        // Chuyển về trang danh sách
-        navigate('/risk/list');
+        // Chuyển về trang danh sách sau 1 giây
+        setTimeout(() => {
+          navigate('/risk/list');
+        }, 1000);
       } catch (error) {
         console.error('Lỗi khi tạo rủi ro:', error);
-        alert('Có lỗi xảy ra khi tạo rủi ro: ' + (error.response?.data?.message || error.message));
+        setSnackbar({
+          open: true,
+          message: 'Có lỗi xảy ra khi tạo rủi ro: ' + (error.response?.data?.message || error.message),
+          severity: 'error'
+        });
       }
     }
   };
@@ -204,22 +240,24 @@ const RiskCreate = () => {
               fullWidth 
               required 
               size="small"
-              error={!!errors.type}
+              error={!!errors.riskTypeId}
             >
               <InputLabel>Loại rủi ro</InputLabel>
               <Select
-                name="type"
-                value={formData.type}
+                name="riskTypeId"
+                value={formData.riskTypeId}
                 onChange={handleFormChange}
                 label="Loại rủi ro"
               >
-                <MenuItem value="Rủi ro sức khỏe">Rủi ro sức khỏe</MenuItem>
-                <MenuItem value="Rủi ro môi trường">Rủi ro môi trường</MenuItem>
-                <MenuItem value="Rủi ro an toàn">Rủi ro an toàn</MenuItem>
+                {riskTypes.map((type) => (
+                  <MenuItem key={type.id} value={type.id}>
+                    {type.name}
+                  </MenuItem>
+                ))}
               </Select>
-              {errors.type && (
+              {errors.riskTypeId && (
                 <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.5 }}>
-                  {errors.type}
+                  {errors.riskTypeId}
                 </Typography>
               )}
             </FormControl>
@@ -230,21 +268,49 @@ const RiskCreate = () => {
               fullWidth 
               required 
               size="small"
-              error={!!errors.impactScope}
+              error={!!errors.impactLevelId}
+            >
+              <InputLabel>Mức độ ảnh hưởng</InputLabel>
+              <Select
+                name="impactLevelId"
+                value={formData.impactLevelId}
+                onChange={handleFormChange}
+                label="Mức độ ảnh hưởng"
+              >
+                {impactLevels.map((level) => (
+                  <MenuItem key={level.id} value={level.id}>
+                    {level.name}
+                  </MenuItem>
+                ))}
+              </Select>
+              {errors.impactLevelId && (
+                <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.5 }}>
+                  {errors.impactLevelId}
+                </Typography>
+              )}
+            </FormControl>
+          </Grid>
+
+          <Grid item xs={12} md={4}>
+            <FormControl 
+              fullWidth 
+              required 
+              size="small"
+              error={!!errors.scopeId}
             >
               <InputLabel>Phạm vi ảnh hưởng</InputLabel>
               <Select
-                name="impactScope"
-                value={formData.impactScope}
+                name="scopeId"
+                value={formData.scopeId}
                 onChange={handleFormChange}
                 label="Phạm vi ảnh hưởng"
               >
-                <MenuItem value="Dự án">Dự án</MenuItem>
-                <MenuItem value="Phòng ban">Phòng ban</MenuItem>
+                <MenuItem value={1}>Dự án</MenuItem>
+                <MenuItem value={2}>Phòng ban</MenuItem>
               </Select>
-              {errors.impactScope && (
+              {errors.scopeId && (
                 <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.5 }}>
-                  {errors.impactScope}
+                  {errors.scopeId}
                 </Typography>
               )}
             </FormControl>
@@ -255,12 +321,12 @@ const RiskCreate = () => {
               fullWidth 
               required 
               size="small"
-              error={!!errors.projectName}
+              error={!!errors.projectId}
             >
               <InputLabel>Tên dự án</InputLabel>
               <Select
-                name="projectName"
-                value={formData.projectName}
+                name="projectId"
+                value={formData.projectId}
                 onChange={handleFormChange}
                 label="Tên dự án"
               >
@@ -270,9 +336,9 @@ const RiskCreate = () => {
                   </MenuItem>
                 ))}
               </Select>
-              {errors.projectName && (
+              {errors.projectId && (
                 <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.5 }}>
-                  {errors.projectName}
+                  {errors.projectId}
                 </Typography>
               )}
             </FormControl>
@@ -283,12 +349,12 @@ const RiskCreate = () => {
               fullWidth 
               required 
               size="small"
-              error={!!errors.department}
+              error={!!errors.departmentId}
             >
               <InputLabel>Đơn vị ghi nhận</InputLabel>
               <Select
-                name="department"
-                value={formData.department}
+                name="departmentId"
+                value={formData.departmentId}
                 onChange={handleFormChange}
                 label="Đơn vị ghi nhận"
               >
@@ -298,9 +364,9 @@ const RiskCreate = () => {
                   </MenuItem>
                 ))}
               </Select>
-              {errors.department && (
+              {errors.departmentId && (
                 <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.5 }}>
-                  {errors.department}
+                  {errors.departmentId}
                 </Typography>
               )}
             </FormControl>
@@ -311,15 +377,15 @@ const RiskCreate = () => {
               fullWidth 
               required 
               size="small"
-              error={!!errors.analyst}
+              error={!!errors.reflectorId}
             >
               <InputLabel>Người phản ánh</InputLabel>
               <Select
-                name="analyst"
-                value={formData.analyst}
+                name="reflectorId"
+                value={formData.reflectorId}
                 onChange={handleFormChange}
                 label="Người phản ánh"
-                disabled={!formData.department}
+                disabled={!formData.departmentId}
               >
                 {Array.isArray(users) && users.map((user) => (
                   <MenuItem key={user.id} value={user.id}>
@@ -327,9 +393,9 @@ const RiskCreate = () => {
                   </MenuItem>
                 ))}
               </Select>
-              {errors.analyst && (
+              {errors.reflectorId && (
                 <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.5 }}>
-                  {errors.analyst}
+                  {errors.reflectorId}
                 </Typography>
               )}
             </FormControl>
@@ -340,14 +406,14 @@ const RiskCreate = () => {
               fullWidth
               type="date"
               label="Ngày phản ánh"
-              name="analysisDate"
-              value={formData.analysisDate}
+              name="reflectionDay"
+              value={formData.reflectionDay}
               onChange={handleFormChange}
               InputLabelProps={{ shrink: true }}
               required
               size="small"
-              error={!!errors.analysisDate}
-              helperText={errors.analysisDate}
+              error={!!errors.reflectionDay}
+              helperText={errors.reflectionDay}
             />
           </Grid>
 
@@ -362,6 +428,58 @@ const RiskCreate = () => {
               onChange={handleFormChange}
               size="small"
             />
+          </Grid>
+
+          <Grid item xs={12} md={4}>
+            <FormControl 
+              fullWidth 
+              required 
+              size="small"
+              error={!!errors.possibilityId}
+            >
+              <InputLabel>Khả năng xảy ra</InputLabel>
+              <Select
+                name="possibilityId"
+                value={formData.possibilityId}
+                onChange={handleFormChange}
+                label="Khả năng xảy ra"
+              >
+                <MenuItem value={1}>Thấp</MenuItem>
+                <MenuItem value={2}>Trung bình</MenuItem>
+                <MenuItem value={3}>Cao</MenuItem>
+              </Select>
+              {errors.possibilityId && (
+                <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.5 }}>
+                  {errors.possibilityId}
+                </Typography>
+              )}
+            </FormControl>
+          </Grid>
+
+          <Grid item xs={12} md={4}>
+            <FormControl 
+              fullWidth 
+              required 
+              size="small"
+              error={!!errors.priorityId}
+            >
+              <InputLabel>Mức độ ưu tiên</InputLabel>
+              <Select
+                name="priorityId"
+                value={formData.priorityId}
+                onChange={handleFormChange}
+                label="Mức độ ưu tiên"
+              >
+                <MenuItem value={1}>Thấp</MenuItem>
+                <MenuItem value={2}>Trung bình</MenuItem>
+                <MenuItem value={3}>Cao</MenuItem>
+              </Select>
+              {errors.priorityId && (
+                <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.5 }}>
+                  {errors.priorityId}
+                </Typography>
+              )}
+            </FormControl>
           </Grid>
         </Grid>
 
@@ -404,6 +522,23 @@ const RiskCreate = () => {
           </Button>
         </Box>
       </Paper>
+
+      <Snackbar 
+        open={snackbar.open} 
+        autoHideDuration={1000} 
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <MuiAlert
+          elevation={6}
+          variant="filled"
+          onClose={handleCloseSnackbar}
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </MuiAlert>
+      </Snackbar>
     </Box>
   );
 };

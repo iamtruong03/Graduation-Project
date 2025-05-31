@@ -11,6 +11,7 @@ public class TaskDTO {
     private Integer state;
     private Long departmentId;
     private Long projectId;
+    private Long riskId;
     private Integer priorityId;
     private Date startDate;
     private Date dueDate;

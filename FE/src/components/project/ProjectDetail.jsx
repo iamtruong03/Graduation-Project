@@ -51,6 +51,7 @@ import { PROJECT_STATES, PROJECT_TYPES } from '../../utils/constants';
 import ProjectHistory from './ProjectHistory';
 import TaskProjectList from './TaskProjectList';
 import taskService from '../../services/taskService';
+import categoryService from '../../services/categoryService';
 
 const ProjectDetail = () => {
   const { id } = useParams();
@@ -93,15 +94,17 @@ const ProjectDetail = () => {
     message: '',
     severity: 'success'
   });
+  const [projectTypes, setProjectTypes] = useState({});
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [projectResponse, historyResponse, tasksResponse] = await Promise.all([
+        const [projectResponse, historyResponse, tasksResponse, projectTypesResponse] = await Promise.all([
           projectService.getProjectById(id),
           projectService.getProjectHistory(id),
-          taskService.getTasksByProjectId(id)
+          taskService.getTasksByProjectId(id),
+          categoryService.getCategoriesByType('projectTypeId')
         ]);
 
         console.log('Project Response:', projectResponse);
@@ -134,7 +137,7 @@ const ProjectDetail = () => {
               if (userResponse && userResponse.data) {
                 console.log('Setting managers:', userResponse.data);
                 setManagers(userResponse.data);
-              }
+        }
             } catch (err) {
               console.error('Error fetching department and managers:', err);
             }
@@ -147,6 +150,14 @@ const ProjectDetail = () => {
           setProjectHistory(historyResponse);
         } else {
           setProjectHistory([]);
+        }
+
+        if (projectTypesResponse && projectTypesResponse.data) {
+          const typeMap = {};
+          projectTypesResponse.data.forEach(type => {
+            typeMap[type.id] = type.name;
+          });
+          setProjectTypes(typeMap);
         }
       } catch (err) {
         console.error('Error fetching data:', err);
@@ -279,12 +290,12 @@ const ProjectDetail = () => {
             setProjectHistory(historyResponse);
           }
 
-          setIsEditing(false);
-          setSnackbar({
-            open: true,
+        setIsEditing(false);
+        setSnackbar({
+          open: true,
             message: 'Cập nhật dự án thành công!',
-            severity: 'success'
-          });
+          severity: 'success'
+        });
         } catch (fetchError) {
           console.error('Error fetching updated data:', fetchError);
           setSnackbar({
@@ -440,17 +451,17 @@ const ProjectDetail = () => {
       await taskService.changeStatus(taskId);
       
       // Cập nhật lại danh sách task
-      const updatedTasks = project.tasks.filter(task => task.id !== taskId);
-      setProject({
-        ...project,
-        tasks: updatedTasks
-      });
+    const updatedTasks = project.tasks.filter(task => task.id !== taskId);
+    setProject({
+      ...project,
+      tasks: updatedTasks
+    });
 
-      setSnackbar({
-        open: true,
-        message: 'Xóa công việc thành công',
-        severity: 'success'
-      });
+    setSnackbar({
+      open: true,
+      message: 'Xóa công việc thành công',
+      severity: 'success'
+    });
     } catch (error) {
       console.error('Error deleting task:', error);
       setSnackbar({
@@ -512,11 +523,11 @@ const ProjectDetail = () => {
       setOpenTaskDialog(true);
     } catch (error) {
       console.error('Error in handleEditTask:', error);
-      setSnackbar({
-        open: true,
+    setSnackbar({
+      open: true,
         message: 'Không thể tải thông tin công việc',
         severity: 'error'
-      });
+    });
     }
   };
 
@@ -540,7 +551,7 @@ const ProjectDetail = () => {
         .then(response => {
           if (response.data) {
             setManagers(response.data);
-          }
+      }
         })
         .catch(err => {
           console.error('Error fetching assignees:', err);
@@ -577,6 +588,19 @@ const ProjectDetail = () => {
           severity: 'error'
         });
         return;
+      }
+
+      // Kiểm tra quyền tạo task khi taskTypeId == 2
+      if (taskData.taskTypeId === 2) {
+        const currentUserId = localStorage.getItem('userId');
+        if (currentUserId !== project.managerId) {
+          setSnackbar({
+            open: true,
+            message: 'Chỉ có quản lý dự án mới được phép tạo công việc',
+            severity: 'error'
+          });
+          return;
+        }
       }
 
       // Đảm bảo các trường số là number
@@ -639,7 +663,7 @@ const ProjectDetail = () => {
             <CloseIcon />
           </IconButton>
           <Stack direction="row" alignItems="center" spacing={2}>
-            <Typography variant="h5" sx={{ fontWeight: 600 }}>Chi tiết dự án</Typography>
+          <Typography variant="h5" sx={{ fontWeight: 600 }}>Chi tiết dự án</Typography>
             {isEditing ? (
               <FormControl size="small" sx={{ minWidth: 150 }}>
                 <Select
@@ -772,9 +796,9 @@ const ProjectDetail = () => {
                   {isEditing ? (
                     <FormControl fullWidth size="small" sx={{ mt: 1 }}>
                       <Select
-                        name="managerId"
+                      name="managerId"
                         value={editedProject.managerId || ''}
-                        onChange={handleProjectChange}
+                      onChange={handleProjectChange}
                       >
                         <MenuItem value="">-- Chọn người phụ trách --</MenuItem>
                         {managers && managers.length > 0 && managers.map((user) => (
@@ -806,7 +830,7 @@ const ProjectDetail = () => {
                     <FormControl fullWidth size="small" required>
                       <InputLabel>Phòng ban</InputLabel>
                       <Select
-                        name="departmentId"
+                      name="departmentId"
                         value={project.departmentId}
                         label="Phòng ban"
                         disabled
@@ -839,14 +863,14 @@ const ProjectDetail = () => {
                         value={editedProject.projectTypeId}
                         onChange={handleProjectChange}
                       >
-                        {Object.entries(PROJECT_TYPES).map(([key, value]) => (
-                          <MenuItem key={key} value={Number(key)}>{value}</MenuItem>
+                        {Object.entries(projectTypes).map(([id, name]) => (
+                          <MenuItem key={id} value={Number(id)}>{name}</MenuItem>
                         ))}
                       </Select>
                     </FormControl>
                   ) : (
                     <Typography variant="body1">
-                      {PROJECT_TYPES[project.projectTypeId]}
+                      {projectTypes[project.projectTypeId] || project.projectTypeId}
                     </Typography>
                   )}
                 </Grid>
@@ -1032,7 +1056,7 @@ const ProjectDetail = () => {
               formatDate={formatDate}
               getPriorityColor={getPriorityColor}
               managers={managers}
-            />
+                        />
           </Grid>
         </Grid>
       </Paper>

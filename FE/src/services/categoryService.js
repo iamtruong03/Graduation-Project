@@ -43,6 +43,11 @@ const categoryService = {
   // Thay đổi trạng thái danh mục
   changeStatus: (id) => {
     return api.post(`/api/categories/change-status/${id}`, {}, getAuthHeader());
+  },
+
+  // Lấy danh sách danh mục theo loại
+  getCategoriesByType: (categoryTypeCode) => {
+    return api.get(`/api/categories/get-by-category-type?categoryTypeCode=${categoryTypeCode}`, getAuthHeader());
   }
 };
 

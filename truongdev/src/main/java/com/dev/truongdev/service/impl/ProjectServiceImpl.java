@@ -313,7 +313,7 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
             .orElseThrow(() -> new RuntimeException("Không tìm thấy dự án"));
 
         // Kiểm tra quyền cập nhật
-        if (!uid.equals(project.getApproverId()) && !uid.equals(project.getManagerId())) {
+        if (!uid.equals(project.getApproverId())) {
             throw new RuntimeException("Không có quyền xóa");
         }
             

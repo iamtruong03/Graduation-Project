@@ -24,6 +24,7 @@ import { Save as SaveIcon, ArrowBack as ArrowBackIcon } from '@mui/icons-materia
 import projectService from '../../services/projectService';
 import departmentService from '../../services/departmentService';
 import staffService from '../../services/staffService';
+import categoryService from '../../services/categoryService';
 import { projectSchema } from '../../utils/validation';
 
 const ProjectCreate = () => {
@@ -34,6 +35,7 @@ const ProjectCreate = () => {
   const [managers, setManagers] = useState([]);
   const [validationErrors, setValidationErrors] = useState({});
   const [openSnackbar, setOpenSnackbar] = useState(false);
+  const [projectTypes, setProjectTypes] = useState([]);
   
   const [project, setProject] = useState({
     code: '',
@@ -53,6 +55,12 @@ const ProjectCreate = () => {
         const deptResponse = await departmentService.getAll();
         if (deptResponse.data) {
           setDepartments(deptResponse.data);
+        }
+
+        // Lấy danh sách loại dự án
+        const projectTypesResponse = await categoryService.getCategoriesByType('projectTypeId');
+        if (projectTypesResponse && projectTypesResponse.data) {
+          setProjectTypes(projectTypesResponse.data);
         }
       } catch (err) {
         console.error('Error fetching data:', err);
@@ -341,9 +349,11 @@ const ProjectCreate = () => {
                       }
                     }}
                   >
-                    <MenuItem value={1}>Phát triển phần mềm</MenuItem>
-                    <MenuItem value={2}>Mobile</MenuItem>
-                    <MenuItem value={3}>Web</MenuItem>
+                    {projectTypes.map((type) => (
+                      <MenuItem key={type.id} value={type.id}>
+                        {type.name}
+                      </MenuItem>
+                    ))}
                   </Select>
                   {validationErrors.projectTypeId && (
                     <Typography variant="caption" color="error">

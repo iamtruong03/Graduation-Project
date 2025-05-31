@@ -15,28 +15,13 @@ import vi from 'date-fns/locale/vi';
 
 const getStatusColor = (stage) => {
   switch (stage) {
-    case 'Chờ duyệt':
-    case 'pending':
-    case 0:
-      return 'warning';
-    case 'Từ chối':
-    case 'rejected':
-    case 1:
-      return 'error';
-    case 'Đang thực hiện':
-    case 'in_progress':
+    case 'Đang xử lý':
     case 2:
       return 'info';
-    case 'Hoàn thành':
-    case 'completed':
+    case 'Đã đóng':
     case 3:
       return 'success';
-    case 'Quá hạn':
-    case 'overdue':
-    case 4:
-      return 'error';
     case 'Đã hủy':
-    case 'cancelled':
     case 5:
       return 'error';
     default:
@@ -44,25 +29,15 @@ const getStatusColor = (stage) => {
   }
 };
 
-const getStatusName = (stage) => {
+const getStatusName = (stage, stageName) => {
+  if (stageName) return stageName;
+  
   switch (stage) {
-    case 0:
-    case 'pending':
-      return 'Chờ duyệt';
-    case 1:
-    case 'rejected':
-      return 'Từ chối';
     case 2:
-    case 'in_progress':
-      return 'Đang thực hiện';
+      return 'Đang xử lý';
     case 3:
-    case 'completed':
-      return 'Hoàn thành';
-    case 4:
-    case 'overdue':
-      return 'Quá hạn';
+      return 'Đã đóng';
     case 5:
-    case 'cancelled':
       return 'Đã hủy';
     default:
       return stage || 'Không xác định';
@@ -125,28 +100,23 @@ const RiskHistory = ({ history = [] }) => {
             <TimelineItem key={item.id || index}>
               <TimelineOppositeContent color="text.secondary">
                 <Typography variant="caption">
-                  {formatDate(item.changedAt || item.updatedAt)}
+                  {formatDate(item.changedAt)}
                 </Typography>
               </TimelineOppositeContent>
               <TimelineSeparator>
-                <TimelineDot variant="outlined" color={getStatusColor(item.newStage || item.stage)} />
+                <TimelineDot variant="outlined" color={getStatusColor(item.newState || item.state)} />
                 {index < history.length - 1 && <TimelineConnector />}
               </TimelineSeparator>
               <TimelineContent>
                 <Typography variant="body2" component="span">
-                  {item.stageName || getStatusName(item.newStage || item.stage)}
+                  {item.stateName || getStatusName(item.newState || item.state)}
                 </Typography>
                 <Typography variant="caption" color="text.secondary" display="block">
-                  bởi {getChangedByName(item.changedBy || item.updatedBy, item.changedByName || item.updatedByName)}
+                  bởi {getChangedByName(item.changedBy, item.changedByName)}
                 </Typography>
                 {item.comment && (
                   <Typography variant="caption" color="text.secondary" display="block">
                     {item.comment}
-                  </Typography>
-                )}
-                {item.riskLevel && (
-                  <Typography variant="caption" color="text.secondary" display="block">
-                    Mức độ rủi ro: {item.riskLevel}
                   </Typography>
                 )}
               </TimelineContent>

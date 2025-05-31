@@ -36,6 +36,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import projectService from '../../services/projectService';
 import staffService from '../../services/staffService';
 import departmentService from '../../services/departmentService';
+import categoryService from '../../services/categoryService';
 import { PROJECT_STATES, PROJECT_TYPES } from '../../utils/constants';
 
 const ProjectList = () => {
@@ -69,11 +70,13 @@ const ProjectList = () => {
     message: '',
     severity: 'success'
   });
+  const [projectTypes, setProjectTypes] = useState({});
 
   useEffect(() => {
     fetchProjects();
     fetchPendingCount();
     fetchDepartments();
+    fetchProjectTypes();
   }, [page, searchTerm, projectType, status]);
 
   useEffect(() => {
@@ -106,6 +109,21 @@ const ProjectList = () => {
       }
     } catch (err) {
       console.error('Error fetching departments and users:', err);
+    }
+  };
+
+  const fetchProjectTypes = async () => {
+    try {
+      const response = await categoryService.getCategoriesByType('projectTypeId');
+      if (response && response.data) {
+        const typeMap = {};
+        response.data.forEach(type => {
+          typeMap[type.id] = type.name;
+        });
+        setProjectTypes(typeMap);
+      }
+    } catch (err) {
+      console.error('Error fetching project types:', err);
     }
   };
 
@@ -505,7 +523,7 @@ const ProjectList = () => {
                 onChange={handleProjectTypeChange}
               >
                 <MenuItem value="all">Tất cả</MenuItem>
-                {Object.entries(PROJECT_TYPES).map(([id, name]) => (
+                {Object.entries(projectTypes).map(([id, name]) => (
                   <MenuItem key={id} value={id}>{name}</MenuItem>
                 ))}
               </Select>
@@ -620,7 +638,7 @@ const ProjectList = () => {
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2">
-                        {PROJECT_TYPES[project.projectTypeId] || project.projectTypeId}
+                        {projectTypes[project.projectTypeId] || project.projectTypeId}
                       </Typography>
                     </TableCell>
                     <TableCell>

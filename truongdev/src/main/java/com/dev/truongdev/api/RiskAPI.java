@@ -40,40 +40,6 @@ public class RiskAPI extends XDevBaseAPI<Risk, RiskFilter> {
         return (S) riskService;
     }
 
-    @PostMapping("/create")
-    public ResponseEntity<ApiResponse<RiskDTO>> createRisk(
-            @RequestAttribute String uid,
-            @RequestBody RiskDTO riskDTO) {
-        try {
-            return ApiResponse.ok(riskService.createRisk(uid, riskDTO));
-        } catch (Exception e) {
-            return ApiResponse.error(e.getMessage());
-        }
-    }
-
-    @PostMapping("/{id}/approve")
-    public ResponseEntity<ApiResponse<RiskDTO>> approveRisk(
-            @RequestAttribute String uid,
-            @PathVariable Long id,
-            @RequestParam String approvedBy) {
-        try {
-            return ApiResponse.ok(riskService.approveRisk(uid, id, approvedBy));
-        } catch (Exception e) {
-            return ApiResponse.error(e.getMessage());
-        }
-    }
-
-    @PostMapping("/{id}/reject")
-    public ResponseEntity<ApiResponse<RiskDTO>> rejectRisk(
-            @RequestAttribute String uid,
-            @PathVariable Long id,
-            @RequestParam String reason) {
-        try {
-            return ApiResponse.ok(riskService.rejectRisk(uid, id, reason));
-        } catch (Exception e) {
-            return ApiResponse.error(e.getMessage());
-        }
-    }
 
     @PutMapping("/{id}/update")
     public ResponseEntity<ApiResponse<RiskDTO>> updateRisk(
@@ -82,7 +48,7 @@ public class RiskAPI extends XDevBaseAPI<Risk, RiskFilter> {
             @RequestBody RiskDTO riskDTO) {
         try {
             riskDTO.setUpdateBy(uid);
-            return ApiResponse.ok(riskService.updateRisk(id, riskDTO));
+            return ApiResponse.ok(riskService.updateRisk(uid, id, riskDTO));
         } catch (Exception e) {
             return ApiResponse.error(e.getMessage());
         }
@@ -99,24 +65,8 @@ public class RiskAPI extends XDevBaseAPI<Risk, RiskFilter> {
         }
     }
 
-    @GetMapping("/pending-approval")
-    public ResponseEntity<ApiResponse<Page<Risk>>> getPendingApprovalRisks(
-            @RequestAttribute String uid,
-            RiskFilter filter,
-            Pageable pageable) {
-        try {
-            return ApiResponse.ok(riskService.getPendingApprovalRisks(uid, filter, pageable));
-        } catch (Exception e) {
-            return ApiResponse.error(e.getMessage());
-        }
-    }
-
     /**
      * Export danh sách rủi ro ra file Excel.
-     * @param did ID phòng ban (từ JWT token)
-     * @param uid ID người dùng yêu cầu (từ JWT token)
-     * @param filter Bộ lọc tìm kiếm
-     * @return File Excel chứa danh sách rủi ro
      */
     @GetMapping("/export")
     public ResponseEntity<byte[]> exportRisks(

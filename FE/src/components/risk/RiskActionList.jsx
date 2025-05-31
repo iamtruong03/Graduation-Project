@@ -80,12 +80,11 @@ const getStatusColor = (state) => {
   }
 };
 
-const TaskProjectList = ({ 
-  tasks, 
-  projectState, 
-  onAddTask, 
-  onEditTask, 
-  onDeleteTask,
+const RiskActionList = ({ 
+  actions, 
+  riskState, 
+  onAddAction, 
+  onDeleteAction,
   formatDate,
   managers
 }) => {
@@ -100,17 +99,17 @@ const TaskProjectList = ({
   };
 
   return (
-    <Paper elevation={1} sx={{ p: 3, borderRadius: 2, mt: 3 }}>
+    <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h6" sx={{ color: 'primary.main', fontWeight: 600 }}>
-          Danh sách công việc
+          Hành động phòng ngừa
         </Typography>
-        {projectState === 2 && (
+        {riskState === 2 && (
           <Button
             variant="contained"
             size="small"
             startIcon={<AddIcon />}
-            onClick={onAddTask}
+            onClick={onAddAction}
             sx={{
               backgroundColor: '#2e7d32',
               '&:hover': {
@@ -124,9 +123,9 @@ const TaskProjectList = ({
       </Box>
 
       <Stack spacing={2}>
-        {tasks.map((task) => (
+        {actions.map((action) => (
           <Paper
-            key={task.id}
+            key={action.id}
             elevation={0}
             sx={{
               p: 2,
@@ -151,16 +150,16 @@ const TaskProjectList = ({
                     textDecoration: 'underline'
                   }
                 }}
-                onClick={() => navigate(`/task/detail/${task.id}`)}
+                onClick={() => navigate(`/task/detail/${action.id}`)}
               >
-                {task.name}
+                {action.name}
               </Typography>
-              {projectState === 2 && (
+              {riskState === 2 && (
                 <Stack direction="row" spacing={1}>
-               
+                
                   <IconButton
                     size="small"
-                    onClick={() => onDeleteTask(task.id)}
+                    onClick={() => onDeleteAction(action.id)}
                     sx={{
                       color: 'error.main',
                       p: 0.5,
@@ -182,10 +181,10 @@ const TaskProjectList = ({
                 </Typography>
                 <Stack direction="row" spacing={1} alignItems="center">
                   <Avatar sx={{ width: 24, height: 24, fontSize: '0.875rem' }}>
-                    {getAssigneeName(task.assigneeId).charAt(0)}
+                    {getAssigneeName(action.assigneeId).charAt(0)}
                   </Avatar>
                   <Typography variant="body2">
-                    {getAssigneeName(task.assigneeId)}
+                    {getAssigneeName(action.assigneeId)}
                   </Typography>
                 </Stack>
               </Box>
@@ -195,7 +194,7 @@ const TaskProjectList = ({
                   Thời gian:
                 </Typography>
                 <Typography variant="body2">
-                  {formatDate(task.startDate)} - {formatDate(task.dueDate)}
+                  {formatDate(action.startDate)} - {formatDate(action.dueDate)}
                 </Typography>
               </Box>
 
@@ -204,12 +203,12 @@ const TaskProjectList = ({
                   Độ ưu tiên:
                 </Typography>
                 <Chip
-                  label={getPriorityName(task.priorityId)}
+                  label={getPriorityName(action.priorityId)}
                   size="small"
                   sx={{
                     height: '24px',
                     fontSize: '0.75rem',
-                    bgcolor: getPriorityColor(task.priorityId),
+                    bgcolor: getPriorityColor(action.priorityId),
                     color: 'white',
                     '& .MuiChip-label': {
                       px: 1
@@ -223,12 +222,12 @@ const TaskProjectList = ({
                   Trạng thái:
                 </Typography>
                 <Chip
-                  label={getStatusName(task.state)}
+                  label={getStatusName(action.state)}
                   size="small"
                   sx={{
                     height: '24px',
                     fontSize: '0.75rem',
-                    bgcolor: getStatusColor(task.state),
+                    bgcolor: getStatusColor(action.state),
                     color: 'white',
                     '& .MuiChip-label': {
                       px: 1
@@ -244,4 +243,4 @@ const TaskProjectList = ({
   );
 };
 
-export default TaskProjectList; 
+export default RiskActionList; 

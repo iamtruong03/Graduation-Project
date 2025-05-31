@@ -2,6 +2,7 @@ package com.dev.truongdev.repo;
 
 import com.dev.truongdev.entity.Category;
 import com.dev.truongdev.xdevbase.repo.XDevBaseRepo;
+import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
@@ -22,4 +23,6 @@ public interface CategoryRepo extends XDevBaseRepo<Category> {
             @Param("search") String search,
             Pageable pageable
     );
+
+    List<Category> findAllByCategoryTypeIdAndStatus(Long categoryTypeId, Integer status);
 } 

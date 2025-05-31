@@ -27,7 +27,7 @@ const riskService = {
   // Thêm rủi ro mới
   createRisk: async (riskData) => {
     try {
-      const response = await api.post('/api/risks/create', riskData, getAuthHeader());
+      const response = await api.post('/api/risks', riskData, getAuthHeader());
       return response.data;
     } catch (error) {
       throw error;
@@ -36,13 +36,13 @@ const riskService = {
 
   // Cập nhật thông tin rủi ro
   updateRisk: async (id, riskData) => {
-    const response = await api.put(`api/risks/${id}`, riskData, getAuthHeader());
+    const response = await api.put(`api/risks/${id}/update`, riskData, getAuthHeader());
     return response.data;
   },
 
   // Xóa rủi ro
   deleteRisk: (id) => {
-    return api.delete(`api/risks/${id}`, getAuthHeader());
+    return api.post(`api/risks/change-status/${id}`, getAuthHeader());
   },
 
   // Thêm lịch sử thay đổi trạng thái

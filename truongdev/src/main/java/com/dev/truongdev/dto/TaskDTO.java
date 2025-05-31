@@ -14,7 +14,6 @@ public class TaskDTO {
     private Integer priorityId;
     private Date startDate;
     private Date dueDate;
-    private Date completedDate;
     private String assigneeId;
     private String approverId;
     private String updateBy;

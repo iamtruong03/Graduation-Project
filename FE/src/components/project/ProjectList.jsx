@@ -86,7 +86,7 @@ const ProjectList = () => {
     try {
       const [deptResponse, userResponse] = await Promise.all([
         departmentService.getAll(),
-        staffService.listUserChildDep()
+        staffService.getListUser()
       ]);
 
       if (deptResponse.data) {

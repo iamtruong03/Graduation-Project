@@ -49,6 +49,7 @@ import departmentService from '../../services/departmentService';
 import staffService from '../../services/staffService';
 import { PROJECT_STATES, PROJECT_TYPES } from '../../utils/constants';
 import ProjectHistory from './ProjectHistory';
+import TaskProjectList from './TaskProjectList';
 import taskService from '../../services/taskService';
 
 const ProjectDetail = () => {
@@ -97,18 +98,20 @@ const ProjectDetail = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [projectResponse, historyResponse] = await Promise.all([
+        const [projectResponse, historyResponse, tasksResponse] = await Promise.all([
           projectService.getProjectById(id),
-          projectService.getProjectHistory(id)
+          projectService.getProjectHistory(id),
+          taskService.getTasksByProjectId(id)
         ]);
 
         console.log('Project Response:', projectResponse);
+        console.log('Tasks Response:', tasksResponse);
 
         if (projectResponse && projectResponse.status === 200) {
           const projectData = {
             ...projectResponse.data,
             attachments: projectResponse.data.attachments || [],
-            tasks: projectResponse.data.tasks || []
+            tasks: tasksResponse?.data || []
           };
           setProject(projectData);
           setEditedProject(projectData);
@@ -206,64 +209,6 @@ const ProjectDetail = () => {
       status: 'NEW',
     });
     setSelectedTask(null);
-  };
-
-  const handleAddTask = () => {
-    setSelectedTask(null);
-    setNewTask({
-      code: '',
-      name: '',
-      departmentId: project.departmentId,
-      assigneeId: '',
-      priorityId: '',
-      taskTypeId: 2,
-      projectId: id,
-      description: '',
-      startDate: '',
-      dueDate: '',
-    });
-    // Lấy danh sách người thực hiện theo phòng ban của dự án
-    if (project.departmentId) {
-      staffService.listUserByDep(project.departmentId)
-        .then(response => {
-          if (response.data) {
-            setManagers(response.data);
-          }
-        })
-        .catch(err => {
-          console.error('Error fetching assignees:', err);
-        });
-    }
-    setOpenTaskDialog(true);
-  };
-
-  const handleEditTask = (task) => {
-    setSelectedTask(task);
-    setNewTask({
-      code: task.code || '',
-      name: task.name,
-      departmentId: project.departmentId,
-      assigneeId: task.assigneeId || '',
-      priorityId: task.priorityId || 2,
-      taskTypeId: 2,
-      projectId: id,
-      description: task.description || '',
-      startDate: task.startDate || '',
-      dueDate: task.dueDate || '',
-    });
-    // Lấy danh sách người thực hiện theo phòng ban của dự án
-    if (project.departmentId) {
-      staffService.listUserByDep(project.departmentId)
-        .then(response => {
-          if (response) {
-            setManagers(response.data);
-          }
-        })
-        .catch(err => {
-          console.error('Error fetching assignees:', err);
-        });
-    }
-    setOpenTaskDialog(true);
   };
 
   const handleEdit = () => {
@@ -489,68 +434,28 @@ const ProjectDetail = () => {
     setSelectedAttachment(null);
   };
 
-  const handleDeleteTask = (taskId) => {
-    const updatedTasks = project.tasks.filter(task => task.id !== taskId);
-    setProject({
-      ...project,
-      tasks: updatedTasks
-    });
-    setSnackbar({
-      open: true,
-      message: 'Xóa công việc thành công',
-      severity: 'success'
-    });
-  };
-
-  const handleSaveTask = async () => {
+  const handleDeleteTask = async (taskId) => {
     try {
       setLoading(true);
-      const taskData = {
-        code: newTask.code,
-        name: newTask.name,
-        taskTypeId: 2,
-        departmentId: project.departmentId,
-        assigneeId: newTask.assigneeId,
-        priorityId: newTask.priorityId || 2,
-        projectId: id,
-        description: newTask.description,
-        startDate: newTask.startDate,
-        dueDate: newTask.dueDate,
-      };
+      await taskService.changeStatus(taskId);
+      
+      // Cập nhật lại danh sách task
+      const updatedTasks = project.tasks.filter(task => task.id !== taskId);
+      setProject({
+        ...project,
+        tasks: updatedTasks
+      });
 
-      if (selectedTask) {
-        // Xử lý cập nhật task
-        const response = await taskService.updateTask(selectedTask.id, taskData);
-        if (response && response.data) {
-          const updatedTasks = project.tasks.map(task =>
-            task.id === selectedTask.id ? response.data : task
-          );
-          setProject({
-            ...project,
-            tasks: updatedTasks
-          });
-        }
-      } else {
-        // Xử lý thêm task mới
-        const response = await taskService.createTask(taskData);
-        if (response && response.data) {
-          setProject({
-            ...project,
-            tasks: [...project.tasks, response.data]
-          });
-        }
-      }
-      handleCloseTaskDialog();
       setSnackbar({
         open: true,
-        message: selectedTask ? 'Cập nhật công việc thành công' : 'Thêm công việc mới thành công',
+        message: 'Xóa công việc thành công',
         severity: 'success'
       });
     } catch (error) {
-      console.error('Error saving task:', error);
+      console.error('Error deleting task:', error);
       setSnackbar({
         open: true,
-        message: error.response?.message || 'Không thể lưu công việc',
+        message: error.response?.data?.message || 'Không thể xóa công việc',
         severity: 'error'
       });
     } finally {
@@ -558,6 +463,170 @@ const ProjectDetail = () => {
     }
   };
 
+  const handleEditTask = async (task) => {
+    try {
+      // Kiểm tra trạng thái task
+      if (task.state !== 2) {
+        setSnackbar({
+          open: true,
+          message: 'Chỉ có thể chỉnh sửa công việc khi đang ở trạng thái thực hiện',
+          severity: 'error'
+        });
+        return;
+      }
+
+      setSelectedTask(task);
+      setNewTask({
+        code: task.code || '',
+        name: task.name,
+        departmentId: project.departmentId,
+        assigneeId: task.assigneeId || '',
+        priorityId: task.priorityId || '',
+        taskTypeId: 2,
+        projectId: id,
+        state: task.state || '',
+        description: task.description || '',
+        startDate: task.startDate ? format(new Date(task.startDate), 'yyyy-MM-dd') : '',
+        dueDate: task.dueDate ? format(new Date(task.dueDate), 'yyyy-MM-dd') : '',
+      });
+
+      // Lấy danh sách người thực hiện theo phòng ban của dự án
+      if (project.departmentId) {
+        const response = await staffService.listUserByDep(project.departmentId);
+        if (response && response.data) {
+          setManagers(response.data);
+        }
+      }
+
+      // Gọi API lấy thông tin task mới nhất
+      const taskResponse = await taskService.getTaskById(task.id);
+      if (taskResponse && taskResponse.data) {
+        setSelectedTask(taskResponse.data);
+        setNewTask({
+          ...taskResponse.data,
+          startDate: taskResponse.data.startDate ? format(new Date(taskResponse.data.startDate), 'yyyy-MM-dd') : '',
+          dueDate: taskResponse.data.dueDate ? format(new Date(taskResponse.data.dueDate), 'yyyy-MM-dd') : '',
+        });
+      }
+
+      setOpenTaskDialog(true);
+    } catch (error) {
+      console.error('Error in handleEditTask:', error);
+      setSnackbar({
+        open: true,
+        message: 'Không thể tải thông tin công việc',
+        severity: 'error'
+      });
+    }
+  };
+
+  const handleAddTask = () => {
+    setSelectedTask(null);
+    setNewTask({
+      code: '',
+      name: '',
+      departmentId: project.departmentId,
+      assigneeId: '',
+      priorityId: '',
+      taskTypeId: 2,
+      projectId: id,
+      description: '',
+      startDate: '',
+      dueDate: '',
+    });
+    // Lấy danh sách người thực hiện theo phòng ban của dự án
+    if (project.departmentId) {
+      staffService.listUserByDep(project.departmentId)
+        .then(response => {
+          if (response.data) {
+            setManagers(response.data);
+          }
+        })
+        .catch(err => {
+          console.error('Error fetching assignees:', err);
+        });
+    }
+    setOpenTaskDialog(true);
+  };
+
+  const handleSaveTask = async () => {
+    try {
+      setLoading(true);
+      const taskData = {
+        code: newTask.code || '',
+        name: newTask.name || '',
+        taskTypeId: 2,
+        departmentId: project.departmentId,
+        assigneeId: newTask.assigneeId,
+        priorityId: newTask.priorityId || 2,
+        projectId: id,
+        state: newTask.state || 2,
+        description: newTask.description || '',
+        startDate: newTask.startDate || '',
+        dueDate: newTask.dueDate || '',
+      };
+
+      // Log dữ liệu để debug
+      console.log('Task data being sent:', taskData);
+
+      // Validate dữ liệu trước khi gửi
+      if (!taskData.name || !taskData.assigneeId || !taskData.startDate || !taskData.dueDate) {
+        setSnackbar({
+          open: true,
+          message: 'Vui lòng điền đầy đủ thông tin bắt buộc',
+          severity: 'error'
+        });
+        return;
+      }
+
+      // Đảm bảo các trường số là number
+      taskData.taskTypeId = Number(taskData.taskTypeId);
+      taskData.departmentId = Number(taskData.departmentId);
+      taskData.assigneeId = Number(taskData.assigneeId);
+      taskData.priorityId = Number(taskData.priorityId);
+      taskData.projectId = Number(taskData.projectId);
+
+      let response;
+      if (selectedTask) {
+        // Xử lý cập nhật task
+        console.log('Updating task with ID:', selectedTask.id);
+        response = await taskService.updateTask(selectedTask.id, taskData);
+      } else {
+        // Xử lý thêm task mới
+        console.log('Creating new task');
+        response = await taskService.createTask(taskData);
+      }
+
+      if (response && response.data) {
+        // Cập nhật lại danh sách task
+        const updatedTasks = selectedTask 
+          ? project.tasks.map(task => task.id === selectedTask.id ? response.data : task)
+          : [...project.tasks, response.data];
+        
+        setProject({
+          ...project,
+          tasks: updatedTasks
+        });
+
+        handleCloseTaskDialog();
+        setSnackbar({
+          open: true,
+          message: selectedTask ? 'Cập nhật công việc thành công' : 'Thêm công việc mới thành công',
+          severity: 'success'
+        });
+      }
+    } catch (error) {
+      console.error('Error saving task:', error);
+      console.error('Error response data:', error.response?.data);
+      setSnackbar({
+        open: true,
+        message: error.response?.data?.message || 'Không thể lưu công việc',
+        severity: 'error'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <Box sx={{ p: 3 }}>
@@ -954,138 +1023,16 @@ const ProjectDetail = () => {
             <ProjectHistory history={projectHistory} />
 
             {/* Phần danh sách công việc */}
-            <Paper elevation={1} sx={{ p: 3, borderRadius: 2, mt: 3 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <Typography variant="h6" sx={{ color: 'primary.main', fontWeight: 600 }}>
-                  Danh sách công việc
-                </Typography>
-                {project.state === 2 && (
-                  <Button
-                    variant="contained"
-                    size="small"
-                    startIcon={<AddIcon />}
-                    onClick={() => {
-                      setSelectedTask(null);
-                      setOpenTaskDialog(true);
-                    }}
-                    sx={{
-                      backgroundColor: '#2e7d32',
-                      '&:hover': {
-                        backgroundColor: '#1b5e20'
-                      }
-                    }}
-                  >
-                    THÊM
-                  </Button>
-                )}
-              </Box>
-
-              <Stack spacing={2}>
-                {project.tasks.map((task) => (
-                  <Paper
-                    key={task.id}
-                    elevation={0}
-                    sx={{
-                      p: 2,
-                      borderRadius: 1,
-                      bgcolor: '#f8f9fa',
-                      border: '1px solid #e0e0e0',
-                      '&:hover': {
-                        bgcolor: '#f5f5f5',
-                        borderColor: '#bdbdbd'
-                      }
-                    }}
-                  >
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
-                      <Typography
-                        variant="subtitle1"
-                        sx={{
-                          fontWeight: 600,
-                          color: '#2196f3',
-                          cursor: 'pointer',
-                          '&:hover': {
-                            color: '#1976d2',
-                            textDecoration: 'underline'
-                          }
-                        }}
-                        onClick={() => navigate(`/task/detail/${task.id}`)}
-                      >
-                        {task.name}
-                      </Typography>
-                      {project.state === 2 && (
-                        <Stack direction="row" spacing={1}>
-                          <IconButton
-                            size="small"
-                            onClick={() => handleEditTask(task)}
-                            sx={{
-                              color: 'primary.main',
-                              p: 0.5,
-                              '&:hover': {
-                                bgcolor: 'rgba(33, 150, 243, 0.08)'
-                              }
-                            }}
-                          >
-                            <EditIcon fontSize="small" />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            onClick={() => handleDeleteTask(task.id)}
-                            sx={{
-                              color: 'error.main',
-                              p: 0.5,
-                              '&:hover': {
-                                bgcolor: 'rgba(244, 67, 54, 0.08)'
-                              }
-                            }}
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </Stack>
-                      )}
-                    </Box>
-
-                    <Stack spacing={1}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography variant="body2" color="text.secondary" sx={{ minWidth: 85 }}>
-                          Thực hiện:
-                        </Typography>
-                        <Typography variant="body2">
-                          {task.assignee}
-                        </Typography>
-                      </Box>
-
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography variant="body2" color="text.secondary" sx={{ minWidth: 85 }}>
-                          Thời gian:
-                        </Typography>
-                        <Typography variant="body2">
-                          {formatDate(task.startDate)} - {formatDate(task.endDate)}
-                        </Typography>
-                      </Box>
-
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography variant="body2" color="text.secondary" sx={{ minWidth: 85 }}>
-                          Độ ưu tiên:
-                        </Typography>
-                        <Chip
-                          label={task.priority}
-                          size="small"
-                          sx={{
-                            height: '24px',
-                            fontSize: '0.75rem',
-                            bgcolor: getPriorityColor(task.priority),
-                            color: 'white',
-                            '& .MuiChip-label': {
-                              px: 1
-                            }
-                          }}
-                        />
-                      </Box>
-                    </Stack>
-                  </Paper>
-                ))}
-              </Stack>
-            </Paper>
+            <TaskProjectList
+              tasks={project.tasks}
+              projectState={project.state}
+              onAddTask={handleAddTask}
+              onEditTask={handleEditTask}
+              onDeleteTask={handleDeleteTask}
+              formatDate={formatDate}
+              getPriorityColor={getPriorityColor}
+              managers={managers}
+            />
           </Grid>
         </Grid>
       </Paper>

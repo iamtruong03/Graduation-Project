@@ -50,6 +50,28 @@ public class TaskAPI extends XDevBaseAPI<Task, TaskFilter> {
         }
     }
 
+    @GetMapping("/project/{projectId}")
+    public ResponseEntity<ApiResponse<List<Task>>> getTasksByProjectId(
+        @RequestAttribute String uid,
+        @PathVariable Long projectId) {
+        try {
+            return ApiResponse.ok(taskService.getTasksByProjectId(uid, projectId));
+        } catch (Exception e) {
+            return ApiResponse.error(e.getMessage());
+        }
+    }
+
+    @GetMapping("/risk/{riskId}")
+    public ResponseEntity<ApiResponse<List<Task>>> getTasksByRiskId(
+        @RequestAttribute String uid,
+        @PathVariable Long riskId) {
+        try {
+            return ApiResponse.ok(taskService.getTasksByRiskId(uid, riskId));
+        } catch (Exception e) {
+            return ApiResponse.error(e.getMessage());
+        }
+    }
+
     @PostMapping("/{id}/approve")
     public ResponseEntity<ApiResponse<TaskDTO>> approveTask(
             @RequestAttribute String uid,
@@ -80,7 +102,7 @@ public class TaskAPI extends XDevBaseAPI<Task, TaskFilter> {
             @RequestBody TaskDTO taskDTO) {
         try {
             taskDTO.setUpdateBy(uid);
-            return ApiResponse.ok(taskService.updateTask(id, taskDTO));
+            return ApiResponse.ok(taskService.updateTask(uid, id, taskDTO));
         } catch (Exception e) {
             return ApiResponse.error(e.getMessage());
         }

@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import taskService from '../../services/taskService';
+import projectService from '../../services/projectService';
+import departmentService from '../../services/departmentService';
+import staffService from '../../services/staffService';
 import TaskHistory from './TaskHistory';
 import {
   Box,
@@ -36,7 +39,7 @@ import {
 
 const getStatusColor = (state) => {
   if (!state) return 'default';
-  
+
   switch (state) {
     case 0: // Chờ duyệt
       return 'warning';
@@ -76,7 +79,7 @@ const getStatusName = (state) => {
 
 const getPriorityColor = (priorityId) => {
   if (!priorityId) return 'default';
-  
+
   switch (priorityId) {
     case 3: // Cao
       return 'error';
@@ -129,6 +132,9 @@ const TaskDetail = () => {
     message: '',
     severity: 'success'
   });
+  const [project, setProject] = useState(null);
+  const [departmentName, setDepartmentName] = useState(null);
+  const [assigneeName, setAssigneeName] = useState(null);
 
   // Fetch lists for dropdowns in edit mode
   const [projectList, setProjectList] = useState([]);
@@ -136,6 +142,21 @@ const TaskDetail = () => {
   const [departmentList, setDepartmentList] = useState([]);
   const [approverList, setApproverList] = useState([]);
   const [riskList, setRiskList] = useState([]);
+
+  const fetchAssigneeName = async (departmentId, assigneeId) => {
+    if (!departmentId || !assigneeId) return;
+    try {
+      const response = await staffService.listUserByDep(departmentId);
+      if (response?.data) {
+        const assignee = response.data.find(user => String(user.id) === String(assigneeId));
+        if (assignee) {
+          setAssigneeName(assignee.name);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching assignee details:', err);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -146,12 +167,11 @@ const TaskDetail = () => {
           taskService.getTaskById(id),
           taskService.getTaskHistory(id)
         ]);
-        
-        const taskData = taskDataResponse?.data; // Access data property from response
-        const historyData = historyDataResponse?.data; // Access data property from response
+
+        const taskData = taskDataResponse?.data;
+        const historyData = historyDataResponse?.data;
 
         if (taskData) {
-           // Map API response to task state
           const mappedTask = {
             id: taskData.id,
             code: taskData.code,
@@ -175,20 +195,46 @@ const TaskDetail = () => {
             assigneeId: taskData.assigneeId,
             approverId: taskData.approverId,
             isApproved: taskData.isApproved,
-            // Thêm các trường hiển thị
             statusName: getStatusName(taskData.state),
             priorityName: getPriorityName(taskData.priorityId),
-            // Add placeholder for department/project name if needed and not returned by API
-            departmentName: taskData.departmentName || null, // Assume API might return these
-            projectName: taskData.projectName || null, // Assume API might return these
-            assigneeName: taskData.assigneeName || null, // Assume API might return these
-            approverName: taskData.approverName || null, // Assume API might return these
+            departmentName: taskData.departmentName || null,
+            projectName: taskData.projectName || null,
+            assigneeName: taskData.assigneeName || null,
+            approverName: taskData.approverName || null,
             riskName: taskData.riskName || null,
           };
-          
+
           setTask(mappedTask);
+
+          // Fetch project details if task is associated with a project
+          if (taskData.projectId) {
+            try {
+              const projectResponse = await projectService.getProjectById(taskData.projectId);
+              if (projectResponse?.data) {
+                setProject(projectResponse.data);
+              }
+            } catch (err) {
+              console.error('Error fetching project details:', err);
+            }
+          }
+
+          // Fetch department name if task is associated with a department
+          if (taskData.departmentId) {
+            try {
+              const departmentResponse = await departmentService.getDepartmentById(taskData.departmentId);
+              if (departmentResponse?.data) {
+                setDepartmentName(departmentResponse.data.name);
+              }
+            } catch (err) {
+              console.error('Error fetching department details:', err);
+            }
+          }
+
+          // Fetch assignee name
+          if (taskData.departmentId && taskData.assigneeId) {
+            await fetchAssigneeName(taskData.departmentId, taskData.assigneeId);
+          }
         } else {
-          // Handle case where task data is null/undefined but request was successful
           setTask(null);
           setError('Không tìm thấy thông tin công việc cho ID này.');
         }
@@ -201,7 +247,7 @@ const TaskDetail = () => {
 
       } catch (err) {
         console.error('Error fetching task data:', err);
-        setTask(null); // Ensure task state is null on error
+        setTask(null);
         setError(err.response?.data?.message || err.message || 'Không thể tải thông tin công việc');
       } finally {
         setLoading(false);
@@ -274,8 +320,8 @@ const TaskDetail = () => {
       return;
     }
     try {
-      const response = await taskService.getUsersByDepartment(departmentId); // Assuming a service method to get users by department
-      if (response.data) {
+      const response = await staffService.listUserByDep(departmentId);
+      if (response?.data) {
         setAssigneeList(response.data);
       }
     } catch (error) {
@@ -380,12 +426,81 @@ const TaskDetail = () => {
 
       const response = await taskService.updateTask(editedTask.id, taskDataToUpdate);
       if (response) {
-        const [updatedTaskData, newHistory] = await Promise.all([
+        // Gọi lại API để lấy dữ liệu mới nhất
+        const [taskDataResponse, historyDataResponse] = await Promise.all([
           taskService.getTaskById(id),
           taskService.getTaskHistory(id)
         ]);
-        setTask(updatedTaskData);
-        setTaskHistory(newHistory);
+
+        const taskData = taskDataResponse?.data;
+        const historyData = historyDataResponse?.data;
+
+        if (taskData) {
+          const mappedTask = {
+            id: taskData.id,
+            code: taskData.code,
+            name: taskData.name,
+            description: taskData.description || '',
+            status: taskData.status,
+            createDate: taskData.createDate,
+            modifiedDate: taskData.modifiedDate,
+            version: taskData.version,
+            createBy: taskData.createBy,
+            updateBy: taskData.updateBy,
+            state: taskData.state,
+            taskTypeId: taskData.taskTypeId,
+            riskId: taskData.riskId,
+            departmentId: taskData.departmentId,
+            projectId: taskData.projectId,
+            priorityId: taskData.priorityId,
+            startDate: taskData.startDate,
+            dueDate: taskData.dueDate,
+            completedDate: taskData.completedDate,
+            assigneeId: taskData.assigneeId,
+            approverId: taskData.approverId,
+            isApproved: taskData.isApproved,
+            statusName: getStatusName(taskData.state),
+            priorityName: getPriorityName(taskData.priorityId),
+            departmentName: taskData.departmentName || null,
+            projectName: taskData.projectName || null,
+            assigneeName: taskData.assigneeName || null,
+            approverName: taskData.approverName || null,
+            riskName: taskData.riskName || null,
+          };
+
+          setTask(mappedTask);
+          setTaskHistory(historyData || []);
+
+          // Fetch project details if task is associated with a project
+          if (taskData.projectId) {
+            try {
+              const projectResponse = await projectService.getProjectById(taskData.projectId);
+              if (projectResponse?.data) {
+                setProject(projectResponse.data);
+              }
+            } catch (err) {
+              console.error('Error fetching project details:', err);
+            }
+          }
+
+          // Fetch department name if task is associated with a department
+          if (taskData.departmentId) {
+            try {
+              const departmentResponse = await departmentService.getDepartmentById(taskData.departmentId);
+              if (departmentResponse?.data) {
+                setDepartmentName(departmentResponse.data.name);
+              }
+            } catch (err) {
+              console.error('Error fetching department details:', err);
+            }
+          }
+
+          // Fetch assignee name
+          if (taskData.departmentId && taskData.assigneeId) {
+            await fetchAssigneeName(taskData.departmentId, taskData.assigneeId);
+          }
+        }
+
         setIsEditing(false);
         setSnackbar({
           open: true,
@@ -475,7 +590,7 @@ const TaskDetail = () => {
           <IconButton onClick={handleClose} sx={{ color: 'text.secondary' }}>
             <ArrowBackIcon />
           </IconButton>
-          <Typography variant="h5" sx={{ fontWeight: 600 }}>Chi tiết công việc: {task.name}</Typography> {/* Display task name in title */}
+          <Typography variant="h5" sx={{ fontWeight: 600 }}>Chi tiết công việc</Typography>
           <Box sx={{ flexGrow: 1 }} />
           {isEditing ? (
             <>
@@ -561,12 +676,24 @@ const TaskDetail = () => {
                     )}
                   </Typography>
                   <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
-                    <Chip
-                      icon={<AssignmentIcon />}
-                      label={isEditing ? editedTask?.code || '' : task?.code || ''}
-                      variant="outlined"
-                      sx={{ mr: 1 }}
-                    />
+                    {isEditing ? (
+                      <TextField
+                        size="small"
+                        name="code"
+                        value={editedTask?.code || ''}
+                        onChange={handleTaskChange}
+                        label="Mã công việc"
+                        required
+                        sx={{ minWidth: 150 }}
+                      />
+                    ) : (
+                      <Chip
+                        icon={<AssignmentIcon />}
+                        label={task?.code || ''}
+                        variant="outlined"
+                        sx={{ mr: 1 }}
+                      />
+                    )}
                     {isEditing ? (
                       <FormControl sx={{ minWidth: 150 }} size="small" required>
                         <InputLabel>Mức độ ưu tiên</InputLabel>
@@ -648,7 +775,7 @@ const TaskDetail = () => {
                             Dự án
                           </Typography>
                           <Typography>
-                            {task?.projectName || task?.projectId || 'N/A'}
+                            {project?.name || task?.projectName || task?.projectId || 'N/A'}
                           </Typography>
                         </Box>
                       )}
@@ -660,7 +787,7 @@ const TaskDetail = () => {
                             Phòng ban
                           </Typography>
                           <Typography>
-                            {task?.departmentName || task?.departmentId || 'N/A'}
+                            {departmentName || task?.departmentName || task?.departmentId || 'N/A'}
                           </Typography>
                         </Box>
                       )}
@@ -679,8 +806,8 @@ const TaskDetail = () => {
                           <FormControl fullWidth size="small" required>
                             <InputLabel>Người thực hiện</InputLabel>
                             <Select
-                              name="assigneeId" // Use assigneeId
-                              value={editedTask?.assigneeId || ''} // Use editedTask assigneeId
+                              name="assigneeId"
+                              value={editedTask?.assigneeId || ''}
                               onChange={handleTaskChange}
                             >
                               {assigneeList.map(assignee => (
@@ -690,11 +817,10 @@ const TaskDetail = () => {
                           </FormControl>
                         ) : (
                           <Stack direction="row" spacing={1} alignItems="center">
-                            {/* Use assigneeName or assigneeId for display. Check if assigneeName exists before charAt */}
                             <Avatar sx={{ width: 24, height: 24 }}>
-                              {(task?.assigneeName && task?.assigneeName.length > 0) ? task.assigneeName.charAt(0) : (task?.assigneeId ? String(task.assigneeId).charAt(0) : '')}
+                              {(assigneeName && assigneeName.length > 0) ? assigneeName.charAt(0) : (task?.assigneeId ? String(task.assigneeId).charAt(0) : '')}
                             </Avatar>
-                            <Typography>{task?.assigneeName || task?.assigneeId || 'N/A'}</Typography>
+                            <Typography>{assigneeName || task?.assigneeName || task?.assigneeId || 'N/A'}</Typography>
                           </Stack>
                         )}
                       </Box>
@@ -728,19 +854,7 @@ const TaskDetail = () => {
                               InputLabelProps={{ shrink: true }}
                               required
                             />
-                            {(editedTask?.state === 3 || task?.state === 3) && (
-                              <TextField
-                                type="date"
-                                name="completedDate"
-                                label="Ngày hoàn thành"
-                                value={editedTask?.completedDate || ''}
-                                onChange={handleTaskChange}
-                                size="small"
-                                fullWidth
-                                InputLabelProps={{ shrink: true }}
-                                required={isEditing && editedTask?.state === 3}
-                              />
-                            )}
+                            
                           </Stack>
                         ) : (
                           <Typography>

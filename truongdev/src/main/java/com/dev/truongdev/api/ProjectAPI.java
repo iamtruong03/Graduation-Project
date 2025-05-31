@@ -83,7 +83,7 @@ public class ProjectAPI extends XDevBaseAPI<Project, ProjectFilter> {
             @RequestBody ProjectDTO projectDTO) {
         try {
             projectDTO.setUpdateBy(uid);
-            return ApiResponse.ok(projectService.updateProject(id, projectDTO));
+            return ApiResponse.ok(projectService.updateProject(uid, id, projectDTO));
         } catch (Exception e) {
             return ApiResponse.error(e.getMessage());
         }

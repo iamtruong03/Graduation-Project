@@ -142,9 +142,6 @@ public class UserServiceImpl extends XDevBaseServiceImpl<User, UserFilter, UserR
    * Lấy danh sách người dùng trong cùng phòng ban.
    * - Admin: xem tất cả người dùng
    * - Người dùng thường: chỉ xem người dùng cùng phòng ban
-   * 
-   * @param uid ID người dùng yêu cầu
-   * @return Danh sách người dùng trong phòng ban
    */
   @Override
   public List<User> listUserDep(String uid){
@@ -162,9 +159,6 @@ public class UserServiceImpl extends XDevBaseServiceImpl<User, UserFilter, UserR
    * Lấy danh sách người dùng trong phòng ban và các phòng ban con.
    * - Admin: xem tất cả người dùng
    * - Người dùng thường: xem người dùng trong phòng ban và phòng ban con
-   * 
-   * @param uid ID người dùng yêu cầu
-   * @return Danh sách người dùng trong phòng ban và phòng ban con
    */
   @Override
   public List<User> listUserChildDep(String uid){
@@ -189,12 +183,6 @@ public class UserServiceImpl extends XDevBaseServiceImpl<User, UserFilter, UserR
    * Tìm kiếm người dùng với phân quyền theo phòng ban.
    * - Admin: tìm kiếm toàn bộ hệ thống
    * - Người dùng thường: tìm kiếm trong phòng ban và phòng ban con
-   * 
-   * @param did ID phòng ban
-   * @param uid ID người dùng yêu cầu
-   * @param filter Bộ lọc tìm kiếm
-   * @param pageable Thông tin phân trang
-   * @return Danh sách người dùng phù hợp
    */
   @Override
   public Page<User> searchAll(Long did, String uid, UserFilter filter, Pageable pageable){
@@ -238,9 +226,6 @@ public class UserServiceImpl extends XDevBaseServiceImpl<User, UserFilter, UserR
    * Lấy danh sách người dùng trong phòng ban cha.
    * - Admin: xem tất cả người dùng
    * - Người dùng thường: xem người dùng trong phòng ban cha
-   * 
-   * @param uid ID người dùng yêu cầu
-   * @return Danh sách người dùng trong phòng ban cha
    */
   @Override
   public List<User> listUserParentDep(String uid){
@@ -264,9 +249,6 @@ public class UserServiceImpl extends XDevBaseServiceImpl<User, UserFilter, UserR
    * Lấy danh sách trưởng phòng các phòng ban con.
    * - Admin: xem tất cả trưởng phòng
    * - Người dùng thường: xem trưởng phòng các phòng ban con
-   * 
-   * @param uid ID người dùng yêu cầu
-   * @return Danh sách trưởng phòng các phòng ban con
    */
   @Override
   public List<User> listHeadChildDep(String uid){
@@ -306,13 +288,16 @@ public class UserServiceImpl extends XDevBaseServiceImpl<User, UserFilter, UserR
    * - Quản lý dự án đang thực hiện
    * - Phụ trách dự án đang thực hiện  
    * - Được giao công việc đang thực hiện
-   * 
-   * @param uid ID người thực hiện xóa
-   * @param id ID người dùng cần xóa
-   * @throws RuntimeException nếu có ràng buộc nghiệp vụ
    */
   @Override
   public void delete(String uid, Long id) {
+
+    User user = userRepo.findById(Long.valueOf(uid))
+        .orElseThrow(() -> new RuntimeException("User not found"));
+
+    if (user.getRole().equals("1")) {
+      throw new RuntimeException("Không thể xóa admin");
+    }
     // Kiểm tra user có phải người quản lý dự án đang thực hiện không
     boolean hasActiveProjects = projectRepo.existsByManagerIdAndState(
         id.toString(), 
@@ -322,19 +307,11 @@ public class UserServiceImpl extends XDevBaseServiceImpl<User, UserFilter, UserR
       throw new RuntimeException("Không thể xóa người dùng đang quản lý dự án đang thực hiện");
     }
 
-    // Kiểm tra user có phải người phụ trách dự án đang thực hiện không
-    hasActiveProjects = projectRepo.existsByResponsibleIdsContainingAndState(
-        id.toString(),
-        AppConstants.STATUS_IN_PROGRESS
-    );
-    if (hasActiveProjects) {
-      throw new RuntimeException("Không thể xóa người dùng đang phụ trách dự án đang thực hiện");
-    }
-
     // Kiểm tra user có phải người được giao task đang thực hiện không
-    boolean hasActiveTasks = taskRepo.existsByAssigneeIdAndState(
+    boolean hasActiveTasks = taskRepo.existsByAssigneeIdAndStateAndStatus(
         id.toString(),
-        AppConstants.STATUS_IN_PROGRESS
+        AppConstants.STATUS_IN_PROGRESS,
+        1
     );
     if (hasActiveTasks) {
       throw new RuntimeException("Không thể xóa người dùng đang được giao task đang thực hiện");
@@ -342,5 +319,26 @@ public class UserServiceImpl extends XDevBaseServiceImpl<User, UserFilter, UserR
 
     // Nếu không có ràng buộc thì thực hiện xóa
     super.delete(uid, id);
+  }
+
+  @Override
+  public List<User> getAll(Long did, String uid) {
+    User user = userRepo.findById(Long.valueOf(uid))
+        .orElseThrow(() -> new RuntimeException("User not found"));
+
+    if (user.getRole().equals("1")) {
+      return userRepo.findAllByStatus(AppConstants.STATUS_ACTIVE);
+    } else {
+      List<Department> departments = new ArrayList<>();
+      Department currentDepartment = departmentService.getById(uid, did);
+      departments.add(currentDepartment);
+      departments.addAll(departmentService.getAllSubDepartments(did));
+
+      List<Long> departmentIds = departments.stream()
+          .map(Department::getId)
+          .collect(Collectors.toList());
+
+      return userRepo.findByDepartmentIdInAndStatus(departmentIds, AppConstants.STATUS_ACTIVE);
+    }
   }
 }

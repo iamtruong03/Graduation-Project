@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { FileDownload as FileDownloadIcon, Search as SearchIcon, Edit as EditIcon, Visibility as VisibilityIcon, Delete as DeleteIcon, CheckCircle as ApproveIcon, Assignment as AssignmentIcon, Add as AddIcon, Cancel as CancelIcon } from '@mui/icons-material';
 import {
   Box,
@@ -34,6 +34,8 @@ import {
 import { Link } from 'react-router-dom';
 import taskService from '../../services/taskService';
 import staffService from '../../services/staffService';
+import departmentService from '../../services/departmentService';
+import projectService from '../../services/projectService';
 
 const TaskList = () => {
   const [tasks, setTasks] = useState([]);
@@ -66,6 +68,10 @@ const TaskList = () => {
     severity: 'success'
   });
   const [users, setUsers] = useState({});
+  const [departments, setDepartments] = useState({});
+  const [projects, setProjects] = useState({});
+  const projectsRef = useRef({});
+  const [projectNames, setProjectNames] = useState({});
 
   const fetchTasks = async () => {
     setLoading(true);
@@ -127,7 +133,7 @@ const TaskList = () => {
 
   const fetchUsers = async () => {
     try {
-      const response = await staffService.listUserChildDep();
+      const response = await staffService.getListUser();
       if (response.data) {
         const userMap = {};
         response.data.forEach(user => {
@@ -140,10 +146,54 @@ const TaskList = () => {
     }
   };
 
+  const fetchDepartments = async () => {
+    try {
+      const response = await departmentService.getAll();
+      if (response.data) {
+        const departmentMap = {};
+        response.data.forEach(department => {
+          departmentMap[department.id] = department.name;
+        });
+        setDepartments(departmentMap);
+      }
+    } catch (err) {
+      console.error('Error fetching departments:', err);
+    }
+  };
+
+  const fetchProjects = async () => {
+    try {
+      const response = await projectService.getProjectList();
+      console.log('Raw API Response:', response);
+      
+      if (response && response.data) {
+        const projectMap = {};
+        response.data.forEach(project => {
+          if (project && project.id) {
+            projectMap[project.id] = {
+              name: project.name,
+              code: project.code,
+              status: project.status,
+              state: project.state
+            };
+            console.log(`Mapping project: id=${project.id}, name=${project.name}`);
+          }
+        });
+        console.log('Final Project Map:', projectMap);
+        projectsRef.current = projectMap;
+        setProjects(projectMap);
+      }
+    } catch (err) {
+      console.error('Error fetching projects:', err);
+    }
+  };
+
   useEffect(() => {
     fetchTasks();
     fetchPendingCount();
     fetchUsers();
+    fetchDepartments();
+    fetchProjects();
     // eslint-disable-next-line
   }, [page, searchName]);
 
@@ -152,6 +202,10 @@ const TaskList = () => {
       fetchPendingTasks();
     }
   }, [openPendingDialog, pendingPage]);
+
+  useEffect(() => {
+    console.log('Projects state updated:', projects);
+  }, [projects]);
 
   const handleDelete = (id) => {
     setDeleteId(id);
@@ -333,6 +387,23 @@ const TaskList = () => {
 
   const getAssigneeName = (assigneeId) => {
     return users[assigneeId] || assigneeId || 'Không xác định';
+  };
+
+  const getDepartmentName = (departmentId) => {
+    return departments[departmentId] || departmentId || 'Không xác định';
+  };
+
+  const getProjectName = (projectId, fallbackName) => {
+    if (!projectId) return 'Không xác định';
+    if (projectNames[projectId]) return projectNames[projectId];
+    if (fallbackName) return fallbackName;
+
+    projectService.getProjectById(projectId).then(res => {
+      if (res?.data?.name) {
+        setProjectNames(prev => ({ ...prev, [projectId]: res.data.name }));
+      }
+    });
+    return projectId;
   };
 
   return (
@@ -528,6 +599,7 @@ const TaskList = () => {
                 <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Người thực hiện</TableCell>
                 <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Ngày bắt đầu</TableCell>
                 <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Ngày kết thúc</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Ngày hoàn thành thực tế</TableCell>
                 <TableCell align="center" sx={{ fontWeight: 600, color: '#1976d2' }}>Thao tác</TableCell>
               </TableRow>
             </TableHead>
@@ -586,8 +658,8 @@ const TaskList = () => {
                     <TableCell>
                       <Typography variant="body2">
                         {row.taskTypeId === 1 ? (row.riskName || row.riskId || 'N/A') :
-                         row.taskTypeId === 2 ? (row.projectName || row.projectId || 'N/A') :
-                         row.taskTypeId === 3 ? (row.departmentName || row.departmentId || 'N/A') : 'N/A'}
+                         row.taskTypeId === 2 ? getProjectName(row.projectId, row.projectName) :
+                         row.taskTypeId === 3 ? getDepartmentName(row.departmentId) : 'N/A'}
                       </Typography>
                     </TableCell>
                     <TableCell>
@@ -627,6 +699,11 @@ const TaskList = () => {
                     <TableCell>
                       <Typography variant="body2">
                         {formatDate(row.dueDate)}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2">
+                        {row.completedDate ? `${formatDate(row.completedDate)}` : ''}
                       </Typography>
                     </TableCell>
                     <TableCell align="center">
@@ -881,8 +958,8 @@ const TaskList = () => {
                           <TableCell>
                             <Typography variant="body2">
                               {task.taskTypeId === 1 ? (task.riskName || task.riskId || 'N/A') :
-                               task.taskTypeId === 2 ? (task.projectName || task.projectId || 'N/A') :
-                               task.taskTypeId === 3 ? (task.departmentName || task.departmentId || 'N/A') : 'N/A'}
+                               task.taskTypeId === 2 ? getProjectName(task.projectId, task.projectName) :
+                               task.taskTypeId === 3 ? getDepartmentName(task.departmentId) : 'N/A'}
                             </Typography>
                           </TableCell>
                           <TableCell>

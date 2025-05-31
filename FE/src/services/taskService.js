@@ -84,6 +84,16 @@ const taskService = {
     // Thay đổi trạng thái
     changeStatus: (id) => {
         return api.post(`/api/tasks/change-status/${id}`, null, getAuthHeader());
+    },
+
+    // Lấy danh sách task theo projectId
+    getTasksByProjectId: (projectId) => {
+        return api.get(`/api/tasks/project/${projectId}`, getAuthHeader());
+    },
+
+    // Lấy danh sách task theo riskId
+    getTasksByRiskId: (riskId) => {
+        return api.get(`/api/tasks/risk/${riskId}`, getAuthHeader());
     }
 };
 

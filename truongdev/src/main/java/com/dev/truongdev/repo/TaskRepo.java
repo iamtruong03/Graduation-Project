@@ -12,7 +12,6 @@ import java.util.List;
 
 @Repository
 public interface TaskRepo extends XDevBaseRepo<Task> {
-    List<Task> findByProjectId(Long projectId);
 
     @Query("SELECT t FROM Task t " +
             "WHERE t.status = :status " +
@@ -54,8 +53,12 @@ public interface TaskRepo extends XDevBaseRepo<Task> {
     );
 
     // Check if department has active tasks
-    boolean existsByDepartmentIdAndState(Long departmentId, Integer state);
+    boolean existsByDepartmentIdAndStateAndStatus(Long departmentId, Integer state, Integer status);
 
     // Check if user is assigned to active tasks
-    boolean existsByAssigneeIdAndState(String assigneeId, Integer state);
+    boolean existsByAssigneeIdAndStateAndStatus(String assigneeId, Integer state, Integer status);
+
+    List<Task> findByProjectIdAndStatus(Long projectId, Integer status);
+
+    List<Task> findByRiskIdAndStatus(Long riskId, Integer status);
 }

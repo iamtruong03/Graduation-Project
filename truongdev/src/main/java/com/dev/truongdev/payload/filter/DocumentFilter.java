@@ -14,7 +14,6 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class DocumentFilter extends XDevBaseFilter {
-    Long documentTypeId;
     Long departmentId;
     Long projectId;
 } 

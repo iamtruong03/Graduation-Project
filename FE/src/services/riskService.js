@@ -9,7 +9,7 @@ const getAuthHeader = () => ({
 const riskService = {
   // Lấy danh sách rủi ro
   getAllRisks: () => {
-    return api.get('api/risks', getAuthHeader());
+    return api.get('api/risks/list', getAuthHeader());
   },
 
   // Lấy chi tiết rủi ro

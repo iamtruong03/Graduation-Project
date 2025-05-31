@@ -97,7 +97,6 @@ public class RiskServiceImpl extends XDevBaseServiceImpl<Risk, RiskFilter, RiskR
     public RiskDTO updateRisk(String uid, Long id, RiskDTO riskDTO) {
         validateRiskDTO(riskDTO);
 
-
         Risk currentRisk = riskRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Risk not found with id: " + id));
 
@@ -150,6 +149,8 @@ public class RiskServiceImpl extends XDevBaseServiceImpl<Risk, RiskFilter, RiskR
             return riskRepo.searchByCodeOrName(
                 AppConstants.STATUS_ACTIVE,
                 filter.getSearch(),
+                filter.getRiskTypeId(),
+                filter.getReflectorId(),
                 pageable
             );
         }
@@ -159,6 +160,8 @@ public class RiskServiceImpl extends XDevBaseServiceImpl<Risk, RiskFilter, RiskR
             AppConstants.STATUS_ACTIVE,
             filter.getSearch(),
             departmentIds,
+            filter.getRiskTypeId(),
+            filter.getReflectorId(),
             pageable
         );
     }

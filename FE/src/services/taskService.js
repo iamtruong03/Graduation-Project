@@ -35,7 +35,10 @@ const taskService = {
     searchTasks: (filter, page = 0, size = 10) => {
         return api.post('/api/tasks/search', filter, {
             ...getAuthHeader(),
-            params: { page, size }
+            params: { 
+                page: Math.max(0, page), 
+                size: Math.max(1, size) 
+            }
         });
     },
 

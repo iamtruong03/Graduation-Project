@@ -144,11 +144,6 @@ public class DocumentServiceImpl extends XDevBaseServiceImpl<Document, DocumentF
      * Download tài liệu từ hệ thống.
      * - Tìm thông tin tài liệu trong database
      * - Đọc file từ đường dẫn lưu trữ
-     *
-     * @param uid ID người thực hiện download
-     * @param id ID tài liệu cần download
-     * @return Byte array của file
-     * @throws RuntimeException nếu không tìm thấy tài liệu hoặc file
      */
     @Override
     public byte[] downloadDocument(String uid, Long id) {
@@ -219,12 +214,6 @@ public class DocumentServiceImpl extends XDevBaseServiceImpl<Document, DocumentF
      * Tìm kiếm tài liệu với kiểm soát truy cập theo phòng ban.
      * - Admin và trưởng phòng ban gốc: xem tất cả tài liệu
      * - Người dùng khác: chỉ xem tài liệu trong phòng ban và phòng ban con
-     *
-     * @param departmentId ID phòng ban
-     * @param uid ID người dùng
-     * @param filter Bộ lọc tìm kiếm
-     * @param pageable Thông tin phân trang
-     * @return Danh sách tài liệu phù hợp
      */
     @Override
     public Page<Document> searchAll(Long departmentId, String uid, DocumentFilter filter, Pageable pageable) {
@@ -240,6 +229,8 @@ public class DocumentServiceImpl extends XDevBaseServiceImpl<Document, DocumentF
             return documentRepo.searchByCodeOrName(
                 1, // STATUS_ACTIVE
                 filter.getSearch(),
+                filter.getDepartmentId(),
+                filter.getProjectId(),
                 pageable
             );
         }
@@ -261,6 +252,7 @@ public class DocumentServiceImpl extends XDevBaseServiceImpl<Document, DocumentF
             1, // STATUS_ACTIVE
             filter.getSearch(),
             departmentIds,
+            filter.getProjectId(),
             pageable
         );
     }

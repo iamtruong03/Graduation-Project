@@ -31,7 +31,7 @@ import {
   Chip
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
-import { Edit as EditIcon, Delete as DeleteIcon, Visibility as VisibilityIcon, CheckCircle as ApproveIcon, Assignment as AssignmentIcon, Add as AddIcon, Cancel as CancelIcon } from '@mui/icons-material';
+import { Edit as EditIcon, Delete as DeleteIcon, Visibility as VisibilityIcon, CheckCircle as ApproveIcon, Assignment as AssignmentIcon, Add as AddIcon, Cancel as CancelIcon, Close as CloseIcon } from '@mui/icons-material';
 import { Link, useNavigate } from 'react-router-dom';
 import projectService from '../../services/projectService';
 import staffService from '../../services/staffService';
@@ -44,8 +44,8 @@ const ProjectList = () => {
   const [departments, setDepartments] = useState({});
   const [managers, setManagers] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
-  const [projectType, setProjectType] = useState('all');
-  const [status, setStatus] = useState('all');
+  const [selectedProjectType, setSelectedProjectType] = useState('');
+  const [selectedManager, setSelectedManager] = useState('');
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [openDialog, setOpenDialog] = useState(false);
@@ -77,7 +77,7 @@ const ProjectList = () => {
     fetchPendingCount();
     fetchDepartments();
     fetchProjectTypes();
-  }, [page, searchTerm, projectType, status]);
+  }, [page, searchTerm, selectedProjectType, selectedManager]);
 
   useEffect(() => {
     if (openPendingDialog) {
@@ -134,8 +134,8 @@ const ProjectList = () => {
 
       const filter = {
         search: searchTerm,
-        projectType: projectType !== 'all' ? projectType : undefined,
-        state: status !== 'all' ? status : undefined,
+        projectTypeId: selectedProjectType || undefined,
+        managerId: selectedManager || undefined,
         page: page,
         size: rowsPerPage
       };
@@ -200,16 +200,6 @@ const ProjectList = () => {
     setPage(0); // Reset về trang đầu tiên khi tìm kiếm
   };
 
-  const handleProjectTypeChange = (event) => {
-    setProjectType(event.target.value);
-    setPage(0);
-  };
-
-  const handleStatusChange = (event) => {
-    setStatus(event.target.value);
-    setPage(0);
-  };
-
   const handlePageChange = (event, newPage) => {
     setPage(newPage - 1); // API sử dụng zero-based index
   };
@@ -266,8 +256,8 @@ const ProjectList = () => {
       setLoading(true);
       const filter = {
         search: searchTerm,
-        projectType: projectType !== 'all' ? projectType : undefined,
-        state: status !== 'all' ? status : undefined
+        projectTypeId: selectedProjectType || undefined,
+        managerId: selectedManager || undefined
       };
       
       const response = await projectService.exportProjects(filter);
@@ -418,6 +408,16 @@ const ProjectList = () => {
     setRejectReason('');
   };
 
+  const handleProjectTypeChange = (event) => {
+    setSelectedProjectType(event.target.value);
+    setPage(0); // Reset về trang đầu tiên khi thay đổi bộ lọc
+  };
+
+  const handleManagerChange = (event) => {
+    setSelectedManager(event.target.value);
+    setPage(0); // Reset về trang đầu tiên khi thay đổi bộ lọc
+  };
+
   return (
     <Box sx={{ p: 4, backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
       <Paper elevation={3} sx={{ p: 3, borderRadius: 2, backgroundColor: '#fff' }}>
@@ -494,61 +494,161 @@ const ProjectList = () => {
               gap: 2
             }}
           >
-            <TextField
-              size="small"
-              placeholder="Tìm kiếm theo tên, mã dự án..."
-              value={searchTerm}
-              onChange={handleSearchChange}
-              InputProps={{
-                startAdornment: <SearchIcon color="action" sx={{ mr: 1 }} />,
-                sx: { backgroundColor: '#fff' }
-              }}
-              sx={{ 
+            <Box
+              sx={{
+                position: 'relative',
+                flex: 1,
                 minWidth: 300,
-                flex: 1
+                backgroundColor: '#fff',
+                borderRadius: 2,
+                boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                '&:hover': {
+                  boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
+                },
+                transition: 'all 0.3s ease'
               }}
-            />
-            
+            >
+              <TextField
+                fullWidth
+                size="small"
+                placeholder="Tìm kiếm theo tên, mã dự án..."
+                value={searchTerm}
+                onChange={handleSearchChange}
+                InputProps={{
+                  startAdornment: (
+                    <SearchIcon 
+                      sx={{ 
+                        color: '#1976d2',
+                        mr: 1,
+                        fontSize: '1.25rem'
+                      }} 
+                    />
+                  ),
+                  endAdornment: searchTerm && (
+                    <IconButton
+                      size="small"
+                      onClick={() => setSearchTerm('')}
+                      sx={{
+                        color: '#757575',
+                        '&:hover': {
+                          color: '#1976d2',
+                          backgroundColor: 'rgba(25, 118, 210, 0.04)'
+                        }
+                      }}
+                    >
+                      <CloseIcon fontSize="small" />
+                    </IconButton>
+                  ),
+                  sx: {
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#e0e0e0'
+                    },
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#1976d2'
+                    },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#1976d2',
+                      borderWidth: '1px'
+                    },
+                    '& input': {
+                      py: 1.5,
+                      fontSize: '0.875rem'
+                    }
+                  }
+                }}
+              />
+              {searchTerm && (
+                <Typography
+                  variant="caption"
+                  sx={{
+                    position: 'absolute',
+                    bottom: -20,
+                    left: 0,
+                    color: '#666',
+                    fontSize: '0.75rem'
+                  }}
+                >
+                  Đang tìm kiếm: {searchTerm}
+                </Typography>
+              )}
+            </Box>
+
             <FormControl 
               size="small" 
               sx={{ 
                 minWidth: 200,
-                backgroundColor: '#fff'
+                backgroundColor: '#fff',
+                borderRadius: 2,
+                boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                '&:hover': {
+                  boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
+                },
+                transition: 'all 0.3s ease'
               }}
             >
               <InputLabel>Loại dự án</InputLabel>
               <Select
-                value={projectType}
-                label="Loại dự án"
+                value={selectedProjectType}
                 onChange={handleProjectTypeChange}
+                label="Loại dự án"
+                sx={{
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#e0e0e0'
+                  },
+                  '&:hover .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#1976d2'
+                  },
+                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#1976d2',
+                    borderWidth: '1px'
+                  }
+                }}
               >
-                <MenuItem value="all">Tất cả</MenuItem>
+                <MenuItem value="">Tất cả</MenuItem>
                 {Object.entries(projectTypes).map(([id, name]) => (
                   <MenuItem key={id} value={id}>{name}</MenuItem>
                 ))}
               </Select>
             </FormControl>
-      
+
             <FormControl 
               size="small" 
               sx={{ 
                 minWidth: 200,
-                backgroundColor: '#fff'
+                backgroundColor: '#fff',
+                borderRadius: 2,
+                boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                '&:hover': {
+                  boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
+                },
+                transition: 'all 0.3s ease'
               }}
             >
-              <InputLabel>Trạng thái</InputLabel>
+              <InputLabel>Người quản lý</InputLabel>
               <Select
-                value={status}
-                label="Trạng thái"
-                onChange={handleStatusChange}
+                value={selectedManager}
+                onChange={handleManagerChange}
+                label="Người quản lý"
+                sx={{
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#e0e0e0'
+                  },
+                  '&:hover .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#1976d2'
+                  },
+                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#1976d2',
+                    borderWidth: '1px'
+                  }
+                }}
               >
-                <MenuItem value="all">Tất cả</MenuItem>
-                {Object.entries(PROJECT_STATES).map(([id, name]) => (
+                <MenuItem value="">Tất cả</MenuItem>
+                {Object.entries(managers).map(([id, name]) => (
                   <MenuItem key={id} value={id}>{name}</MenuItem>
                 ))}
               </Select>
             </FormControl>
-      
+
             <Button
               variant="outlined"
               onClick={handleExport}
@@ -560,10 +660,15 @@ const ProjectList = () => {
                   borderColor: '#1565c0',
                   backgroundColor: 'rgba(25, 118, 210, 0.04)'
                 },
-                minWidth: 140
+                minWidth: 140,
+                height: 40,
+                borderRadius: 2,
+                textTransform: 'none',
+                fontWeight: 500,
+                fontSize: '0.875rem'
               }}
             >
-              XUẤT DỮ LIỆU
+              Xuất dữ liệu
             </Button>
           </Stack>
         </Paper>

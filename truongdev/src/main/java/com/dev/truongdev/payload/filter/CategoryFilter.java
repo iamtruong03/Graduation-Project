@@ -14,5 +14,5 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class CategoryFilter extends XDevBaseFilter {
-    // Add specific filter fields if needed
+    Long categoryTypeId;
 } 

@@ -141,8 +141,8 @@ const projectService = {
     return api.post('/api/projects/search', 
       {
         search: filter.search || '',
-        projectType: filter.projectType,
-        state: filter.state
+        projectTypeId: filter.projectTypeId,
+        managerId: filter.managerId
       },
       {
         ...getAuthHeader(),

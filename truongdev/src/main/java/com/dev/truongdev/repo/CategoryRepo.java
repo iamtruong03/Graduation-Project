@@ -17,10 +17,12 @@ public interface CategoryRepo extends XDevBaseRepo<Category> {
             "WHERE c.status = :status " +
             "AND (LOWER(c.code) LIKE LOWER(CONCAT('%', :search, '%')) " +
             "OR LOWER(c.name) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+            "AND (:categoryTypeId IS NULL OR c.categoryTypeId = :categoryTypeId) " +
             "ORDER BY c.createDate DESC")
     Page<Category> searchByCodeOrName(
             @Param("status") Integer status,
             @Param("search") String search,
+            @Param("categoryTypeId") Long categoryTypeId,
             Pageable pageable
     );
 

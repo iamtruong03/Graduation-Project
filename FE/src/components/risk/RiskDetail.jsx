@@ -50,6 +50,7 @@ import staffService from '../../services/staffService';
 import categoryService from '../../services/categoryService';
 import departmentService from '../../services/departmentService';
 import taskService from '../../services/taskService';
+import projectService from '../../services/projectService';
 
 const getRiskLevelColor = (level) => {
   switch (level) {
@@ -99,12 +100,18 @@ const RiskDetail = () => {
     possibilityId: null,
     priorityId: null,
     reflectorId: null,
-    rootCause: null,
-    impactAnalysis: null,
-    remedy: null,
-    precautions: null,
+    rootCause: '',
+    impactAnalysis: '',
+    remedy: '',
+    precautions: '',
     reflectionDay: null,
-    preventiveActions: []
+    preventiveActions: [],
+    analysis: {
+      rootCause: '',
+      impact: '',
+      preventiveMeasures: '',
+      remedialMeasures: ''
+    }
   });
   const [riskHistory, setRiskHistory] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
@@ -129,6 +136,7 @@ const RiskDetail = () => {
   const [users, setUsers] = useState([]);
   const [impactLevels, setImpactLevels] = useState([]);
   const [department, setDepartment] = useState(null);
+  const [project, setProject] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -151,41 +159,71 @@ const RiskDetail = () => {
           setUsers(usersResponse.data);
         }
 
-        const [riskData, historyData, tasksData] = await Promise.all([
-          riskService.getRiskById(id),
-          riskService.getRiskHistory(id),
-          taskService.getTasksByRiskId(id)
-        ]);
-
+        // Lấy thông tin chi tiết rủi ro
+        const riskData = await riskService.getRiskById(id);
         if (riskData) {
-          setRisk({
+          // Chuyển đổi dữ liệu phẳng thành cấu trúc có analysis
+          const formattedRisk = {
             ...riskData,
-            preventiveActions: tasksData?.data || []
-          });
-          setRiskHistory(historyData || []);
+            preventiveActions: [],
+            analysis: {
+              rootCause: riskData.rootCause || '',
+              impact: riskData.impactAnalysis || '',
+              preventiveMeasures: riskData.precautions || '',
+              remedialMeasures: riskData.remedy || ''
+            }
+          };
+          setRisk(formattedRisk);
 
-          // Lấy thông tin đơn vị ghi nhận
-          if (riskData.departmentId) {
+          // Lấy thông tin dự án nếu có projectId
+          if (riskData.projectId) {
             try {
-              const departmentResponse = await departmentService.getDepartmentById(riskData.departmentId);
-              if (departmentResponse && departmentResponse.data) {
-                setDepartment(departmentResponse.data);
+              const projectResponse = await projectService.getProjectById(riskData.projectId);
+              if (projectResponse && projectResponse.data) {
+                setProject(projectResponse.data);
               }
             } catch (err) {
-              console.error('Error fetching department:', err);
+              console.error('Error fetching project:', err);
             }
           }
+        }
 
-          // Lấy danh sách người thực hiện theo phòng ban
-          if (riskData.departmentId) {
-            try {
-              const userResponse = await staffService.listUserByDep(riskData.departmentId);
-              if (userResponse && userResponse.data) {
-                setManagers(userResponse.data);
-              }
-            } catch (err) {
-              console.error('Error fetching managers:', err);
+        // Lấy lịch sử rủi ro
+        const historyData = await riskService.getRiskHistory(id);
+        if (historyData) {
+          setRiskHistory(historyData);
+        }
+
+        // Lấy danh sách công việc liên quan
+        const tasksData = await taskService.getTasksByRiskId(id);
+        if (tasksData && tasksData.data) {
+          setRisk(prev => ({
+            ...prev,
+            preventiveActions: tasksData.data || []
+          }));
+        }
+
+        // Lấy thông tin đơn vị ghi nhận
+        if (riskData?.departmentId) {
+          try {
+            const departmentResponse = await departmentService.getDepartmentById(riskData.departmentId);
+            if (departmentResponse && departmentResponse.data) {
+              setDepartment(departmentResponse.data);
             }
+          } catch (err) {
+            console.error('Error fetching department:', err);
+          }
+        }
+
+        // Lấy danh sách người thực hiện theo phòng ban
+        if (riskData?.departmentId) {
+          try {
+            const userResponse = await staffService.listUserByDep(riskData.departmentId);
+            if (userResponse && userResponse.data) {
+              setManagers(userResponse.data);
+            }
+          } catch (err) {
+            console.error('Error fetching managers:', err);
           }
         }
       } catch (error) {
@@ -245,8 +283,8 @@ const RiskDetail = () => {
   };
 
   const getProjectName = (projectId) => {
-    // TODO: Implement mapping từ projectId sang tên dự án
-    return 'Dự án';
+    if (!project) return 'Chưa xác định';
+    return project.name || 'Chưa xác định';
   };
 
   const formatDate = (dateString) => {
@@ -283,11 +321,28 @@ const RiskDetail = () => {
   const handleSave = async () => {
     try {
       const updatedRisk = {
-        ...editedRisk,
-        modifiedDate: new Date().toISOString(),
+        id: risk.id,
+        code: editedRisk.code,
+        name: editedRisk.name,
+        description: editedRisk.description,
+        status: editedRisk.status,
+        state: editedRisk.state,
+        riskTypeId: editedRisk.riskTypeId,
+        projectId: editedRisk.projectId,
+        departmentId: editedRisk.departmentId,
+        impactLevelId: editedRisk.impactLevelId,
+        scopeId: editedRisk.scopeId,
+        possibilityId: editedRisk.possibilityId,
+        priorityId: editedRisk.priorityId,
+        reflectorId: editedRisk.reflectorId,
+        reflectionDay: editedRisk.reflectionDay,
+        rootCause: editedRisk?.analysis?.rootCause || '',
+        impactAnalysis: editedRisk?.analysis?.impact || '',
+        remedy: editedRisk?.analysis?.remedialMeasures || '',
+        precautions: editedRisk?.analysis?.preventiveMeasures || ''
       };
       
-      await riskService.updateRisk(updatedRisk.id, updatedRisk);
+      await riskService.updateRisk(risk.id, updatedRisk);
       setRisk(updatedRisk);
       setIsEditing(false);
       setSnackbar({
@@ -378,8 +433,8 @@ const RiskDetail = () => {
         // Refresh danh sách hành động sau khi thêm mới
         const tasksResponse = await taskService.getTasksByRiskId(risk.id);
         if (tasksResponse && tasksResponse.data) {
-          setRisk({
-            ...risk,
+    setRisk({
+      ...risk,
             preventiveActions: tasksResponse.data
           });
         }
@@ -387,8 +442,8 @@ const RiskDetail = () => {
           open: true,
           message: 'Thêm hành động mới thành công',
           severity: 'success'
-        });
-        handleCloseActionDialog();
+    });
+    handleCloseActionDialog();
       }
     } catch (error) {
       console.error('Error saving action:', error);
@@ -430,11 +485,11 @@ const RiskDetail = () => {
       await taskService.changeStatus(actionId);
       
       // Cập nhật lại danh sách hành động
-      const updatedActions = risk.preventiveActions.filter(action => action.id !== actionId);
-      setRisk({
-        ...risk,
-        preventiveActions: updatedActions
-      });
+    const updatedActions = risk.preventiveActions.filter(action => action.id !== actionId);
+    setRisk({
+      ...risk,
+      preventiveActions: updatedActions
+    });
 
       setSnackbar({
         open: true,
@@ -635,15 +690,15 @@ const RiskDetail = () => {
                                 {type.name}
                               </MenuItem>
                             ))}
-                          </Select>
-                        </FormControl>
+                        </Select>
+                      </FormControl>
                       </>
                     ) : (
                       <>
-                        <Chip
+                      <Chip
                           icon={<WarningIcon />}
                           label={risk.code}
-                          variant="outlined"
+                        variant="outlined"
                           sx={{
                             borderColor: '#1976d2',
                             color: '#1976d2',
@@ -739,11 +794,11 @@ const RiskDetail = () => {
                             }}
                           >
                             {getReflectorName(risk.reflectorId).charAt(0)}
-                          </Avatar>
+                            </Avatar>
                           <Typography sx={{ color: '#333', fontWeight: 500 }}>
                             {getReflectorName(risk.reflectorId)}
                           </Typography>
-                        </Stack>
+                          </Stack>
                       </Box>
                     </Stack>
                   </Grid>
@@ -1182,12 +1237,12 @@ const RiskDetail = () => {
 
               {/* Hành động phòng ngừa */}
               <RiskActionList
-                actions={risk.preventiveActions}
-                riskState={risk.state}
+                actions={risk?.preventiveActions || []}
+                riskState={risk?.state}
                 onAddAction={handleAddAction}
                 onDeleteAction={handleDeleteAction}
                 formatDate={formatDate}
-                managers={managers}
+                managers={managers || []}
               />
             </Stack>
           </Grid>
@@ -1344,8 +1399,8 @@ const RiskDetail = () => {
         </DialogActions>
       </Dialog>
 
-      <Snackbar 
-        open={snackbar.open} 
+      <Snackbar
+        open={snackbar.open}
         autoHideDuration={1000} 
         onClose={handleCloseSnackbar}
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}

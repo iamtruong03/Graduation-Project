@@ -18,10 +18,14 @@ public interface RiskRepo extends XDevBaseRepo<Risk> {
             "WHERE r.status = :status " +
             "AND (LOWER(r.code) LIKE LOWER(CONCAT('%', :search, '%')) " +
             "OR LOWER(r.name) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+            "AND (:riskTypeId IS NULL OR r.riskTypeId = :riskTypeId) " +
+            "AND (:reflectorId IS NULL OR r.reflectorId = :reflectorId) " +
             "ORDER BY r.createDate DESC")
     Page<Risk> searchByCodeOrName(
             @Param("status") Integer status,
             @Param("search") String search,
+            @Param("riskTypeId") Long riskTypeId,
+            @Param("reflectorId") String reflectorId,
             Pageable pageable
     );
 
@@ -30,11 +34,15 @@ public interface RiskRepo extends XDevBaseRepo<Risk> {
             "AND r.departmentId IN :departmentIds " +
             "AND (LOWER(r.code) LIKE LOWER(CONCAT('%', :search, '%')) " +
             "OR LOWER(r.name) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+            "AND (:riskTypeId IS NULL OR r.riskTypeId = :riskTypeId) " +
+            "AND (:reflectorId IS NULL OR r.reflectorId = :reflectorId) " +
             "ORDER BY r.createDate DESC")
     Page<Risk> searchByCodeOrNameAndDepartments(
             @Param("status") Integer status,
             @Param("search") String search,
             @Param("departmentIds") List<Long> departmentIds,
+            @Param("riskTypeId") Long riskTypeId,
+            @Param("reflectorId") String reflectorId,
             Pageable pageable
     );
 

@@ -102,9 +102,6 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
     public TaskDTO createTask(String uid, TaskDTO taskDTO) {
         validateTaskDTO(taskDTO);
 
-        Project project = projectRepo.findById(taskDTO.getProjectId())
-            .orElseThrow(() -> new RuntimeException("Project not found"));
-
         Task task = new Task();
         BeanUtils.copyProperties(taskDTO, task);
 
@@ -113,6 +110,8 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
         task.setUpdateBy(uid);
 
         if (taskDTO.getTaskTypeId() == 2) {
+            Project project = projectRepo.findById(taskDTO.getProjectId())
+                .orElseThrow(() -> new RuntimeException("Project not found"));
             // Kiểm tra quyền tạo task chỉ khi taskTypeId == 2
             if (!uid.equals(project.getManagerId())) {
                 throw new RuntimeException("Chỉ có quản lý dự án mới được phép tạo task");
@@ -257,6 +256,8 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
             taskPage = taskRepo.searchByCodeOrName(
                 AppConstants.STATUS_ACTIVE,
                 filter.getSearch(),
+                filter.getTaskTypeId(),
+                filter.getAssigneeId(),
                 pageable
             );
         } else {
@@ -265,6 +266,8 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
                 AppConstants.STATUS_ACTIVE,
                 filter.getSearch(),
                 departmentIds,
+                filter.getTaskTypeId(),
+                filter.getAssigneeId(),
                 pageable
             );
         }

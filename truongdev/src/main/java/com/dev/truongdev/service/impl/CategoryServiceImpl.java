@@ -40,6 +40,7 @@ public class CategoryServiceImpl extends XDevBaseServiceImpl<Category, CategoryF
         return categoryRepo.searchByCodeOrName(
             1, // STATUS_ACTIVE
             filter.getSearch(),
+            filter.getCategoryTypeId(),
             pageable
         );
     }

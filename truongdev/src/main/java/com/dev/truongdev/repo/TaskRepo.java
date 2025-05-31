@@ -17,10 +17,14 @@ public interface TaskRepo extends XDevBaseRepo<Task> {
             "WHERE t.status = :status " +
             "AND (LOWER(t.code) LIKE LOWER(CONCAT('%', :search, '%')) " +
             "OR LOWER(t.name) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+            "AND (:taskTypeId IS NULL OR t.taskTypeId = :taskTypeId) " +
+            "AND (:assigneeId IS NULL OR t.assigneeId = :assigneeId) " +
             "ORDER BY t.createDate DESC")
     Page<Task> searchByCodeOrName(
             @Param("status") Integer status,
             @Param("search") String search,
+            @Param("taskTypeId") Integer taskTypeId,
+            @Param("assigneeId") String assigneeId,
             Pageable pageable
     );
 
@@ -29,11 +33,15 @@ public interface TaskRepo extends XDevBaseRepo<Task> {
             "AND t.departmentId IN :departmentIds " +
             "AND (LOWER(t.code) LIKE LOWER(CONCAT('%', :search, '%')) " +
             "OR LOWER(t.name) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+            "AND (:taskTypeId IS NULL OR t.taskTypeId = :taskTypeId) " +
+            "AND (:assigneeId IS NULL OR t.assigneeId = :assigneeId) " +
             "ORDER BY t.createDate DESC")
     Page<Task> searchByCodeOrNameAndDepartments(
             @Param("status") Integer status,
             @Param("search") String search,
             @Param("departmentIds") List<Long> departmentIds,
+            @Param("taskTypeId") Integer taskTypeId,
+            @Param("assigneeId") String assigneeId,
             Pageable pageable
     );
 

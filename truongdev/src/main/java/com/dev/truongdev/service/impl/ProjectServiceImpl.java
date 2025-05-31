@@ -369,6 +369,8 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
             projectPage = projectRepo.searchByCodeOrName(
                 AppConstants.STATUS_ACTIVE,
                 filter.getSearch(),
+                filter.getProjectTypeId(),
+                filter.getManagerId(),
                 pageable
             );
         } else {
@@ -377,6 +379,8 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
                 AppConstants.STATUS_ACTIVE,
                 filter.getSearch(),
                 departmentIds,
+                filter.getProjectTypeId(),
+                filter.getManagerId(),
                 pageable
             );
         }

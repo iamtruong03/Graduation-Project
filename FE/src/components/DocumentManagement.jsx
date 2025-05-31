@@ -53,8 +53,8 @@ const DocumentManagement = () => {
   const [documents, setDocuments] = useState([]);
   const [totalPages, setTotalPages] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState('');
+  const [selectedProject, setSelectedProject] = useState('');
   const [openUploadDialog, setOpenUploadDialog] = useState(false);
   const [openShareDialog, setOpenShareDialog] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState(null);
@@ -105,8 +105,8 @@ const DocumentManagement = () => {
     try {
       const filter = {
         search: searchTerm,
-        documentTypeId: selectedCategory || undefined,
-        departmentId: selectedDepartment || undefined
+        departmentId: selectedDepartment || undefined,
+        projectId: selectedProject || undefined
       };
       const response = await documentService.searchDocuments(filter, page - 1, rowsPerPage);
       setDocuments(response.data.content);
@@ -128,7 +128,7 @@ const DocumentManagement = () => {
     fetchDepartments();
     fetchProjects();
     // eslint-disable-next-line
-  }, [searchTerm, selectedCategory, selectedDepartment, page]);
+  }, [searchTerm, selectedDepartment, selectedProject, page]);
 
   const fetchDepartments = async () => {
     try {
@@ -162,12 +162,12 @@ const DocumentManagement = () => {
     setSearchTerm(event.target.value);
   };
 
-  const handleCategoryChange = (event) => {
-    setSelectedCategory(event.target.value);
-  };
-
   const handleDepartmentChange = (event) => {
     setSelectedDepartment(event.target.value);
+  };
+
+  const handleProjectChange = (event) => {
+    setSelectedProject(event.target.value);
   };
 
   const handleUpload = async () => {
@@ -421,23 +421,6 @@ const DocumentManagement = () => {
           </Grid>
           <Grid item xs={12} md={3}>
             <FormControl fullWidth size="small">
-              <InputLabel>Phân loại</InputLabel>
-              <Select
-                value={selectedCategory}
-                label="Phân loại"
-                onChange={handleCategoryChange}
-              >
-                <MenuItem value="">Tất cả</MenuItem>
-                {documentTypes.map(type => (
-                  <MenuItem key={type.id} value={type.id}>
-                    {type.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <FormControl fullWidth size="small">
               <InputLabel>Phòng ban</InputLabel>
               <Select
                 value={selectedDepartment}
@@ -448,6 +431,23 @@ const DocumentManagement = () => {
                 {departments.map(dept => (
                   <MenuItem key={dept.id} value={dept.id}>
                     {dept.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <FormControl fullWidth size="small">
+              <InputLabel>Dự án</InputLabel>
+              <Select
+                value={selectedProject}
+                label="Dự án"
+                onChange={handleProjectChange}
+              >
+                <MenuItem value="">Tất cả</MenuItem>
+                {projects.map(project => (
+                  <MenuItem key={project.id} value={project.id}>
+                    {project.name}
                   </MenuItem>
                 ))}
               </Select>

@@ -17,10 +17,14 @@ public interface DocumentRepo extends XDevBaseRepo<Document> {
             "WHERE d.status = :status " +
             "AND (LOWER(d.code) LIKE LOWER(CONCAT('%', :search, '%')) " +
             "OR LOWER(d.name) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+            "AND (:departmentId IS NULL OR d.departmentId = :departmentId) " +
+            "AND (:projectId IS NULL OR d.projectId = :projectId) " +
             "ORDER BY d.createDate DESC")
     Page<Document> searchByCodeOrName(
             @Param("status") Integer status,
             @Param("search") String search,
+            @Param("departmentId") Long departmentId,
+            @Param("projectId") Long projectId,
             Pageable pageable
     );
 
@@ -29,11 +33,13 @@ public interface DocumentRepo extends XDevBaseRepo<Document> {
             "AND d.departmentId IN :departmentIds " +
             "AND (LOWER(d.code) LIKE LOWER(CONCAT('%', :search, '%')) " +
             "OR LOWER(d.name) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+            "AND (:projectId IS NULL OR d.projectId = :projectId) " +
             "ORDER BY d.createDate DESC")
     Page<Document> searchByCodeOrNameAndDepartments(
             @Param("status") Integer status,
             @Param("search") String search,
             @Param("departmentIds") List<Long> departmentIds,
+            @Param("projectId") Long projectId,
             Pageable pageable
     );
 }

@@ -17,10 +17,14 @@ public interface ProjectRepo extends XDevBaseRepo<Project> {
             "WHERE p.status = :status " +
             "AND (LOWER(p.code) LIKE LOWER(CONCAT('%', :search, '%')) " +
             "OR LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+            "AND (:projectTypeId IS NULL OR p.projectTypeId = :projectTypeId) " +
+            "AND (:managerId IS NULL OR p.managerId = :managerId) " +
             "ORDER BY p.createDate DESC")
     Page<Project> searchByCodeOrName(
             @Param("status") Integer status,
             @Param("search") String search,
+            @Param("projectTypeId") Integer projectTypeId,
+            @Param("managerId") String managerId,
             Pageable pageable
     );
 
@@ -29,11 +33,15 @@ public interface ProjectRepo extends XDevBaseRepo<Project> {
             "AND p.departmentId IN :departmentIds " +
             "AND (LOWER(p.code) LIKE LOWER(CONCAT('%', :search, '%')) " +
             "OR LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+            "AND (:projectTypeId IS NULL OR p.projectTypeId = :projectTypeId) " +
+            "AND (:managerId IS NULL OR p.managerId = :managerId) " +
             "ORDER BY p.createDate DESC")
     Page<Project> searchByCodeOrNameAndDepartments(
             @Param("status") Integer status,
             @Param("search") String search,
             @Param("departmentIds") List<Long> departmentIds,
+            @Param("projectTypeId") Integer projectTypeId,
+            @Param("managerId") String managerId,
             Pageable pageable
     );
 

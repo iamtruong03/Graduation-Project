@@ -94,6 +94,33 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
         return convertToDTO(savedProject);
     }
 
+    @Override
+    public ProjectDTO updateProject(Long id, ProjectDTO projectDTO) {
+        validateProjectDTO(projectDTO);
+
+        Project project = projectRepo.findById(id)
+            .orElseThrow(() -> new RuntimeException("Project not found"));
+
+        if (project.getState() != AppConstants.STATUS_IN_PROGRESS) {
+            throw new RuntimeException("Chỉ có thể cập nhật dự án khi đang trong trạng thái thực hiện");
+        }
+
+        Integer previousState = project.getState();
+        if (projectDTO.getState() == AppConstants.STATUS_COMPLETE){
+            project.setCompletedDate(new Date());
+        }
+
+        BeanUtils.copyProperties(projectDTO, project, "id", "createBy", "createDate","modifiedDate");
+        project = projectRepo.save(project);
+
+        if (!Objects.equals(previousState, project.getState())) {
+            createProjectHistory(id, previousState, project.getState(),
+                projectDTO.getUpdateBy(), "Cập nhật trạng thái dự án");
+        }
+
+        return convertToDTO(project);
+    }
+
     /**
      * Phê duyệt dự án, chuyển trạng thái sang ĐÃ DUYỆT và tự động sang ĐANG THỰC HIỆN.
      * @param uid ID người phê duyệt
@@ -283,30 +310,6 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
     }
 
     @Override
-    public ProjectDTO updateProject(Long id, ProjectDTO projectDTO) {
-        validateProjectDTO(projectDTO);
-
-        Project project = projectRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Project not found"));
-
-        if (project.getState() != AppConstants.STATUS_IN_PROGRESS) {
-            throw new RuntimeException("Chỉ có thể cập nhật dự án khi đang trong trạng thái thực hiện");
-        }
-
-        Integer previousState = project.getState();
-        
-        BeanUtils.copyProperties(projectDTO, project, "id", "createBy", "createDate","modifiedDate");
-        project = projectRepo.save(project);
-        
-        if (!Objects.equals(previousState, project.getState())) {
-            createProjectHistory(id, previousState, project.getState(), 
-                projectDTO.getUpdateBy(), "Cập nhật trạng thái dự án");
-        }
-        
-        return convertToDTO(project);
-    }
-
-    @Override
     public List<ProjectHistoryDTO> getProjectHistory(Long projectId) {
         List<ProjectHistory> histories = projectHistoryRepo.findByProjectIdOrderByChangedAtDesc(projectId);
         return histories.stream()
@@ -403,21 +406,22 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
         if (Objects.equals(currentState, newState)) {
             return;
         }
-        
+
         boolean isValidTransition;
+
         if (currentState == null) {
             isValidTransition = false;
         } else if (currentState == AppConstants.STATUS_PENDING) {
             isValidTransition = newState == AppConstants.STATUS_IN_PROGRESS ||
-                              newState == AppConstants.STATUS_REJECTED;
+                newState == AppConstants.STATUS_REJECTED;
         } else if (currentState == AppConstants.STATUS_IN_PROGRESS) {
-            isValidTransition = newState == AppConstants.STATUS_IN_PROGRESS;
-        } else if (currentState == AppConstants.STATUS_IN_PROGRESS) {
-            isValidTransition = newState == AppConstants.STATUS_COMPLETE || 
-                              newState == AppConstants.STATUS_OVERDUE;
-        } else if (currentState == AppConstants.STATUS_COMPLETE || 
-                  currentState == AppConstants.STATUS_OVERDUE || 
-                  currentState == AppConstants.STATUS_REJECTED) {
+            isValidTransition = newState == AppConstants.STATUS_IN_PROGRESS ||
+                newState == AppConstants.STATUS_COMPLETE ||
+                newState == AppConstants.STATUS_OVERDUE;
+        } else if (currentState == AppConstants.STATUS_COMPLETE ||
+            currentState == AppConstants.STATUS_OVERDUE ||
+            currentState == AppConstants.STATUS_REJECTED ||
+            currentState == AppConstants.STATUS_CANCELED) {
             isValidTransition = false;
         } else {
             isValidTransition = false;
@@ -434,7 +438,7 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
 
     private boolean areAllTasksCompleted(List<Task> tasks) {
         return !tasks.isEmpty() && tasks.stream()
-                .allMatch(task -> task.getState() == State.COMPLETED.ordinal());
+                .allMatch(task -> task.getState() == State.COMPLETE.ordinal());
     }
 
     private void handleCompletedProject(Project project) {
@@ -502,7 +506,7 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
         if (!tasks.isEmpty()) {
             int totalTasks = tasks.size();
             int completedTasks = (int) tasks.stream()
-                    .filter(task -> task.getState() == State.COMPLETED.ordinal())
+                    .filter(task -> task.getState() == State.COMPLETE.ordinal())
                     .count();
             
             dto.setTotalTasks(totalTasks);

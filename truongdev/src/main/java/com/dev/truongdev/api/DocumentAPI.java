@@ -7,13 +7,9 @@ import com.dev.truongdev.service.IDocumentService;
 import com.dev.truongdev.utils.ApiResponse;
 import com.dev.truongdev.xdevbase.api.XDevBaseAPI;
 import com.dev.truongdev.xdevbase.service.IXDevBaseService;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -62,28 +58,31 @@ public class DocumentAPI extends XDevBaseAPI<Document, DocumentFilter> {
             @RequestAttribute String uid,
             @PathVariable("id") Long id) {
         try {
+            // Lấy thông tin tài liệu từ service để lấy tên file và kiểu MIME
+            Document document = documentService.getById(uid, id);
+            
             // Gọi service để lấy dữ liệu file
             byte[] fileData = documentService.downloadDocument(uid, id);
 
-            // Lấy thông tin tài liệu từ service để lấy tên file và kiểu MIME
-            Document document = documentService.getById(uid, id);
-            String fileName = document.getName();
-            String contentType = Files.probeContentType(Paths.get(document.getFilePath()));
+            // Sử dụng MIME type đã lưu trong document
+            String contentType = document.getMimeType();
             if (contentType == null) {
                 contentType = "application/octet-stream";
             }
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.parseMediaType(contentType));
-            headers.setContentDispositionFormData("attachment", fileName);
+            headers.setContentDispositionFormData("attachment", document.getName());
             headers.setCacheControl("must-revalidate, post-check=0, pre-check=0");
+            headers.setContentLength(fileData.length);
 
             return new ResponseEntity<>(fileData, headers, HttpStatus.OK);
         } catch (Exception e) {
             // Handle the error gracefully
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                    .body(("{\"error\":\"Failed to download document: " + e.getMessage() + "\"}").getBytes());
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            String errorMessage = "{\"error\":\"Failed to download document: " + e.getMessage() + "\"}";
+            return new ResponseEntity<>(errorMessage.getBytes(), headers, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 }

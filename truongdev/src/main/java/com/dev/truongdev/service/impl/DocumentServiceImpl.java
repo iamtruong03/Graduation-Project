@@ -98,6 +98,27 @@ public class DocumentServiceImpl extends XDevBaseServiceImpl<Document, DocumentF
             Path targetLocation = uploadDir.resolve(fileName);
             Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
 
+            // Xác định MIME type dựa trên phần mở rộng
+            String mimeType;
+            switch (fileExtension.toLowerCase()) {
+                case ".pdf":
+                    mimeType = "application/pdf";
+                    break;
+                case ".doc":
+                case ".docx":
+                    mimeType = "application/msword";
+                    break;
+                case ".xls":
+                case ".xlsx":
+                    mimeType = "application/vnd.ms-excel";
+                    break;
+                case ".txt":
+                    mimeType = "text/plain";
+                    break;
+                default:
+                    mimeType = "application/octet-stream";
+            }
+
             // Create document record
             Document document = new Document();
             document.setCode(documentDTO.getCode());
@@ -110,6 +131,7 @@ public class DocumentServiceImpl extends XDevBaseServiceImpl<Document, DocumentF
             document.setCreateBy(uid);
             document.setUpdateBy(uid);
             document.setStatus(1);
+            document.setMimeType(mimeType);
 
             document = documentRepo.save(document);
             return convertToDTO(document);
@@ -137,7 +159,40 @@ public class DocumentServiceImpl extends XDevBaseServiceImpl<Document, DocumentF
             if (!Files.exists(filePath)) {
                 throw new RuntimeException("File not found: " + filePath);
             }
-            return Files.readAllBytes(filePath);
+
+            // Đọc file và trả về byte array
+            byte[] fileContent = Files.readAllBytes(filePath);
+            
+            // Nếu chưa có MIME type, xác định và lưu lại
+            if (document.getMimeType() == null) {
+                String fileName = filePath.getFileName().toString();
+                String fileExtension = fileName.substring(fileName.lastIndexOf(".") + 1).toLowerCase();
+                
+                String mimeType;
+                switch (fileExtension) {
+                    case "pdf":
+                        mimeType = "application/pdf";
+                        break;
+                    case "doc":
+                    case "docx":
+                        mimeType = "application/msword";
+                        break;
+                    case "xls":
+                    case "xlsx":
+                        mimeType = "application/vnd.ms-excel";
+                        break;
+                    case "txt":
+                        mimeType = "text/plain";
+                        break;
+                    default:
+                        mimeType = "application/octet-stream";
+                }
+                
+                document.setMimeType(mimeType);
+                documentRepo.save(document);
+            }
+
+            return fileContent;
         } catch (IOException e) {
             throw new RuntimeException("Could not read file: " + filePath, e);
         }

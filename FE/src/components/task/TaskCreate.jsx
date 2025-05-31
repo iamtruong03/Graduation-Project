@@ -12,7 +12,9 @@ import {
   Paper,
   Grid,
   TextareaAutosize,
-  Alert
+  Alert as MuiAlert,
+  Snackbar,
+  CircularProgress
 } from '@mui/material';
 import { Link, useNavigate } from 'react-router-dom';
 import taskService from '../../services/taskService';
@@ -38,6 +40,11 @@ const TaskCreate = () => {
   const [assigneeList, setAssigneeList] = useState([]);
   const [departmentList, setDepartmentList] = useState([]);
   const [approverList, setApproverList] = useState([]);
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
 
   useEffect(() => {
     fetchApprovers();
@@ -98,6 +105,13 @@ const TaskCreate = () => {
     }
   };
 
+  const handleCloseSnackbar = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -105,12 +119,20 @@ const TaskCreate = () => {
       setError(null);
       
       if (!formData.departmentId) {
-        setError('Vui lòng chọn Phòng ban.');
+        setSnackbar({
+          open: true,
+          message: 'Vui lòng chọn Phòng ban.',
+          severity: 'error'
+        });
         setLoading(false);
         return;
       }
       if (!formData.assigneeId) {
-        setError('Vui lòng chọn Người thực hiện.');
+        setSnackbar({
+          open: true,
+          message: 'Vui lòng chọn Người thực hiện.',
+          severity: 'error'
+        });
         setLoading(false);
         return;
       }
@@ -131,13 +153,28 @@ const TaskCreate = () => {
 
       const response = await taskService.createTask(taskData);
       if (response) {
-        navigate('/task/list');
+        setSnackbar({
+          open: true,
+          message: 'Tạo công việc thành công',
+          severity: 'success'
+        });
+        setTimeout(() => {
+          navigate('/task/list');
+        }, 1000);
       } else {
-        setError('Tạo công việc không thành công. Vui lòng kiểm tra dữ liệu.');
+        setSnackbar({
+          open: true,
+          message: 'Tạo công việc không thành công. Vui lòng kiểm tra dữ liệu.',
+          severity: 'error'
+        });
       }
     } catch (err) {
       console.error('Error creating task:', err);
-      setError(err.response?.data?.message || err.message || 'Có lỗi xảy ra khi tạo công việc');
+      setSnackbar({
+        open: true,
+        message: err.response?.data?.message || err.message || 'Có lỗi xảy ra khi tạo công việc',
+        severity: 'error'
+      });
     } finally {
       setLoading(false);
     }
@@ -148,9 +185,9 @@ const TaskCreate = () => {
       <Typography variant="h5" sx={{ mb: 3 }}>TẠO CÔNG VIỆC MỚI</Typography>
       <Paper sx={{ p: 3 }}>
         {error && (
-          <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+          <MuiAlert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
             {error}
-          </Alert>
+          </MuiAlert>
         )}
         <form onSubmit={handleSubmit}>
           <Grid container spacing={3}>
@@ -291,6 +328,23 @@ const TaskCreate = () => {
           </Grid>
         </form>
       </Paper>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <MuiAlert
+          elevation={6}
+          variant="filled"
+          onClose={handleCloseSnackbar}
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </MuiAlert>
+      </Snackbar>
     </Box>
   );
 };

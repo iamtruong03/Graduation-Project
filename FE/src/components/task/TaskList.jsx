@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileDownload as FileDownloadIcon } from '@mui/icons-material';
+import { FileDownload as FileDownloadIcon, Search as SearchIcon, Edit as EditIcon, Visibility as VisibilityIcon, Delete as DeleteIcon, CheckCircle as ApproveIcon, Assignment as AssignmentIcon, Add as AddIcon, Cancel as CancelIcon } from '@mui/icons-material';
 import {
   Box,
   Button,
@@ -25,18 +25,15 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
-  Alert,
+  Alert as MuiAlert,
+  Snackbar,
   CircularProgress,
   Badge,
   Chip
 } from '@mui/material';
-import SearchIcon from '@mui/icons-material/Search';
-import EditIcon from '@mui/icons-material/Edit';
-import VisibilityIcon from '@mui/icons-material/Visibility';
-import DeleteIcon from '@mui/icons-material/Delete';
-import { CheckCircle as ApproveIcon, Assignment as AssignmentIcon, Add as AddIcon } from '@mui/icons-material';
 import { Link } from 'react-router-dom';
 import taskService from '../../services/taskService';
+import staffService from '../../services/staffService';
 
 const TaskList = () => {
   const [tasks, setTasks] = useState([]);
@@ -59,7 +56,16 @@ const TaskList = () => {
   const [pendingTotalPages, setPendingTotalPages] = useState(0);
   const [openApproveDialog, setOpenApproveDialog] = useState(false);
   const [approveId, setApproveId] = useState(null);
+  const [openRejectDialog, setOpenRejectDialog] = useState(false);
+  const [rejectId, setRejectId] = useState(null);
+  const [rejectReason, setRejectReason] = useState('');
   const rowsPerPage = 10;
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
+  const [users, setUsers] = useState({});
 
   const fetchTasks = async () => {
     setLoading(true);
@@ -107,8 +113,9 @@ const TaskList = () => {
   const fetchPendingCount = async () => {
     try {
       const response = await taskService.getPendingApprovalTasks({
-        page: 0,
-        size: 1
+        search: searchName,
+        page: pendingPage,
+        size: rowsPerPage
       });
       if (response.status === 200) {
         setPendingCount(response.data.totalElements);
@@ -118,9 +125,25 @@ const TaskList = () => {
     }
   };
 
+  const fetchUsers = async () => {
+    try {
+      const response = await staffService.listUserChildDep();
+      if (response.data) {
+        const userMap = {};
+        response.data.forEach(user => {
+          userMap[user.id] = user.name;
+        });
+        setUsers(userMap);
+      }
+    } catch (err) {
+      console.error('Error fetching users:', err);
+    }
+  };
+
   useEffect(() => {
     fetchTasks();
     fetchPendingCount();
+    fetchUsers();
     // eslint-disable-next-line
   }, [page, searchName]);
 
@@ -138,13 +161,22 @@ const TaskList = () => {
   const handleConfirmDelete = async () => {
     try {
       setLoading(true);
-      await taskService.deleteTask(deleteId);
+      await taskService.changeStatus(deleteId);
       await fetchTasks();
       setOpenDialog(false);
       setDeleteId(null);
+      setSnackbar({
+        open: true,
+        message: 'Xóa công việc thành công',
+        severity: 'success'
+      });
     } catch (err) {
-      setError('Không thể xóa công việc');
-      console.error('Error deleting task:', err);
+      setSnackbar({
+        open: true,
+        message: err.response?.data?.message || 'Không thể xóa công việc',
+        severity: 'error'
+      });
+      console.error('Error cancelling task:', err);
     } finally {
       setLoading(false);
     }
@@ -167,14 +199,23 @@ const TaskList = () => {
   const handleConfirmApprove = async () => {
     try {
       setLoading(true);
-      const response = await taskService.approveTask(approveId, localStorage.getItem('userId'));
+      const response = await taskService.approveTask(approveId);
       if (response) {
         await fetchTasks();
         await fetchPendingTasks();
         await fetchPendingCount();
+        setSnackbar({
+          open: true,
+          message: 'Phê duyệt công việc thành công!',
+          severity: 'success'
+        });
       }
     } catch (err) {
-      setError('Không thể phê duyệt công việc');
+      setSnackbar({
+        open: true,
+        message: err.response?.data?.message || 'Không thể phê duyệt công việc',
+        severity: 'error'
+      });
       console.error('Error approving task:', err);
     } finally {
       setLoading(false);
@@ -207,20 +248,12 @@ const TaskList = () => {
       };
 
       const response = await taskService.exportTasks(filter);
-
-      // Tạo blob từ response data
       const blob = new Blob([response], {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       });
-
-      // Tạo URL để tải file
       const url = window.URL.createObjectURL(blob);
-
-      // Tạo thẻ a ẩn để tải file
       const link = document.createElement('a');
       link.href = url;
-
-      // Lấy tên file từ header
       const contentDisposition = response.headers?.['content-disposition'];
       let fileName = 'DanhSachCongViec.xlsx';
       if (contentDisposition) {
@@ -229,22 +262,77 @@ const TaskList = () => {
           fileName = decodeURIComponent(fileNameMatch[1]);
         }
       }
-
       link.setAttribute('download', fileName);
       document.body.appendChild(link);
       link.click();
-
-      // Cleanup
       link.remove();
       window.URL.revokeObjectURL(url);
-
-      setError(null);
+      setSnackbar({
+        open: true,
+        message: 'Xuất dữ liệu thành công',
+        severity: 'success'
+      });
     } catch (err) {
-      setError('Không thể xuất dữ liệu công việc');
+      setSnackbar({
+        open: true,
+        message: err.response?.data?.message || 'Không thể xuất dữ liệu công việc',
+        severity: 'error'
+      });
       console.error('Error exporting tasks:', err);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCloseSnackbar = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
+
+  const handleReject = (id) => {
+    setRejectId(id);
+    setOpenRejectDialog(true);
+  };
+
+  const handleConfirmReject = async () => {
+    try {
+      setLoading(true);
+      const response = await taskService.rejectTask(rejectId, rejectReason);
+      if (response) {
+        await fetchTasks();
+        await fetchPendingTasks();
+        await fetchPendingCount();
+        setSnackbar({
+          open: true,
+          message: 'Từ chối công việc thành công!',
+          severity: 'success'
+        });
+      }
+    } catch (err) {
+      setSnackbar({
+        open: true,
+        message: err.response?.data?.message || 'Không thể từ chối công việc',
+        severity: 'error'
+      });
+      console.error('Error rejecting task:', err);
+    } finally {
+      setLoading(false);
+      setOpenRejectDialog(false);
+      setRejectId(null);
+      setRejectReason('');
+    }
+  };
+
+  const handleCloseRejectDialog = () => {
+    setOpenRejectDialog(false);
+    setRejectId(null);
+    setRejectReason('');
+  };
+
+  const getAssigneeName = (assigneeId) => {
+    return users[assigneeId] || assigneeId || 'Không xác định';
   };
 
   return (
@@ -305,13 +393,13 @@ const TaskList = () => {
         </Stack>
 
         {error && (
-          <Alert
+          <MuiAlert
             severity="error"
             onClose={() => setError(null)}
             sx={{ mb: 3 }}
           >
             {error}
-          </Alert>
+          </MuiAlert>
         )}
 
         <Paper elevation={0} sx={{ p: 2, mb: 3, backgroundColor: '#f8f9fa', borderRadius: 2 }}>
@@ -352,8 +440,8 @@ const TaskList = () => {
                 onChange={(e) => setTaskType(e.target.value)}
               >
                 <MenuItem value="all">Tất cả</MenuItem>
-                <MenuItem value="department">Công việc phòng ban</MenuItem>
-                <MenuItem value="project">Công việc dự án</MenuItem>
+                <MenuItem value="3">Công việc phòng ban</MenuItem>
+                <MenuItem value="2">Công việc dự án</MenuItem>
               </Select>
             </FormControl>
 
@@ -371,9 +459,12 @@ const TaskList = () => {
                 onChange={(e) => setTaskStatus(e.target.value)}
               >
                 <MenuItem value="all">Tất cả</MenuItem>
-                <MenuItem value="not_started">Chưa bắt đầu</MenuItem>
+                <MenuItem value="pending">Chờ duyệt</MenuItem>
+                <MenuItem value="rejected">Từ chối</MenuItem>
                 <MenuItem value="in_progress">Đang thực hiện</MenuItem>
                 <MenuItem value="completed">Hoàn thành</MenuItem>
+                <MenuItem value="overdue">Quá hạn</MenuItem>
+                <MenuItem value="cancelled">Đã hủy</MenuItem>
               </Select>
             </FormControl>
 
@@ -431,24 +522,25 @@ const TaskList = () => {
                 <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Mã công việc</TableCell>
                 <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Tên công việc</TableCell>
                 <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Loại công việc</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Dự án/Phòng ban</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Phạm vi thực hiện</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Trạng thái</TableCell>
                 <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Mức độ ưu tiên</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Người phụ trách</TableCell>
                 <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Người thực hiện</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Ngày cập nhật</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Ngày bắt đầu</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Ngày kết thúc</TableCell>
                 <TableCell align="center" sx={{ fontWeight: 600, color: '#1976d2' }}>Thao tác</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={10} align="center" sx={{ py: 3 }}>
+                  <TableCell colSpan={11} align="center" sx={{ py: 3 }}>
                     <CircularProgress size={40} />
                   </TableCell>
                 </TableRow>
               ) : tasks.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} align="center" sx={{ py: 3 }}>
+                  <TableCell colSpan={11} align="center" sx={{ py: 3 }}>
                     <Typography color="text.secondary">
                       Không có dữ liệu
                     </Typography>
@@ -488,20 +580,34 @@ const TaskList = () => {
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2">
-                        {row.taskType === 'project' ? 'Công việc dự án' : 'Công việc phòng ban'}
+                        {getTaskTypeName(row.taskTypeId)}
                       </Typography>
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2">
-                        {row.taskType === 'project' ? row.projectName || row.project : row.departmentName || row.department}
+                        {row.taskTypeId === 1 ? (row.riskName || row.riskId || 'N/A') :
+                         row.taskTypeId === 2 ? (row.projectName || row.projectId || 'N/A') :
+                         row.taskTypeId === 3 ? (row.departmentName || row.departmentId || 'N/A') : 'N/A'}
                       </Typography>
                     </TableCell>
                     <TableCell>
                       <Chip
-                        label={row.priorityName || row.priority}
+                        label={getStatusName(row.state)}
                         size="small"
                         sx={{
-                          backgroundColor: getPriorityColor(row.priorityName || row.priority),
+                          backgroundColor: getStatusColor(row.state),
+                          color: '#fff',
+                          fontWeight: 500,
+                          fontSize: '0.75rem'
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={getPriorityName(row.priorityId)}
+                        size="small"
+                        sx={{
+                          backgroundColor: getPriorityColor(row.priorityId),
                           color: '#fff',
                           fontWeight: 500,
                           fontSize: '0.75rem'
@@ -510,17 +616,17 @@ const TaskList = () => {
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2">
-                        {row.managerName || row.manager}
+                        {getAssigneeName(row.assigneeId)}
                       </Typography>
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2">
-                        {row.assigneeName || row.assignee}
+                        {formatDate(row.startDate)}
                       </Typography>
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2">
-                        {row.updatedAt}
+                        {formatDate(row.dueDate)}
                       </Typography>
                     </TableCell>
                     <TableCell align="center">
@@ -539,19 +645,33 @@ const TaskList = () => {
                           <VisibilityIcon fontSize="small" />
                         </IconButton>
 
-                        {row.status === 'pending' && (
-                          <IconButton
-                            size="small"
-                            onClick={() => handleApprove(row.id)}
-                            sx={{
-                              color: '#1976d2',
-                              '&:hover': {
-                                backgroundColor: 'rgba(25, 118, 210, 0.04)'
-                              }
-                            }}
-                          >
-                            <ApproveIcon fontSize="small" />
-                          </IconButton>
+                        {row.state === 0 && (
+                          <>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleApprove(row.id)}
+                              sx={{
+                                color: '#1976d2',
+                                '&:hover': {
+                                  backgroundColor: 'rgba(25, 118, 210, 0.04)'
+                                }
+                              }}
+                            >
+                              <ApproveIcon fontSize="small" />
+                            </IconButton>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleReject(row.id)}
+                              sx={{
+                                color: '#d32f2f',
+                                '&:hover': {
+                                  backgroundColor: 'rgba(211, 47, 47, 0.04)'
+                                }
+                              }}
+                            >
+                              <CancelIcon fontSize="small" />
+                            </IconButton>
+                          </>
                         )}
 
                         <IconButton
@@ -603,7 +723,6 @@ const TaskList = () => {
           />
         </Box>
 
-        {/* Delete Dialog */}
         <Dialog
           open={openDialog}
           onClose={handleCloseDialog}
@@ -622,7 +741,6 @@ const TaskList = () => {
           </DialogActions>
         </Dialog>
 
-        {/* Approve Dialog */}
         <Dialog
           open={openApproveDialog}
           onClose={handleCloseApproveDialog}
@@ -641,7 +759,40 @@ const TaskList = () => {
           </DialogActions>
         </Dialog>
 
-        {/* Pending Tasks Dialog */}
+        <Dialog
+          open={openRejectDialog}
+          onClose={handleCloseRejectDialog}
+        >
+          <DialogTitle>Từ chối công việc</DialogTitle>
+          <DialogContent>
+            <DialogContentText sx={{ mb: 2 }}>
+              Vui lòng nhập lý do từ chối công việc:
+            </DialogContentText>
+            <TextField
+              autoFocus
+              margin="dense"
+              label="Lý do từ chối"
+              type="text"
+              fullWidth
+              multiline
+              rows={4}
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              variant="outlined"
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseRejectDialog}>Hủy</Button>
+            <Button
+              onClick={handleConfirmReject}
+              color="error"
+              disabled={!rejectReason.trim()}
+            >
+              Từ chối
+            </Button>
+          </DialogActions>
+        </Dialog>
+
         <Dialog
           open={openPendingDialog}
           onClose={handleClosePendingDialog}
@@ -649,7 +800,17 @@ const TaskList = () => {
           fullWidth
         >
           <DialogTitle>
-            Danh sách công việc chờ duyệt ({pendingCount})
+            <Typography
+              variant="h5"
+              sx={{
+                fontWeight: 600,
+                color: '#1976d2',
+                textAlign: 'center',
+                mb: 2
+              }}
+            >
+              DANH SÁCH CÔNG VIỆC CHỜ DUYỆT
+            </Typography>
           </DialogTitle>
           <DialogContent>
             {loading ? (
@@ -658,73 +819,182 @@ const TaskList = () => {
               </Box>
             ) : (
               <>
-                <TableContainer>
+                <TableContainer
+                  component={Paper}
+                  elevation={0}
+                  sx={{
+                    borderRadius: 2,
+                    border: '1px solid #e0e0e0'
+                  }}
+                >
                   <Table>
                     <TableHead>
-                      <TableRow>
-                        <TableCell>Mã công việc</TableCell>
-                        <TableCell>Tên công việc</TableCell>
-                        <TableCell>Loại công việc</TableCell>
-                        <TableCell>Dự án/Phòng ban</TableCell>
-                        <TableCell>Mức độ ưu tiên</TableCell>
-                        <TableCell>Người phụ trách</TableCell>
-                        <TableCell>Người thực hiện</TableCell>
-                        <TableCell align="center">Thao tác</TableCell>
+                      <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                        <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Mã công việc</TableCell>
+                        <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Tên công việc</TableCell>
+                        <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Loại công việc</TableCell>
+                        <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Dự án/Phòng ban</TableCell>
+                        <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Trạng thái</TableCell>
+                        <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Mức độ ưu tiên</TableCell>
+                        <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Người thực hiện</TableCell>
+                        <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Ngày bắt đầu</TableCell>
+                        <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Ngày kết thúc</TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 600, color: '#1976d2' }}>Thao tác</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {pendingTasks.map((task) => (
-                        <TableRow key={task.id}>
-                          <TableCell>{task.code}</TableCell>
-                          <TableCell>{task.name}</TableCell>
-                          <TableCell>{task.taskType === 'project' ? 'Công việc dự án' : 'Công việc phòng ban'}</TableCell>
-                          <TableCell>{task.taskType === 'project' ? task.projectName || task.project : task.departmentName || task.department}</TableCell>
+                        <TableRow
+                          key={task.id}
+                          sx={{
+                            '&:hover': {
+                              backgroundColor: '#f5f5f5'
+                            }
+                          }}
+                        >
                           <TableCell>
-                            <Box
-                              sx={{
-                                backgroundColor: getPriorityColor(task.priorityName || task.priority),
-                                color: '#fff',
-                                py: 0.5,
-                                px: 1.5,
-                                borderRadius: 1,
-                                display: 'inline-block',
-                                fontSize: '0.875rem'
-                              }}
-                            >
-                              {task.priorityName || task.priority}
-                            </Box>
+                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                              {task.code}
+                            </Typography>
                           </TableCell>
-                          <TableCell>{task.managerName || task.manager}</TableCell>
-                          <TableCell>{task.assigneeName || task.assignee}</TableCell>
-                          <TableCell align="center">
-                            <IconButton
-                              size="small"
+                          <TableCell>
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                color: '#1976d2',
+                                cursor: 'pointer',
+                                '&:hover': {
+                                  textDecoration: 'underline'
+                                }
+                              }}
                               component={Link}
                               to={`/task/detail/${task.id}`}
-                              sx={{ mr: 1 }}
                             >
-                              <VisibilityIcon fontSize="small" />
-                            </IconButton>
-                            <IconButton
+                              {task.name}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2">
+                              {getTaskTypeName(task.taskTypeId)}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2">
+                              {task.taskTypeId === 1 ? (task.riskName || task.riskId || 'N/A') :
+                               task.taskTypeId === 2 ? (task.projectName || task.projectId || 'N/A') :
+                               task.taskTypeId === 3 ? (task.departmentName || task.departmentId || 'N/A') : 'N/A'}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Chip
+                              label={getStatusName(task.state)}
                               size="small"
-                              color="success"
-                              onClick={() => handleApprove(task.id)}
-                            >
-                              <ApproveIcon fontSize="small" />
-                            </IconButton>
+                              sx={{
+                                backgroundColor: getStatusColor(task.state),
+                                color: '#fff',
+                                fontWeight: 500,
+                                fontSize: '0.75rem'
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Chip
+                              label={getPriorityName(task.priorityId)}
+                              size="small"
+                              sx={{
+                                backgroundColor: getPriorityColor(task.priorityId),
+                                color: '#fff',
+                                fontWeight: 500,
+                                fontSize: '0.75rem'
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2">
+                              {task.assigneeName || getAssigneeName(task.assigneeId)}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2">
+                              {formatDate(task.startDate)}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2">
+                              {formatDate(task.dueDate)}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="center">
+                            <Stack direction="row" spacing={1} justifyContent="center">
+                              <IconButton
+                                size="small"
+                                component={Link}
+                                to={`/task/detail/${task.id}`}
+                                sx={{
+                                  color: '#1976d2',
+                                  '&:hover': {
+                                    backgroundColor: 'rgba(25, 118, 210, 0.04)'
+                                  }
+                                }}
+                              >
+                                <VisibilityIcon fontSize="small" />
+                              </IconButton>
+                              <IconButton
+                                size="small"
+                                onClick={() => handleApprove(task.id)}
+                                sx={{
+                                  color: '#2e7d32',
+                                  '&:hover': {
+                                    backgroundColor: 'rgba(46, 125, 50, 0.04)'
+                                  }
+                                }}
+                              >
+                                <ApproveIcon fontSize="small" />
+                              </IconButton>
+                              <IconButton
+                                size="small"
+                                onClick={() => handleReject(task.id)}
+                                sx={{
+                                  color: '#d32f2f',
+                                  '&:hover': {
+                                    backgroundColor: 'rgba(211, 47, 47, 0.04)'
+                                  }
+                                }}
+                              >
+                                <CancelIcon fontSize="small" />
+                              </IconButton>
+                            </Stack>
                           </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
                 </TableContainer>
-                <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
+                <Box sx={{
+                  mt: 3,
+                  p: 2,
+                  backgroundColor: '#f8f9fa',
+                  borderRadius: 2,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between'
+                }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Tổng {pendingTasks.length} công việc
+                  </Typography>
                   <Pagination
                     count={pendingTotalPages}
                     page={pendingPage + 1}
                     onChange={handlePendingPageChange}
                     color="primary"
-                    size="small"
+                    size="medium"
+                    showFirstButton
+                    showLastButton
+                    sx={{
+                      '& .MuiPaginationItem-root': {
+                        fontSize: '0.875rem'
+                      }
+                    }}
                   />
                 </Box>
               </>
@@ -734,25 +1004,112 @@ const TaskList = () => {
             <Button onClick={handleClosePendingDialog}>Đóng</Button>
           </DialogActions>
         </Dialog>
+
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={3000}
+          onClose={handleCloseSnackbar}
+          anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        >
+          <MuiAlert
+            elevation={6}
+            variant="filled"
+            onClose={handleCloseSnackbar}
+            severity={snackbar.severity}
+            sx={{ width: '100%' }}
+          >
+            {snackbar.message}
+          </MuiAlert>
+        </Snackbar>
       </Paper>
     </Box>
   );
 };
 
-// Helper function để xác định màu sắc mức độ ưu tiên
-const getPriorityColor = (priority) => {
-  switch (priority) {
-    case 'Cao':
-    case 'high':
-      return '#d32f2f'; // Red
-    case 'Trung bình':
-    case 'medium':
-      return '#ed6c02'; // Orange
-    case 'Thấp':
-    case 'low':
-      return '#2e7d32'; // Green
+const getPriorityColor = (priorityId) => {
+  switch (priorityId) {
+    case 3:
+      return '#d32f2f'; // Red - Cao
+    case 2:
+      return '#ed6c02'; // Orange - Trung bình
+    case 1:
+      return '#2e7d32'; // Green - Thấp
     default:
-      return '#757575'; // Grey
+      return '#757575'; // Grey - Không xác định
+  }
+};
+
+const getPriorityName = (priorityId) => {
+  switch (priorityId) {
+    case 3:
+      return 'Cao';
+    case 2:
+      return 'Trung bình';
+    case 1:
+      return 'Thấp';
+    default:
+      return 'Không xác định';
+  }
+};
+
+const getTaskTypeName = (taskTypeId) => {
+  switch (taskTypeId) {
+    case 1:
+      return 'Công việc rủi ro';
+    case 2:
+      return 'Công việc dự án';
+    case 3:
+      return 'Công việc phòng ban';
+    default:
+      return 'Không xác định';
+  }
+};
+
+const getStatusName = (state) => {
+  switch (state) {
+    case 0:
+      return 'Chờ duyệt';
+    case 1:
+      return 'Từ chối';
+    case 2:
+      return 'Đang thực hiện';
+    case 3:
+      return 'Hoàn thành';
+    case 4:
+      return 'Quá hạn';
+    case 5:
+      return 'Đã hủy';
+    default:
+      return 'Không xác định';
+  }
+};
+
+const formatDate = (dateString) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  });
+};
+
+const getStatusColor = (state) => {
+  switch (state) {
+    case 0:
+      return '#ff9800'; // Chờ duyệt - Cam
+    case 1:
+      return '#d32f2f'; // Từ chối - Đỏ
+    case 2:
+      return '#1976d2'; // Đang thực hiện - Xanh dương
+    case 3:
+      return '#2e7d32'; // Hoàn thành - Xanh lá
+    case 4:
+      return '#ed6c02'; // Quá hạn - Cam đậm
+    case 5:
+      return '#757575'; // Đã hủy - Xám
+    default:
+      return '#757575'; // Không xác định - Xám
   }
 };
 

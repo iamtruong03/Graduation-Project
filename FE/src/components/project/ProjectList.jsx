@@ -25,12 +25,13 @@ import {
   DialogContentText,
   DialogActions,
   CircularProgress,
-  Alert,
+  Alert as MuiAlert,
+  Snackbar,
   Badge,
   Chip
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
-import { Edit as EditIcon, Delete as DeleteIcon, Visibility as VisibilityIcon, CheckCircle as ApproveIcon, Assignment as AssignmentIcon, Add as AddIcon } from '@mui/icons-material';
+import { Edit as EditIcon, Delete as DeleteIcon, Visibility as VisibilityIcon, CheckCircle as ApproveIcon, Assignment as AssignmentIcon, Add as AddIcon, Cancel as CancelIcon } from '@mui/icons-material';
 import { Link, useNavigate } from 'react-router-dom';
 import projectService from '../../services/projectService';
 import staffService from '../../services/staffService';
@@ -53,6 +54,9 @@ const ProjectList = () => {
   const [totalElements, setTotalElements] = useState(0);
   const [openApproveDialog, setOpenApproveDialog] = useState(false);
   const [approveId, setApproveId] = useState(null);
+  const [openRejectDialog, setOpenRejectDialog] = useState(false);
+  const [rejectId, setRejectId] = useState(null);
+  const [rejectReason, setRejectReason] = useState('');
   const [pendingProjects, setPendingProjects] = useState([]);
   const [openPendingDialog, setOpenPendingDialog] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
@@ -60,6 +64,11 @@ const ProjectList = () => {
   const [pendingTotalPages, setPendingTotalPages] = useState(0);
   const rowsPerPage = 10;
   const navigate = useNavigate();
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
 
   useEffect(() => {
     fetchProjects();
@@ -192,27 +201,34 @@ const ProjectList = () => {
     setOpenDialog(true);
   };
 
+  const handleCloseSnackbar = () => {
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
+
   const handleConfirmDelete = async () => {
     try {
       setLoading(true);
       const response = await projectService.deleteProject(deleteId);
       
       if (response.status === 200) {
-        setError({
-          type: 'success',
-          message: response.message || 'Xóa dự án thành công'
+        setSnackbar({
+          open: true,
+          message: response.message || 'Xóa dự án thành công',
+          severity: 'success'
         });
         await fetchProjects();
       } else {
-        setError({
-          type: 'error',
-          message: response.message || 'Không thể xóa dự án'
+        setSnackbar({
+          open: true,
+          message: response.message || 'Không thể xóa dự án',
+          severity: 'error'
         });
       }
     } catch (err) {
-      setError({
-        type: 'error',
-        message: err.response?.message || 'Không thể xóa dự án'
+      setSnackbar({
+        open: true,
+        message: err.response?.data?.message || 'Không thể xóa dự án',
+        severity: 'error'
       });
       console.error('Error deleting project:', err);
     } finally {
@@ -220,7 +236,7 @@ const ProjectList = () => {
       setOpenDialog(false);
       setDeleteId(null);
     }
-  };  
+  };
 
   const handleCloseDialog = () => {
     setOpenDialog(false);
@@ -287,13 +303,32 @@ const ProjectList = () => {
     try {
       setLoading(true);
       const response = await projectService.approveProject(approveId, localStorage.getItem('userId'));
-      if (response.success) {
-        await fetchProjects();
+      if (response.status === 200) {
+        setSnackbar({
+          open: true,
+          message: 'Phê duyệt dự án thành công!',
+          severity: 'success'
+        });
+        setTimeout(async () => {
+          await fetchProjects();
+          await fetchPendingCount();
+          if (openPendingDialog) {
+            await fetchPendingProjects();
+          }
+        }, 1000);
       } else {
-        setError(response.message);
+        setSnackbar({
+          open: true,
+          message: response.message || 'Không thể phê duyệt dự án',
+          severity: 'error'
+        });
       }
     } catch (err) {
-      setError('Không thể phê duyệt dự án');
+      setSnackbar({
+        open: true,
+        message: err.response?.data?.message || 'Không thể phê duyệt dự án',
+        severity: 'error'
+      });
       console.error('Error approving project:', err);
     } finally {
       setLoading(false);
@@ -313,6 +348,56 @@ const ProjectList = () => {
 
   const handlePendingPageChange = (event, newPage) => {
     setPendingPage(newPage - 1);
+  };
+
+  const handleReject = (id) => {
+    setRejectId(id);
+    setOpenRejectDialog(true);
+  };
+
+  const handleConfirmReject = async () => {
+    try {
+      setLoading(true);
+      const response = await projectService.rejectProject(rejectId, rejectReason);
+      if (response.status === 200) {
+        setSnackbar({
+          open: true,
+          message: 'Từ chối duyệt dự án thành công!',
+          severity: 'success'
+        });
+        setTimeout(async () => {
+          await fetchProjects();
+          await fetchPendingCount();
+          if (openPendingDialog) {
+            await fetchPendingProjects();
+          }
+        }, 1000);
+      } else {
+        setSnackbar({
+          open: true,
+          message: response.message || 'Không thể từ chối duyệt dự án',
+          severity: 'error'
+        });
+      }
+    } catch (err) {
+      setSnackbar({
+        open: true,
+        message: err.response?.data?.message || 'Không thể từ chối duyệt dự án',
+        severity: 'error'
+      });
+      console.error('Error rejecting project:', err);
+    } finally {
+      setLoading(false);
+      setOpenRejectDialog(false);
+      setRejectId(null);
+      setRejectReason('');
+    }
+  };
+
+  const handleCloseRejectDialog = () => {
+    setOpenRejectDialog(false);
+    setRejectId(null);
+    setRejectReason('');
   };
 
   return (
@@ -373,13 +458,13 @@ const ProjectList = () => {
         </Stack>
 
         {error && (
-          <Alert 
+          <MuiAlert 
             severity={error.type || 'error'} 
             onClose={() => setError(null)}
             sx={{ mb: 3 }}
           >
             {error.message || error}
-          </Alert>
+          </MuiAlert>
         )}
         
         <Paper elevation={0} sx={{ p: 2, mb: 3, backgroundColor: '#f8f9fa', borderRadius: 2 }}>
@@ -584,19 +669,33 @@ const ProjectList = () => {
                           <VisibilityIcon fontSize="small" />
                         </IconButton>
                       
-                        {project.state === 1 && (
-                          <IconButton
-                            size="small"
-                            onClick={() => handleApprove(project.id)}
-                            sx={{ 
-                              color: '#1976d2',
-                              '&:hover': {
-                                backgroundColor: 'rgba(25, 118, 210, 0.04)'
-                              }
-                            }}
-                          >
-                            <ApproveIcon fontSize="small" />
-                          </IconButton>
+                        {project.state === 0 && (
+                          <>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleApprove(project.id)}
+                              sx={{ 
+                                color: '#1976d2',
+                                '&:hover': {
+                                  backgroundColor: 'rgba(25, 118, 210, 0.04)'
+                                }
+                              }}
+                            >
+                              <ApproveIcon fontSize="small" />
+                            </IconButton>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleReject(project.id)}
+                              sx={{ 
+                                color: '#d32f2f',
+                                '&:hover': {
+                                  backgroundColor: 'rgba(211, 47, 47, 0.04)'
+                                }
+                              }}
+                            >
+                              <CancelIcon fontSize="small" />
+                            </IconButton>
+                          </>
                         )}
                         <IconButton
                           size="small"
@@ -684,6 +783,38 @@ const ProjectList = () => {
         </Dialog>
 
         <Dialog
+          open={openRejectDialog}
+          onClose={handleCloseRejectDialog}
+        >
+          <DialogTitle>Xác nhận từ chối duyệt</DialogTitle>
+          <DialogContent>
+            <DialogContentText sx={{ mb: 2 }}>
+              Bạn có chắc chắn muốn từ chối duyệt dự án này không?
+            </DialogContentText>
+            <TextField
+              fullWidth
+              multiline
+              rows={3}
+              label="Lý do từ chối"
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              required
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseRejectDialog}>Hủy</Button>
+            <Button 
+              onClick={handleConfirmReject} 
+              color="error" 
+              disabled={!rejectReason.trim()}
+              autoFocus
+            >
+              Từ chối
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        <Dialog
           open={openPendingDialog}
           onClose={handleClosePendingDialog}
           maxWidth="lg"
@@ -750,8 +881,16 @@ const ProjectList = () => {
                               size="small"
                               color="success"
                               onClick={() => handleApprove(project.id)}
+                              sx={{ mr: 1 }}
                             >
                               <ApproveIcon fontSize="small" />
+                            </IconButton>
+                            <IconButton
+                              size="small"
+                              color="error"
+                              onClick={() => handleReject(project.id)}
+                            >
+                              <CancelIcon fontSize="small" />
                             </IconButton>
                           </TableCell>
                         </TableRow>
@@ -775,6 +914,23 @@ const ProjectList = () => {
             <Button onClick={handleClosePendingDialog}>Đóng</Button>
           </DialogActions>
         </Dialog>
+
+        <Snackbar 
+          open={snackbar.open} 
+          autoHideDuration={1000} 
+          onClose={handleCloseSnackbar}
+          anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        >
+          <MuiAlert
+            elevation={6}
+            variant="filled"
+            onClose={handleCloseSnackbar}
+            severity={snackbar.severity}
+            sx={{ width: '100%' }}
+          >
+            {snackbar.message}
+          </MuiAlert>
+        </Snackbar>
       </Paper>
     </Box>
   );
@@ -783,17 +939,17 @@ const ProjectList = () => {
 // Cập nhật hàm helper để xác định màu sắc trạng thái
 const getStatusColor = (state) => {
   switch (state) {
-    case 1: // STATUS_PENDING
+    case 0: // STATUS_PENDING
       return '#ed6c02'; // Orange
-    case 2: // STATUS_APPROVED
-      return '#2e7d32'; // Green
-    case 3: // STATUS_REJECTED
+    case 1: // STATUS_REJECTED
       return '#d32f2f'; // Red
-    case 4: // STATUS_IN_PROGRESS
+    case 2: // STATUS_IN_PROGRESS
       return '#1976d2'; // Blue
-    case 5: // STATUS_COMPLETE
+    case 3: // STATUS_COMPLETE
       return '#2e7d32'; // Green
-    case 6: // STATUS_OVERDUE
+    case 4: // STATUS_OVERDUE
+      return '#d32f2f'; // Red
+    case 5: // STATUS_CANCELED
       return '#d32f2f'; // Red
     default:
       return '#757575'; // Grey

@@ -3,6 +3,17 @@ import axios from 'axios';
 const API_URL = 'http://localhost:8080';
 
 class AuthService {
+    handle403Error() {
+        // Xóa token và thông tin người dùng
+        localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('userName');
+        delete axios.defaults.headers.common['Authorization'];
+        
+        // Chuyển hướng về trang đăng nhập
+        window.location.href = '/login';
+    }
+
     async login(code, password) {
         try {
             const response = await axios.post(`${API_URL}/auth/login`, {
@@ -19,6 +30,9 @@ class AuthService {
             }
             return response.data;
         } catch (error) {
+            if (error.response?.status === 403) {
+                this.handle403Error();
+            }
             const errorMessage = error.response?.data?.message || 'Đăng nhập thất bại';
             throw new Error(errorMessage);
         }
@@ -48,12 +62,14 @@ class AuthService {
             });
             localStorage.removeItem('token');
             localStorage.removeItem('refreshToken');
+            localStorage.removeItem('userName');
             delete axios.defaults.headers.common['Authorization'];
             return { success: true, message: 'Đăng xuất thành công' };
         } catch (error) {
             console.error('Logout error:', error);
             localStorage.removeItem('token');
             localStorage.removeItem('refreshToken');
+            localStorage.removeItem('userName');
             delete axios.defaults.headers.common['Authorization'];
             return { success: false, message: 'Đăng xuất thất bại' };
         }
@@ -91,8 +107,12 @@ class AuthService {
             }
             throw new Error('Không thể làm mới token');
         } catch (error) {
+            if (error.response?.status === 403) {
+                this.handle403Error();
+            }
             localStorage.removeItem('token');
             localStorage.removeItem('refreshToken');
+            localStorage.removeItem('userName');
             throw new Error(error.response?.data?.message || 'Phiên đăng nhập đã hết hạn');
         }
     }
@@ -109,6 +129,9 @@ class AuthService {
                 data: response.data
             };
         } catch (error) {
+            if (error.response?.status === 403) {
+                this.handle403Error();
+            }
             let errorMessage = 'Đăng ký thất bại';
             
             if (error.response) {
@@ -130,8 +153,6 @@ class AuthService {
             throw new Error(errorMessage);
         }
     }
-
-    
 }
 
 export default new AuthService();

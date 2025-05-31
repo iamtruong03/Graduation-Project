@@ -15,34 +15,30 @@ import vi from 'date-fns/locale/vi';
 
 const getStatusColor = (stage) => {
   switch (stage) {
-    case 'Mới ghi nhận':
-    case 'new':
+    case 'Chờ duyệt':
+    case 'pending':
+    case 0:
+      return 'warning';
+    case 'Từ chối':
+    case 'rejected':
     case 1:
-      return 'warning'; // Mới ghi nhận
-    case 'Đang phân tích':
-    case 'analyzing':
+      return 'error';
+    case 'Đang thực hiện':
+    case 'in_progress':
     case 2:
-      return 'info'; // Đang phân tích
-    case 'Đang xử lý':
-    case 'processing':
+      return 'info';
+    case 'Hoàn thành':
+    case 'completed':
     case 3:
-      return 'primary'; // Đang xử lý
-    case 'Chờ xác nhận':
-    case 'pending_verification':
+      return 'success';
+    case 'Quá hạn':
+    case 'overdue':
     case 4:
-      return 'warning'; // Chờ xác nhận
-    case 'Đã giải quyết':
-    case 'resolved':
-    case 5:
-      return 'success'; // Đã giải quyết
-    case 'Đã đóng':
-    case 'closed':
-    case 6:
-      return 'success'; // Đã đóng
+      return 'error';
     case 'Đã hủy':
     case 'cancelled':
-    case 7:
-      return 'error'; // Đã hủy
+    case 5:
+      return 'error';
     default:
       return 'grey';
   }
@@ -50,25 +46,22 @@ const getStatusColor = (stage) => {
 
 const getStatusName = (stage) => {
   switch (stage) {
+    case 0:
+    case 'pending':
+      return 'Chờ duyệt';
     case 1:
-    case 'new':
-      return 'Mới ghi nhận';
+    case 'rejected':
+      return 'Từ chối';
     case 2:
-    case 'analyzing':
-      return 'Đang phân tích';
+    case 'in_progress':
+      return 'Đang thực hiện';
     case 3:
-    case 'processing':
-      return 'Đang xử lý';
+    case 'completed':
+      return 'Hoàn thành';
     case 4:
-    case 'pending_verification':
-      return 'Chờ xác nhận';
+    case 'overdue':
+      return 'Quá hạn';
     case 5:
-    case 'resolved':
-      return 'Đã giải quyết';
-    case 6:
-    case 'closed':
-      return 'Đã đóng';
-    case 7:
     case 'cancelled':
       return 'Đã hủy';
     default:

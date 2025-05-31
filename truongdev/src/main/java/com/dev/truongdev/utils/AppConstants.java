@@ -12,13 +12,15 @@ public class AppConstants {
   public static final Integer STATUS_IN_PROGRESS = 2;  // Đang thực hiện
   public static final Integer STATUS_COMPLETE = 3;     // Hoàn thành
   public static final Integer STATUS_OVERDUE = 4;      // Quá hạn
+  public static final Integer STATUS_CANCELED = 5;      // Đã hủy
   
   public static final Set<Integer> LIST_STATUS_WORKFLOW = Set.of(
       STATUS_PENDING,
       STATUS_REJECTED,
       STATUS_IN_PROGRESS,
       STATUS_COMPLETE,
-      STATUS_OVERDUE
+      STATUS_OVERDUE,
+      STATUS_CANCELED
   );
 
   // Status Business
@@ -31,7 +33,7 @@ public class AppConstants {
 
   @Getter
   public enum State {
-    INIT, PENDING, IN_PROGRESS, DEFERRED, REVIEWING, REPROCESS, COMPLETED, CANCELED, ALL
+     PENDING, REJECTED, IN_PROGRESS, COMPLETE, OVERDUE, CANCELEDs
   }
 
   public static String getStatusName(Integer status) {

@@ -1,10 +1,10 @@
 export const PROJECT_STATES = {
-  1: 'Chờ duyệt',
-  2: 'Đã duyệt',
-  3: 'Từ chối',
-  4: 'Đang thực hiện',
-  5: 'Hoàn thành',
-  6: 'Quá hạn'
+  0: 'Chờ duyệt',
+  1: 'Từ chối',
+  2: 'Đang thực hiện',
+  3: 'Hoàn thành',
+  4: 'Quá hạn',
+  5: 'Đã hủy'
 };
 
 export const PROJECT_TYPES = {

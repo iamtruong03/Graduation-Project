@@ -35,9 +35,14 @@ public class Project extends XDevBaseEntity {
     
     @Column(name = "start_date")
     Date startDate;
-    
+
+    // ket thuc du kien
     @Column(name = "end_date")
     Date endDate;
+
+    // Ngày hoàn thành thực tế
+    @Column(name = "completed_date")
+    Date completedDate;
     
     @Column(name = "state")
     Integer state;
@@ -51,7 +56,7 @@ public class Project extends XDevBaseEntity {
     
     @Column(name = "manager_id")
     String managerId;
-    
+
     @Column(name = "responsible_ids")
     List<String> responsibleIds;
 

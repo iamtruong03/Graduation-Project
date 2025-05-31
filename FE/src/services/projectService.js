@@ -36,6 +36,14 @@ const projectService = {
     return api.post(`/api/projects/${id}/approve`, { approverId }, getAuthHeader());
   },
 
+  // Từ chối duyệt dự án
+  rejectProject: (id, reason) => {
+    return api.post(`/api/projects/${id}/reject`, null, {
+      ...getAuthHeader(),
+      params: { reason }
+    });
+  },
+
   // Cập nhật trạng thái dự án
   updateProjectState: async (id, newState, changedBy, comment) => {
     const response = await api.put(

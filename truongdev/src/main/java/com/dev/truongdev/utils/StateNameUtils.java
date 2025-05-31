@@ -10,6 +10,7 @@ public class StateNameUtils {
             case 2: return "Đang thực hiện";
             case 3: return "Hoàn thành";
             case 4: return "Quá hạn";
+            case 5: return "Đã hủy";
             default: return "Unknown";
         }
     }
@@ -23,6 +24,7 @@ public class StateNameUtils {
             case 2: return "Đang thực hiện";
             case 3: return "Hoàn thành";
             case 4: return "Quá hạn";
+            case 5: return "Đã hủy";
             default: return "Unknown";
         }
     }
@@ -36,6 +38,7 @@ public class StateNameUtils {
             case 2: return "Đang thực hiện";
             case 3: return "Hoàn thành";
             case 4: return "Quá hạn";
+            case 5: return "Đã hủy";
             default: return "Unknown";
         }
     }

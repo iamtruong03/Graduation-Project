@@ -583,34 +583,41 @@ public class RiskServiceImpl extends XDevBaseServiceImpl<Risk, RiskFilter, RiskR
         }
     }
 
-    private void validateStateTransition(Integer previousState, Integer newState) {
-        if (previousState == null) return;
-        
-        boolean isValid;
-        if (previousState.equals(AppConstants.STATUS_PENDING)) {
-            isValid = newState.equals(AppConstants.STATUS_IN_PROGRESS) ||
-                     newState.equals(AppConstants.STATUS_REJECTED);
-        } else if (previousState.equals(AppConstants.STATUS_IN_PROGRESS)) {
-            isValid = newState.equals(AppConstants.STATUS_IN_PROGRESS);
-        } else if (previousState.equals(AppConstants.STATUS_IN_PROGRESS)) {
-            isValid = newState.equals(AppConstants.STATUS_COMPLETE) || 
-                     newState.equals(AppConstants.STATUS_OVERDUE);
-        } else if (previousState.equals(AppConstants.STATUS_COMPLETE) || 
-                  previousState.equals(AppConstants.STATUS_OVERDUE) || 
-                  previousState.equals(AppConstants.STATUS_REJECTED)) {
-            isValid = false;
-        } else {
-            isValid = false;
-        }
-
-        if (!isValid) {
-            throw new RuntimeException("Không thể chuyển từ trạng thái " + 
-                AppConstants.getProjectStateName(previousState) + " sang " + 
-                AppConstants.getProjectStateName(newState));
-        }
+  private void validateStateTransition(Integer currentState, Integer newState) {
+    if (Objects.equals(currentState, newState)) {
+      return;
     }
 
-    private Risk convertDTOToEntity(RiskDTO dto, Long id) {
+    boolean isValidTransition;
+
+    if (currentState == null) {
+      isValidTransition = false;
+    } else if (currentState == AppConstants.STATUS_PENDING) {
+      isValidTransition = newState == AppConstants.STATUS_IN_PROGRESS ||
+          newState == AppConstants.STATUS_REJECTED;
+    } else if (currentState == AppConstants.STATUS_IN_PROGRESS) {
+      isValidTransition = newState == AppConstants.STATUS_IN_PROGRESS ||
+          newState == AppConstants.STATUS_COMPLETE ||
+          newState == AppConstants.STATUS_OVERDUE;
+    } else if (currentState == AppConstants.STATUS_COMPLETE ||
+        currentState == AppConstants.STATUS_OVERDUE ||
+        currentState == AppConstants.STATUS_REJECTED ||
+        currentState == AppConstants.STATUS_CANCELED) {
+      isValidTransition = false;
+    } else {
+      isValidTransition = false;
+    }
+
+    if (!isValidTransition) {
+      throw new IllegalStateException(
+          String.format("Invalid state transition from %s to %s",
+              StateNameUtils.getProjectStateName(currentState),
+              StateNameUtils.getProjectStateName(newState))
+      );
+    }
+  }
+
+  private Risk convertDTOToEntity(RiskDTO dto, Long id) {
         Risk risk = id != null ? riskRepo.findById(id).orElse(new Risk()) : new Risk();
         risk.setName(dto.getName());
         risk.setCode(dto.getCode());

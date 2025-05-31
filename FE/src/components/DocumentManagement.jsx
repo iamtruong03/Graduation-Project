@@ -112,7 +112,11 @@ const DocumentManagement = () => {
       setDocuments(response.data.content);
       setTotalPages(response.data.totalPages);
     } catch (err) {
-      setError('Không thể tải danh sách tài liệu');
+      setSnackbar({
+        open: true,
+        message: err.response?.data?.message || 'Không thể tải danh sách tài liệu',
+        severity: 'error'
+      });
       console.error('Error fetching documents:', err);
     } finally {
       setLoading(false);
@@ -131,8 +135,12 @@ const DocumentManagement = () => {
       const response = await departmentService.getAll();
       setDepartments(response.data);
     } catch (err) {
+      setSnackbar({
+        open: true,
+        message: err.response?.data?.message || 'Không thể tải danh sách phòng ban',
+        severity: 'error'
+      });
       console.error('Error fetching departments:', err);
-      setError('Không thể tải danh sách phòng ban');
     }
   };
 
@@ -141,8 +149,12 @@ const DocumentManagement = () => {
       const response = await projectService.getProjectList();
       setProjects(response);
     } catch (err) {
+      setSnackbar({
+        open: true,
+        message: err.response?.data?.message || 'Không thể tải danh sách dự án',
+        severity: 'error'
+      });
       console.error('Error fetching projects:', err);
-      setError('Không thể tải danh sách dự án');
     }
   };
 
@@ -195,60 +207,20 @@ const DocumentManagement = () => {
   const handleDownload = async (documentId) => {
     try {
       setLoading(true);
-      const response = await documentService.downloadDocument(documentId);
+      await documentService.downloadDocument(documentId);
       
-      // Kiểm tra response
-      if (!response) {
-        throw new Error('Không có phản hồi từ server');
-      }
-
-      // Kiểm tra nếu response là error message
-      if (response.data && typeof response.data === 'object' && response.data.message) {
-        setError(response.data.message);
-        return;
-      }
-
-      // Tạo blob từ response data với type là octet-stream
-      const blob = new Blob([response.data], { 
-        type: 'application/octet-stream'
+      setSnackbar({
+        open: true,
+        message: 'Tải xuống tài liệu thành công',
+        severity: 'success'
       });
-
-      // Kiểm tra kích thước blob
-      if (blob.size === 0) {
-        throw new Error('File tải về trống');
-      }
-
-      // Tạo URL từ blob
-      const url = window.URL.createObjectURL(blob);
-
-      // Tạo link tải xuống
-      const link = document.createElement('a');
-      link.href = url;
-
-      // Lấy tên file từ selectedDocumentDetail hoặc sử dụng tên mặc định
-      const filename = selectedDocumentDetail?.name || 'document.pdf';
-      link.setAttribute('download', filename);
-      
-      // Thêm link vào DOM và click
-      document.body.appendChild(link);
-      link.click();
-
-      // Cleanup
-      window.URL.revokeObjectURL(url);
-      link.remove();
     } catch (err) {
       console.error('Error downloading document:', err);
-      if (err.response) {
-        // Xử lý lỗi từ server
-        const errorMessage = err.response.data?.message || 'Lỗi từ server';
-        setError(errorMessage);
-      } else if (err.request) {
-        // Xử lý lỗi không có response
-        setError('Không thể kết nối đến server');
-      } else {
-        // Xử lý lỗi khác
-        setError(err.message || 'Không thể tải xuống tài liệu');
-      }
+      setSnackbar({
+        open: true,
+        message: err.message || 'Không thể tải xuống tài liệu',
+        severity: 'error'
+      });
     } finally {
       setLoading(false);
     }
@@ -350,7 +322,11 @@ const DocumentManagement = () => {
       
       setOpenViewDialog(true);
     } catch (err) {
-      setError('Không thể tải thông tin tài liệu');
+      setSnackbar({
+        open: true,
+        message: err.response?.data?.message || 'Không thể tải thông tin tài liệu',
+        severity: 'error'
+      });
       console.error('Error fetching document details:', err);
     } finally {
       setLoading(false);
@@ -401,9 +377,18 @@ const DocumentManagement = () => {
       setLoading(true);
       await documentService.updateDocument(selectedDocument.id, editForm);
       setOpenEditDialog(false);
+      setSnackbar({
+        open: true,
+        message: 'Cập nhật tài liệu thành công',
+        severity: 'success'
+      });
       fetchDocuments(); // Refresh danh sách
     } catch (err) {
-      setError('Không thể cập nhật tài liệu');
+      setSnackbar({
+        open: true,
+        message: err.response?.data?.message || 'Không thể cập nhật tài liệu',
+        severity: 'error'
+      });
       console.error('Error updating document:', err);
     } finally {
       setLoading(false);

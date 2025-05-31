@@ -15,8 +15,9 @@ import {
   CardContent,
   IconButton,
   InputAdornment,
-  Alert,
+  Alert as MuiAlert,
   Snackbar,
+  CircularProgress
 } from '@mui/material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -33,6 +34,7 @@ import {
 import staffService from '../../services/staffService';
 import departmentService from '../../services/departmentService';
 import { useNavigate } from 'react-router-dom';
+import AddressSelect from '../common/AddressSelect';
 
 const StaffCreate = () => {
   const navigate = useNavigate();
@@ -85,19 +87,66 @@ const StaffCreate = () => {
     fetchDepartments();
   }, []);
 
+  const validateEmail = (email) => {
+    const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
+    return emailRegex.test(email);
+  };
+
+  const validatePhone = (phone) => {
+    const phoneRegex = /^[0-9]{10}$/;
+    return phoneRegex.test(phone);
+  };
+
   const handleFormChange = (event) => {
     const { name, value } = event.target;
+    let error = '';
+
+    if (name === 'email' && value && !validateEmail(value)) {
+      error = 'Email không đúng định dạng';
+    }
+
+    if (name === 'phoneNumber' && value && !validatePhone(value)) {
+      error = 'Số điện thoại phải có 10 chữ số';
+    }
+
     setFormData((prev) => ({
       ...prev,
       [name]: value,
+      [`${name}Error`]: error
     }));
   };
 
+  const handleCloseSnackbar = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
+
   const handleSubmit = async () => {
+    if (formData.email && !validateEmail(formData.email)) {
+      setSnackbar({
+        open: true,
+        message: 'Email không đúng định dạng',
+        severity: 'error'
+      });
+      return;
+    }
+
+    if (formData.phoneNumber && !validatePhone(formData.phoneNumber)) {
+      setSnackbar({
+        open: true,
+        message: 'Số điện thoại phải có 10 chữ số',
+        severity: 'error'
+      });
+      return;
+    }
+
     try {
       const submitData = {
         ...formData,
-        role: '2'
+        role: '2',
+        address: formData.address
       };
       const response = await staffService.createStaff(submitData);
       if (response.status === 200) {
@@ -113,15 +162,11 @@ const StaffCreate = () => {
     } catch (error) {
       setSnackbar({
         open: true,
-        message: 'Không thể thêm nhân viên',
+        message: error.response?.data?.message || 'Không thể thêm nhân viên',
         severity: 'error'
       });
       console.error('Error creating staff:', error);
     }
-  };
-
-  const handleCloseSnackbar = () => {
-    setSnackbar(prev => ({ ...prev, open: false }));
   };
 
   return (
@@ -299,6 +344,8 @@ const StaffCreate = () => {
                   onChange={handleFormChange}
                   required
                   sx={{ bgcolor: 'white' }}
+                  error={!!formData.emailError}
+                  helperText={formData.emailError}
                 />
               </Grid>
 
@@ -338,18 +385,15 @@ const StaffCreate = () => {
                   onChange={handleFormChange}
                   required
                   sx={{ bgcolor: 'white' }}
+                  error={!!formData.phoneNumberError}
+                  helperText={formData.phoneNumberError}
                 />
               </Grid>
 
               <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  size="small"
-                  label="Địa chỉ"
-                  name="address"
+                <AddressSelect
                   value={formData.address}
-                  onChange={handleFormChange}
-                  sx={{ bgcolor: 'white' }}
+                  onChange={(value) => handleFormChange({ target: { name: 'address', value } })}
                 />
               </Grid>
             </Grid>
@@ -385,17 +429,19 @@ const StaffCreate = () => {
 
       <Snackbar
         open={snackbar.open}
-        autoHideDuration={6000}
+        autoHideDuration={3000}
         onClose={handleCloseSnackbar}
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
-        <Alert 
-          onClose={handleCloseSnackbar} 
+        <MuiAlert
+          elevation={6}
+          variant="filled"
+          onClose={handleCloseSnackbar}
           severity={snackbar.severity}
           sx={{ width: '100%' }}
         >
           {snackbar.message}
-        </Alert>
+        </MuiAlert>
       </Snackbar>
     </Box>
   );

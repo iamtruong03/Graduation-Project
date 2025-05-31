@@ -12,7 +12,8 @@ import {
   Select,
   MenuItem,
   Stack,
-  Alert,
+  Alert as MuiAlert,
+  Snackbar,
   CircularProgress,
   Table,
   TableBody,
@@ -51,6 +52,11 @@ const DepartmentDetail = () => {
     status: 1
   });
   const [formErrors, setFormErrors] = useState({});
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
 
   const positionOptions = [
     { id: 1, name: 'Quản lý' },
@@ -169,6 +175,13 @@ const DepartmentDetail = () => {
     setFormErrors({});
   };
 
+  const handleCloseSnackbar = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
+
   const handleSave = async () => {
     if (!validateForm()) return;
 
@@ -189,15 +202,24 @@ const DepartmentDetail = () => {
       if (response.status === 200) {
         setIsEditing(false);
         await fetchDepartmentDetail(); // Refresh data
+        setSnackbar({
+          open: true,
+          message: 'Cập nhật phòng ban thành công',
+          severity: 'success'
+        });
       } else {
-        setError(response.message || 'Có lỗi xảy ra khi cập nhật phòng ban');
+        setSnackbar({
+          open: true,
+          message: response.message || 'Có lỗi xảy ra khi cập nhật phòng ban',
+          severity: 'error'
+        });
       }
     } catch (err) {
-      if (err.response?.data?.message) {
-        setError(err.response.data.message);
-      } else {
-        setError('Không thể cập nhật phòng ban. Vui lòng thử lại sau.');
-      }
+      setSnackbar({
+        open: true,
+        message: err.response?.data?.message || 'Không thể cập nhật phòng ban. Vui lòng thử lại sau.',
+        severity: 'error'
+      });
       console.error('Error updating department:', err);
     } finally {
       setLoading(false);
@@ -215,7 +237,7 @@ const DepartmentDetail = () => {
   if (!department) {
     return (
       <Box sx={{ p: 3 }}>
-        <Alert severity="error">Không tìm thấy thông tin phòng ban</Alert>
+        <MuiAlert severity="error">Không tìm thấy thông tin phòng ban</MuiAlert>
       </Box>
     );
   }
@@ -291,13 +313,13 @@ const DepartmentDetail = () => {
         </Stack>
 
         {error && (
-          <Alert 
+          <MuiAlert 
             severity="error" 
             onClose={() => setError(null)}
             sx={{ mb: 3 }}
           >
             {error}
-          </Alert>
+          </MuiAlert>
         )}
 
         <Grid container spacing={3}>
@@ -451,6 +473,23 @@ const DepartmentDetail = () => {
           </Grid>
         </Grid>
       </Paper>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <MuiAlert
+          elevation={6}
+          variant="filled"
+          onClose={handleCloseSnackbar}
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </MuiAlert>
+      </Snackbar>
     </Box>
   );
 };

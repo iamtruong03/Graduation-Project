@@ -19,7 +19,8 @@ import {
   MenuItem,
   TextField,
   CircularProgress,
-  Alert
+  Alert as MuiAlert,
+  Snackbar
 } from '@mui/material';
 import {
   Assignment as AssignmentIcon,
@@ -37,14 +38,16 @@ const getStatusColor = (state) => {
   if (!state) return 'default';
   
   switch (state) {
-    case 1: // Chưa bắt đầu
+    case 0: // Chờ duyệt
       return 'warning';
+    case 1: // Từ chối
+      return 'error';
     case 2: // Đang thực hiện
       return 'info';
     case 3: // Hoàn thành
       return 'success';
-    case 4: // Tạm dừng
-      return 'warning';
+    case 4: // Quá hạn
+      return 'error';
     case 5: // Đã hủy
       return 'error';
     default:
@@ -54,14 +57,16 @@ const getStatusColor = (state) => {
 
 const getStatusName = (state) => {
   switch (state) {
+    case 0:
+      return 'Chờ duyệt';
     case 1:
-      return 'Chưa bắt đầu';
+      return 'Từ chối';
     case 2:
       return 'Đang thực hiện';
     case 3:
       return 'Hoàn thành';
     case 4:
-      return 'Tạm dừng';
+      return 'Quá hạn';
     case 5:
       return 'Đã hủy';
     default:
@@ -97,6 +102,19 @@ const getPriorityName = (priorityId) => {
   }
 };
 
+const getTaskTypeName = (taskTypeId) => {
+  switch (taskTypeId) {
+    case 1:
+      return 'Công việc rủi ro';
+    case 2:
+      return 'Công việc dự án';
+    case 3:
+      return 'Công việc phòng ban';
+    default:
+      return 'Không xác định';
+  }
+};
+
 const TaskDetail = () => {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -106,12 +124,18 @@ const TaskDetail = () => {
   const [editedTask, setEditedTask] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
 
   // Fetch lists for dropdowns in edit mode
   const [projectList, setProjectList] = useState([]);
   const [assigneeList, setAssigneeList] = useState([]);
   const [departmentList, setDepartmentList] = useState([]);
   const [approverList, setApproverList] = useState([]);
+  const [riskList, setRiskList] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -158,7 +182,8 @@ const TaskDetail = () => {
             departmentName: taskData.departmentName || null, // Assume API might return these
             projectName: taskData.projectName || null, // Assume API might return these
             assigneeName: taskData.assigneeName || null, // Assume API might return these
-            approverName: taskData.approverName || null // Assume API might return these
+            approverName: taskData.approverName || null, // Assume API might return these
+            riskName: taskData.riskName || null,
           };
           
           setTask(mappedTask);
@@ -168,8 +193,8 @@ const TaskDetail = () => {
           setError('Không tìm thấy thông tin công việc cho ID này.');
         }
 
-        if (historyData && historyData.data) { // historyData is response object, historyData.data is array
-          setTaskHistory(historyData.data);
+        if (historyData) {
+          setTaskHistory(historyData);
         } else {
           setTaskHistory([]);
         }
@@ -192,6 +217,7 @@ const TaskDetail = () => {
       fetchProjectList();
       fetchDepartmentList();
       fetchApproverList();
+      fetchRiskList();
       if (editedTask?.departmentId) {
         fetchAssigneeListByDepartment(editedTask.departmentId);
       }
@@ -231,6 +257,17 @@ const TaskDetail = () => {
     }
   };
 
+  const fetchRiskList = async () => {
+    try {
+      const response = await taskService.getAllRisks(); // Assuming a service method to get all risks
+      if (response.data) {
+        setRiskList(response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching risks:', error);
+    }
+  };
+
   const fetchAssigneeListByDepartment = async (departmentId) => {
     if (!departmentId) {
       setAssigneeList([]);
@@ -252,6 +289,15 @@ const TaskDetail = () => {
   };
 
   const handleEdit = () => {
+    // Kiểm tra trạng thái task
+    if (task.state !== 2) {
+      setSnackbar({
+        open: true,
+        message: 'Chỉ có thể chỉnh sửa công việc khi đang ở trạng thái "Đang thực hiện"',
+        severity: 'error'
+      });
+      return;
+    }
     setIsEditing(true);
     // Initialize editedTask with current task data, using correct backend field names
     setEditedTask({
@@ -276,19 +322,38 @@ const TaskDetail = () => {
     setError(null); // Clear any form errors
   };
 
+  const handleCloseSnackbar = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
+
   const handleSave = async () => {
-    // Basic validation for required fields (adjust based on your requirements)
+    // Basic validation for required fields
     if (!editedTask.name || !editedTask.code || !editedTask.assigneeId || !editedTask.startDate || !editedTask.dueDate || !editedTask.state || !editedTask.priorityId) {
-      setError('Vui lòng điền đầy đủ các trường bắt buộc (Mã, Tên, Người thực hiện, Ngày bắt đầu, Ngày kết thúc, Trạng thái, Mức độ ưu tiên).');
+      setSnackbar({
+        open: true,
+        message: 'Vui lòng điền đầy đủ các trường bắt buộc (Mã, Tên, Người thực hiện, Ngày bắt đầu, Ngày kết thúc, Trạng thái, Mức độ ưu tiên).',
+        severity: 'error'
+      });
       return;
     }
     // Additional validation based on task type
-    if (editedTask.taskTypeId === 2 && !editedTask.projectId) { // Assuming taskTypeId 2 is project task
-      setError('Vui lòng chọn Dự án cho công việc dự án.');
+    if (editedTask.taskTypeId === 2 && !editedTask.projectId) {
+      setSnackbar({
+        open: true,
+        message: 'Vui lòng chọn Dự án cho công việc dự án.',
+        severity: 'error'
+      });
       return;
     }
-    if (editedTask.taskTypeId === 3 && !editedTask.departmentId) { // Assuming taskTypeId 3 is department task
-      setError('Vui lòng chọn Phòng ban cho công việc phòng ban.');
+    if (editedTask.taskTypeId === 3 && !editedTask.departmentId) {
+      setSnackbar({
+        open: true,
+        message: 'Vui lòng chọn Phòng ban cho công việc phòng ban.',
+        severity: 'error'
+      });
       return;
     }
 
@@ -296,7 +361,6 @@ const TaskDetail = () => {
       setLoading(true);
       setError(null);
 
-      // Prepare data to send to backend, ensuring correct format and fields
       const taskDataToUpdate = {
         id: editedTask.id,
         code: editedTask.code,
@@ -311,27 +375,37 @@ const TaskDetail = () => {
         description: editedTask.description,
         startDate: editedTask.startDate,
         dueDate: editedTask.dueDate,
-        completedDate: editedTask.completedDate || null, // Include completedDate if available
-        // Do not send createDate, modifiedDate, createBy, updateBy, version back
+        completedDate: editedTask.completedDate || null,
       };
 
       const response = await taskService.updateTask(editedTask.id, taskDataToUpdate);
-      if (response) { // Assuming successful update returns a response
-        // Refresh task data and history after successful update
+      if (response) {
         const [updatedTaskData, newHistory] = await Promise.all([
-          taskService.getTaskById(id), // Fetch the updated task details
-          taskService.getTaskHistory(id) // Fetch the updated history
+          taskService.getTaskById(id),
+          taskService.getTaskHistory(id)
         ]);
-        setTask(updatedTaskData); // Update the main task state
-        setTaskHistory(newHistory); // Update the history state
+        setTask(updatedTaskData);
+        setTaskHistory(newHistory);
         setIsEditing(false);
+        setSnackbar({
+          open: true,
+          message: 'Cập nhật công việc thành công',
+          severity: 'success'
+        });
       } else {
-        setError('Cập nhật công việc không thành công. Vui lòng kiểm tra dữ liệu.');
+        setSnackbar({
+          open: true,
+          message: 'Cập nhật công việc không thành công. Vui lòng kiểm tra dữ liệu.',
+          severity: 'error'
+        });
       }
-
     } catch (err) {
       console.error('Error updating task:', err);
-      setError(err.response?.data?.message || err.message || 'Có lỗi xảy ra khi cập nhật công việc');
+      setSnackbar({
+        open: true,
+        message: err.response?.data?.message || err.message || 'Có lỗi xảy ra khi cập nhật công việc',
+        severity: 'error'
+      });
     } finally {
       setLoading(false);
     }
@@ -374,9 +448,9 @@ const TaskDetail = () => {
   if (error && !task) { // Show error message if task failed to load initially
     return (
       <Box sx={{ p: 3 }}>
-        <Alert severity="error" sx={{ mb: 3 }}>
+        <MuiAlert severity="error" sx={{ mb: 3 }}>
           {error}
-        </Alert>
+        </MuiAlert>
         <Button variant="contained" onClick={handleClose}>
           Quay lại
         </Button>
@@ -424,7 +498,7 @@ const TaskDetail = () => {
               </Button>
               <Button
                 variant="contained"
-                startIcon={loading ? <CircularProgress size={20} /> : <SaveIcon />} // Show loading spinner on button
+                startIcon={loading ? <CircularProgress size={20} /> : <SaveIcon />}
                 onClick={handleSave}
                 disabled={loading}
                 sx={{
@@ -440,9 +514,9 @@ const TaskDetail = () => {
           ) : (
             <Button
               variant="contained"
-              startIcon={<EditIcon />} // Removed loading check here
+              startIcon={<EditIcon />}
               onClick={handleEdit}
-              disabled={task?.state !== 2} // Disable if state is not 'Đang thực hiện' (state 2)
+              disabled={task?.state !== 2} // Chỉ cho phép chỉnh sửa khi state = 2
               sx={{
                 backgroundColor: '#1976d2',
                 '&:hover': {
@@ -456,13 +530,13 @@ const TaskDetail = () => {
         </Stack>
 
         {error && ( // Show form errors here as well
-          <Alert
+          <MuiAlert
             severity="error"
             onClose={() => setError(null)}
             sx={{ mb: 3 }}
           >
             {error}
-          </Alert>
+          </MuiAlert>
         )}
 
         <Grid container spacing={3}>
@@ -552,62 +626,42 @@ const TaskDetail = () => {
                         <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                           Loại công việc
                         </Typography>
-                        {/* Task Type is not editable based on previous changes */}
                         <Typography>
-                          {task?.taskTypeId === 2 ? 'Công việc dự án' : task?.taskTypeId === 3 ? 'Công việc phòng ban' : 'Không xác định'}
+                          {getTaskTypeName(task?.taskTypeId)}
                         </Typography>
                       </Box>
 
-                      {task?.taskTypeId === 2 && ( // Conditionally render Project field based on taskTypeId
+                      {task?.taskTypeId === 1 && (
+                        <Box>
+                          <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                            Rủi ro
+                          </Typography>
+                          <Typography>
+                            {task?.riskName || task?.riskId || 'N/A'}
+                          </Typography>
+                        </Box>
+                      )}
+
+                      {task?.taskTypeId === 2 && (
                         <Box>
                           <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                             Dự án
                           </Typography>
-                          {isEditing ? (
-                            <FormControl fullWidth size="small">
-                              <InputLabel>Dự án</InputLabel>
-                              <Select
-                                name="projectId"
-                                value={editedTask?.projectId || ''}
-                                onChange={handleTaskChange}
-                              >
-                                {projectList.map(project => (
-                                  <MenuItem key={project.id} value={project.id}>{project.name}</MenuItem>
-                                ))}
-                              </Select>
-                            </FormControl>
-                          ) : (
-                            <Typography>
-                              {task?.projectName || task?.projectId || 'N/A'}
-                            </Typography>
-                          )}
+                          <Typography>
+                            {task?.projectName || task?.projectId || 'N/A'}
+                          </Typography>
                         </Box>
                       )}
 
-                      {task?.taskTypeId === 3 && ( // Conditionally render Department field based on taskTypeId
+                      {task?.taskTypeId === 3 && (
                         <Box>
                           <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                             <BusinessIcon sx={{ fontSize: 16, mr: 1, verticalAlign: 'text-bottom' }} />
                             Phòng ban
                           </Typography>
-                          {isEditing ? (
-                            <FormControl fullWidth size="small" required>
-                              <InputLabel>Phòng ban</InputLabel>
-                              <Select
-                                name="departmentId"
-                                value={editedTask?.departmentId || ''}
-                                onChange={handleTaskChange}
-                              >
-                                {departmentList.map(department => (
-                                  <MenuItem key={department.id} value={department.id}>{department.name}</MenuItem>
-                                ))}
-                              </Select>
-                            </FormControl>
-                          ) : (
-                            <Typography>
-                              {task?.departmentName || task?.departmentId || 'N/A'}
-                            </Typography>
-                          )}
+                          <Typography>
+                            {task?.departmentName || task?.departmentId || 'N/A'}
+                          </Typography>
                         </Box>
                       )}
                     </Stack>
@@ -733,6 +787,23 @@ const TaskDetail = () => {
           </Grid>
         </Grid>
       </Paper>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <MuiAlert
+          elevation={6}
+          variant="filled"
+          onClose={handleCloseSnackbar}
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </MuiAlert>
+      </Snackbar>
     </Box>
   );
 };

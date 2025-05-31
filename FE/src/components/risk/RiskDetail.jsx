@@ -25,7 +25,9 @@ import {
   TableCell,
   TableContainer,
   TableHead,
-  TableRow
+  TableRow,
+  Snackbar,
+  Alert as MuiAlert
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
@@ -126,6 +128,11 @@ const RiskDetail = () => {
     priority: 'MEDIUM',
     status: 'NEW'
   });
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -192,10 +199,12 @@ const RiskDetail = () => {
 
   const getRiskStateName = (stateId) => {
     switch (stateId) {
-      case 1: return 'Chưa xử lý';
+      case 0: return 'Khởi tạo';
+      case 1: return 'Từ chối';
       case 2: return 'Đang xử lý';
-      case 3: return 'Đã xử lý';
-      case 4: return 'Đã đóng';
+      case 3: return 'Hoàn thành';
+      case 4: return 'Quá hạn';
+      case 5: return 'Đã hủy';
       default: return 'Chưa xác định';
     }
   };
@@ -241,6 +250,14 @@ const RiskDetail = () => {
   };
 
   const handleEdit = () => {
+    if (risk.state !== 2) {
+      setSnackbar({
+        open: true,
+        message: 'Chỉ có thể chỉnh sửa rủi ro khi đang ở trạng thái "Đang xử lý"',
+        severity: 'error'
+      });
+      return;
+    }
     setIsEditing(true);
     setEditedRisk({...risk});
   };
@@ -250,9 +267,23 @@ const RiskDetail = () => {
     setEditedRisk(null);
   };
 
-  const handleSave = () => {
-    setRisk(editedRisk);
-    setIsEditing(false);
+  const handleSave = async () => {
+    try {
+      await riskService.updateRisk(editedRisk.id, editedRisk);
+      setRisk(editedRisk);
+      setIsEditing(false);
+      setSnackbar({
+        open: true,
+        message: 'Cập nhật rủi ro thành công',
+        severity: 'success'
+      });
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message: 'Có lỗi xảy ra khi cập nhật rủi ro: ' + (error.response?.data?.message || error.message),
+        severity: 'error'
+      });
+    }
   };
 
   const handleRiskChange = (event) => {
@@ -331,6 +362,10 @@ const RiskDetail = () => {
     });
   };
 
+  const handleCloseSnackbar = () => {
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
+
   return (
     <Box sx={{ p: 3, backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
       <Paper elevation={0} sx={{ p: 3, borderRadius: 2 }}>
@@ -377,6 +412,7 @@ const RiskDetail = () => {
               variant="contained"
               startIcon={<EditIcon />}
               onClick={handleEdit}
+              disabled={risk?.state !== 2}
               sx={{
                 backgroundColor: '#1976d2',
                 '&:hover': {
@@ -944,6 +980,21 @@ const RiskDetail = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <MuiAlert 
+          onClose={handleCloseSnackbar} 
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </MuiAlert>
+      </Snackbar>
     </Box>
   );
 };

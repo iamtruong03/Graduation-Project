@@ -25,6 +25,8 @@ import {
   DialogActions,
   CircularProgress,
   Pagination,
+  Alert as MuiAlert,
+  Snackbar,
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -35,7 +37,6 @@ import {
 import { useNavigate } from 'react-router-dom';
 import staffService from '../../services/staffService';
 import departmentService from '../../services/departmentService';
-import { Alert } from '@mui/material';
 import { Stack } from '@mui/material';
 
 const StaffManagement = () => {
@@ -52,6 +53,11 @@ const StaffManagement = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
 
   const positionOptions = [
     { id: 1, name: 'Quản lý' },
@@ -163,16 +169,32 @@ const StaffManagement = () => {
     setOpenDeleteDialog(true);
   };
 
-  const handleDeleteConfirm = () => {
+  const handleCloseSnackbar = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
+
+  const handleDeleteConfirm = async () => {
     try {
+      await staffService.deleteStaff(selectedStaff.id);
       setStaffList((prev) =>
         prev.filter((staff) => staff.id !== selectedStaff.id)
       );
       setOpenDeleteDialog(false);
-      setError(null);
+      setSnackbar({
+        open: true,
+        message: 'Xóa nhân viên thành công',
+        severity: 'success'
+      });
     } catch (err) {
       console.error('Lỗi khi xóa:', err);
-      setError('Có lỗi xảy ra khi xóa nhân viên');
+      setSnackbar({
+        open: true,
+        message: err.response?.data?.message || 'Có lỗi xảy ra khi xóa nhân viên',
+        severity: 'error'
+      });
     }
   };
 
@@ -313,7 +335,7 @@ const StaffManagement = () => {
               {error ? (
                 <TableRow>
                   <TableCell colSpan={10}>
-                    <Alert
+                    <MuiAlert
                       severity="error"
                       sx={{
                         mb: 2,
@@ -323,7 +345,7 @@ const StaffManagement = () => {
                       }}
                     >
                       {error}
-                    </Alert>
+                    </MuiAlert>
                   </TableCell>
                 </TableRow>
               ) : loading ? (
@@ -434,6 +456,23 @@ const StaffManagement = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <MuiAlert
+          elevation={6}
+          variant="filled"
+          onClose={handleCloseSnackbar}
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </MuiAlert>
+      </Snackbar>
     </Box>
   );
 };

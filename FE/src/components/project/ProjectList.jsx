@@ -568,6 +568,7 @@ const ProjectList = () => {
                 <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Trạng thái</TableCell>
                 <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Ngày bắt đầu</TableCell>
                 <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Ngày kết thúc</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Ngày hoàn thành thực tế</TableCell>
                 <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>Người quản lý</TableCell>
                 <TableCell align="center" sx={{ fontWeight: 600, color: '#1976d2' }}>Thao tác</TableCell>
               </TableRow>
@@ -575,13 +576,13 @@ const ProjectList = () => {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={9} align="center" sx={{ py: 3 }}>
+                  <TableCell colSpan={10} align="center" sx={{ py: 3 }}>
                     <CircularProgress size={40} />
                   </TableCell>
                 </TableRow>
               ) : projects.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} align="center" sx={{ py: 3 }}>
+                  <TableCell colSpan={10} align="center" sx={{ py: 3 }}>
                     <Typography color="text.secondary">
                       Không có dữ liệu
                     </Typography>
@@ -647,6 +648,11 @@ const ProjectList = () => {
                     <TableCell>
                       <Typography variant="body2">
                         {new Date(project.endDate).toLocaleDateString('vi-VN')}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2">
+                        {project.completedDate ? new Date(project.completedDate).toLocaleDateString('vi-VN') : '-'}
                       </Typography>
                     </TableCell>
                     <TableCell>
@@ -840,6 +846,7 @@ const ProjectList = () => {
                         <TableCell>Trạng thái</TableCell>
                         <TableCell>Ngày bắt đầu</TableCell>
                         <TableCell>Ngày kết thúc</TableCell>
+                        <TableCell>Ngày hoàn thành thực tế</TableCell>
                         <TableCell>Người quản lý</TableCell>
                         <TableCell align="center">Thao tác</TableCell>
                       </TableRow>
@@ -867,6 +874,11 @@ const ProjectList = () => {
                           </TableCell>
                           <TableCell>{new Date(project.startDate).toLocaleDateString('vi-VN')}</TableCell>
                           <TableCell>{new Date(project.endDate).toLocaleDateString('vi-VN')}</TableCell>
+                          <TableCell>
+                            <Typography variant="body2">
+                              {project.completedDate ? new Date(project.completedDate).toLocaleDateString('vi-VN') : '-'}
+                            </Typography>
+                          </TableCell>
                           <TableCell>{managers[project.managerId] || project.managerId}</TableCell>
                           <TableCell align="center">
                             <IconButton

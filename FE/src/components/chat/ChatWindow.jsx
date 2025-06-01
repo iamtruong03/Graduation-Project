@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Grid, Paper, Typography, List, ListItem, ListItemText, ListItemAvatar, Avatar, Badge, Divider, IconButton, InputAdornment, TextField, Chip } from '@mui/material';
+import { Box, Grid, Paper, Typography, List, ListItem, ListItemText, ListItemAvatar, Avatar, Badge, Divider, IconButton, InputAdornment, TextField, Chip, CircularProgress, Button } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
@@ -44,6 +44,8 @@ const ChatWindow = () => {
   const [unreadCounts, setUnreadCounts] = useState({});
   const [onlineUsers, setOnlineUsers] = useState(new Set());
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
+  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+  const [usersError, setUsersError] = useState(null);
 
   // Initialize chat service
   useEffect(() => {
@@ -80,6 +82,8 @@ const ChatWindow = () => {
   // Load users list
   useEffect(() => {
     const fetchUsers = async () => {
+      setIsLoadingUsers(true);
+      setUsersError(null);
       try {
         const response = await api.get('/user/list');
         console.log('Response from /user/list API:', response);
@@ -92,13 +96,18 @@ const ChatWindow = () => {
           );
           console.log('Filtered users from /user/list:', filteredUsers);
           setUsers(filteredUsers);
+          setIsLoadingUsers(false);
         } else {
           console.error('Response từ API /user/list không hợp lệ:', response);
           setUsers([]);
+          setUsersError('Không thể tải danh sách người dùng.');
+          setIsLoadingUsers(false);
         }
       } catch (error) {
         console.error('Lỗi khi lấy danh sách người dùng:', error);
         setUsers([]);
+        setUsersError('Lỗi khi tải danh sách người dùng: ' + (error.message || 'Không xác định'));
+        setIsLoadingUsers(false);
       }
     };
 
@@ -186,6 +195,20 @@ const ChatWindow = () => {
     // This callback is called from MessageInput after successfully sending a message
   };
 
+  const handleReconnect = async () => {
+    setConnectionStatus('connecting');
+    try {
+      await chatService.connect();
+      setConnectionStatus('connected');
+      chatService.joinChat(); // Re-join chat after reconnect
+      chatService.sendUserStatus('ONLINE'); // Re-send status
+      loadUnreadCounts(); // Reload unread counts
+    } catch (error) {
+      console.error('Lỗi kết nối lại WebSocket:', error);
+      setConnectionStatus('error');
+    }
+  };
+
   const ConnectionStatus = () => {
     const getStatusColor = () => {
       switch (connectionStatus) {
@@ -222,19 +245,36 @@ const ChatWindow = () => {
     <Box sx={{ height: 'calc(100vh - 100px)', p: 2 }}>
       <Grid container spacing={2} sx={{ height: '100%' }}>
         <Grid item xs={3}>
-          <Paper sx={{ 
-            height: '100%', 
-            display: 'flex', 
+          <Paper sx={{
+            height: '100%',
+            display: 'flex',
             flexDirection: 'column',
             borderRadius: 2,
-            boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
+            boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+            overflow: 'hidden',
+            position: 'relative'
           }}>
-            <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
+            <Box sx={{
+              p: 2,
+              borderBottom: 1,
+              borderColor: 'divider',
+              flexShrink: 0,
+              backgroundColor: 'background.paper',
+              position: 'sticky',
+              top: 0,
+              zIndex: 1
+            }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h6">
                   Trò chuyện ({users?.length || 0})
                 </Typography>
-                <ConnectionStatus />
+                {isLoadingUsers ? (
+                  <CircularProgress size={20} sx={{ color: 'primary.main' }} />
+                ) : usersError ? (
+                  <Chip size="small" label="Lỗi tải" color="error" />
+                ) : (
+                  <ConnectionStatus />
+                )}
               </Box>
               <TextField
                 fullWidth
@@ -257,7 +297,25 @@ const ChatWindow = () => {
                 }}
               />
             </Box>
-            <List sx={{ flexGrow: 1, overflow: 'auto', p: 0 }}>
+            <List sx={{
+              flexGrow: 1,
+              overflow: 'auto',
+              p: 0,
+              '&::-webkit-scrollbar': {
+                width: '6px',
+              },
+              '&::-webkit-scrollbar-track': {
+                background: '#f1f1f1',
+                borderRadius: '3px',
+              },
+              '&::-webkit-scrollbar-thumb': {
+                background: '#888',
+                borderRadius: '3px',
+                '&:hover': {
+                  background: '#555',
+                },
+              },
+            }}>
               {filteredUsers.length > 0 ? (
                 filteredUsers.map((user, index) => (
                   <React.Fragment key={user.id}>
@@ -336,6 +394,15 @@ const ChatWindow = () => {
                     {index < filteredUsers.length - 1 && <Divider variant="inset" component="li" />}
                   </React.Fragment>
                 ))
+              ) : isLoadingUsers ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                  <CircularProgress size={40} />
+                </Box>
+              ) : usersError ? (
+                <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%', p: 2, textAlign: 'center' }}>
+                  <Typography color="error" sx={{ mb: 2 }}>{usersError}</Typography>
+                  <Button variant="outlined" onClick={fetchUsers}>Thử lại</Button>
+                </Box>
               ) : (
                 <ListItem>
                   <ListItemText 
@@ -359,82 +426,93 @@ const ChatWindow = () => {
             borderRadius: 2,
             boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
           }}>
-            {selectedUser ? (
-              <>
-                <Box sx={{ 
-                  p: 2, 
-                  borderBottom: 1, 
-                  borderColor: 'divider',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 2
-                }}>
-                  <Badge
-                    overlap="circular"
-                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                    variant="dot"
-                    invisible={!onlineUsers.has(selectedUser.id.toString())}
-                    sx={{
-                      '& .MuiBadge-badge': {
-                        backgroundColor: '#44b700',
-                        width: 12,
-                        height: 12,
-                        borderRadius: '50%',
-                        border: '2px solid white'
-                      }
-                    }}
-                  >
-                    <Avatar 
-                      sx={{ 
-                        width: 48, 
-                        height: 48,
-                        bgcolor: selectedUser.role === 'ROLE_ADMIN' ? 'primary.main' : 'secondary.main'
+            {connectionStatus === 'connecting' ? (
+               <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%', gap: 2 }}>
+                 <CircularProgress size={60} />
+                 <Typography variant="h6" color="text.secondary">Đang kết nối đến máy chủ chat...</Typography>
+               </Box>
+            ) : connectionStatus === 'error' ? (
+               <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%', gap: 3, p: 3, textAlign: 'center' }}>
+                  <Typography variant="h6" color="error" sx={{ mb: 2 }}>Lỗi kết nối đến máy chủ chat.</Typography>
+                  <Button variant="contained" onClick={handleReconnect} size="large">Thử lại</Button>
+               </Box>
+            ) : (
+              selectedUser ? (
+                <>
+                  <Box sx={{ 
+                    p: 2, 
+                    borderBottom: 1, 
+                    borderColor: 'divider',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 2
+                  }}>
+                    <Badge
+                      overlap="circular"
+                      anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                      variant="dot"
+                      invisible={!onlineUsers.has(selectedUser.id.toString())}
+                      sx={{
+                        '& .MuiBadge-badge': {
+                          backgroundColor: '#44b700',
+                          width: 12,
+                          height: 12,
+                          borderRadius: '50%',
+                          border: '2px solid white'
+                        }
                       }}
                     >
-                      {selectedUser.name.charAt(0).toUpperCase()}
-                    </Avatar>
-                  </Badge>
-                  <Box>
-                    <Typography variant="h6" sx={{ fontWeight: 500 }}>
-                      {selectedUser.name}
-                      {onlineUsers.has(selectedUser.id.toString()) && (
-                        <Typography component="span" sx={{ fontSize: '0.875rem', color: '#44b700', ml: 1 }}>
-                          • Online
-                        </Typography>
-                      )}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {selectedUser.email}
-                    </Typography>
+                      <Avatar 
+                        sx={{ 
+                          width: 48, 
+                          height: 48,
+                          bgcolor: selectedUser.role === 'ROLE_ADMIN' ? 'primary.main' : 'secondary.main'
+                        }}
+                      >
+                        {selectedUser.name.charAt(0).toUpperCase()}
+                      </Avatar>
+                    </Badge>
+                    <Box>
+                      <Typography variant="h6" sx={{ fontWeight: 500 }}>
+                        {selectedUser.name}
+                        {onlineUsers.has(selectedUser.id.toString()) && (
+                          <Typography component="span" sx={{ fontSize: '0.875rem', color: '#44b700', ml: 1 }}>
+                            • Online
+                          </Typography>
+                        )}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {selectedUser.email}
+                      </Typography>
+                    </Box>
                   </Box>
+                  <Box sx={{ flexGrow: 1, overflow: 'auto', p: 2, bgcolor: '#f8f9fa' }}>
+                    <MessageList selectedUser={selectedUser} />
+                  </Box>
+                  <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider', bgcolor: 'white' }}>
+                    <MessageInput 
+                      selectedUser={selectedUser}
+                      onMessageSent={handleMessageSent}
+                    />
+                  </Box>
+                </>
+              ) : (
+                <Box sx={{ 
+                  display: 'flex', 
+                  flexDirection: 'column',
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  height: '100%',
+                  color: 'text.secondary'
+                }}>
+                  <Typography variant="h6" sx={{ mb: 1 }}>
+                    Chào mừng đến với Trò chuyện Realtime
+                  </Typography>
+                  <Typography variant="body1" sx={{ mb: 2 }}>
+                    Chọn một người dùng để bắt đầu cuộc trò chuyện
+                  </Typography>
                 </Box>
-                <Box sx={{ flexGrow: 1, overflow: 'auto', p: 2, bgcolor: '#f8f9fa' }}>
-                  <MessageList selectedUser={selectedUser} />
-                </Box>
-                <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider', bgcolor: 'white' }}>
-                  <MessageInput 
-                    selectedUser={selectedUser}
-                    onMessageSent={handleMessageSent}
-                  />
-                </Box>
-              </>
-            ) : (
-              <Box sx={{ 
-                display: 'flex', 
-                flexDirection: 'column',
-                alignItems: 'center', 
-                justifyContent: 'center', 
-                height: '100%',
-                color: 'text.secondary'
-              }}>
-                <Typography variant="h6" sx={{ mb: 1 }}>
-                  Chào mừng đến với Trò chuyện Realtime
-                </Typography>
-                <Typography variant="body1" sx={{ mb: 2 }}>
-                  Chọn một người dùng để bắt đầu cuộc trò chuyện
-                </Typography>
-                <ConnectionStatus />
-              </Box>
+              )
             )}
           </Paper>
         </Grid>

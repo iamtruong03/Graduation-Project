@@ -3,10 +3,12 @@ package com.dev.truongdev.service.impl;
 import com.dev.truongdev.dto.TaskDTO;
 import com.dev.truongdev.dto.TaskHistoryDTO;
 import com.dev.truongdev.entity.Department;
+import com.dev.truongdev.entity.Project;
 import com.dev.truongdev.entity.Task;
 import com.dev.truongdev.entity.TaskHistory;
 import com.dev.truongdev.entity.User;
 import com.dev.truongdev.repo.DepartmentRepo;
+import com.dev.truongdev.repo.ProjectRepo;
 import com.dev.truongdev.repo.TaskHistoryRepo;
 import com.dev.truongdev.repo.TaskRepo;
 import com.dev.truongdev.repo.UserRepo;
@@ -24,7 +26,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.BeanUtils;
-import org.springframework.util.StringUtils;
 
 import java.util.Date;
 import java.util.List;
@@ -44,20 +45,22 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
     TaskHistoryRepo taskHistoryRepo;
     IUserService userService;
     DepartmentRepo departmentRepo;
+    ProjectRepo projectRepo;
     IDepartmentService<Department, ?> departmentService;
     UserRepo userRepo;
 
     public TaskServiceImpl(TaskRepo repo, 
                           TaskHistoryRepo historyRepo, 
                           IUserService userService, 
-                          DepartmentRepo departmentRepo, 
-                          IDepartmentService<Department, ?> departmentService,
+                          DepartmentRepo departmentRepo,
+        ProjectRepo projectRepo, IDepartmentService<Department, ?> departmentService,
                           UserRepo userRepo) {
         super(repo);
         this.taskRepo = repo;
         this.taskHistoryRepo = historyRepo;
         this.userService = userService;
         this.departmentRepo = departmentRepo;
+        this.projectRepo = projectRepo;
         this.departmentService = departmentService;
         this.userRepo = userRepo;
     }
@@ -106,7 +109,14 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
         task.setCreateBy(uid);
         task.setUpdateBy(uid);
 
-        if (taskDTO.getTaskTypeId() == 1 || taskDTO.getTaskTypeId() == 2) {
+        if (taskDTO.getTaskTypeId() == 2) {
+            Project project = projectRepo.findById(taskDTO.getProjectId())
+                .orElseThrow(() -> new RuntimeException("Project not found"));
+            // Kiểm tra quyền tạo task chỉ khi taskTypeId == 2
+            if (!uid.equals(project.getManagerId())) {
+                throw new RuntimeException("Chỉ có quản lý dự án mới được phép tạo task");
+            }
+
             task.setState(AppConstants.STATUS_IN_PROGRESS);
             task.setIsApproved(true);
             task.setApproverId(uid);
@@ -118,7 +128,6 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
             
             return convertToDTO(savedTask);
         } else {
-
             task.setState(AppConstants.STATUS_PENDING);
             task.setIsApproved(false);
 
@@ -211,6 +220,10 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
             throw new RuntimeException("Không có quyền xóa");
         }
 
+        if (!canDelete(task.getState())) {
+            throw new RuntimeException("Chỉ có thể xóa công việc ở trạng thái chờ duyệt hoặc từ chối");
+        }
+
         task.setStatus(AppConstants.STATUS_INACTIVE);
         task.setUpdateBy(uid);
         taskRepo.save(task);
@@ -243,6 +256,8 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
             taskPage = taskRepo.searchByCodeOrName(
                 AppConstants.STATUS_ACTIVE,
                 filter.getSearch(),
+                filter.getTaskTypeId(),
+                filter.getAssigneeId(),
                 pageable
             );
         } else {
@@ -251,6 +266,8 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
                 AppConstants.STATUS_ACTIVE,
                 filter.getSearch(),
                 departmentIds,
+                filter.getTaskTypeId(),
+                filter.getAssigneeId(),
                 pageable
             );
         }
@@ -407,6 +424,10 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
         }
     }
 
+    private boolean canDelete(Integer state) {
+        return state == AppConstants.STATUS_PENDING || state == AppConstants.STATUS_REJECTED;
+    }
+
     /**
      * Kiểm tra công việc có quá hạn không.
      * @return true nếu ngày hết hạn đã qua
@@ -483,6 +504,7 @@ public class TaskServiceImpl extends XDevBaseServiceImpl<Task, TaskFilter, TaskR
         dto.setState(task.getState());
         dto.setDepartmentId(task.getDepartmentId());
         dto.setProjectId(task.getProjectId());
+        dto.setRiskId(task.getRiskId());
         dto.setPriorityId(task.getPriorityId());
         dto.setStartDate(task.getStartDate());
         dto.setDueDate(task.getDueDate());

@@ -230,7 +230,7 @@ const MessageList = ({ selectedUser }) => {
         sx={{
           display: 'flex',
           justifyContent: isCurrentUser ? 'flex-end' : 'flex-start',
-          mb: 2,
+          mb: 1.5,
           maxWidth: '80%',
           marginLeft: isCurrentUser ? 'auto' : 0,
           marginRight: isCurrentUser ? 0 : 'auto'
@@ -240,8 +240,8 @@ const MessageList = ({ selectedUser }) => {
           <Avatar 
             sx={{ 
               mr: 1,
-              width: 36,
-              height: 36,
+              width: 32,
+              height: 32,
               bgcolor: 'secondary.main'
             }}
           >
@@ -252,10 +252,11 @@ const MessageList = ({ selectedUser }) => {
           {!isCurrentUser && (
             <Typography 
               variant="caption" 
-              sx={{ 
+              sx={{
                 ml: 1,
                 color: 'text.secondary',
-                fontWeight: 500
+                fontWeight: 500,
+                fontSize: '0.7rem'
               }}
             >
               {senderName}
@@ -263,8 +264,8 @@ const MessageList = ({ selectedUser }) => {
           )}
           <Paper
             sx={{
-              p: 1.5,
-              backgroundColor: isCurrentUser ? 'primary.main' : '#f5f5f5',
+              p: 1.2,
+              backgroundColor: isCurrentUser ? 'primary.main' : '#e0e0e0',
               color: isCurrentUser ? 'white' : 'black',
               borderRadius: 2,
               mt: 0.5,
@@ -279,13 +280,13 @@ const MessageList = ({ selectedUser }) => {
                 height: 0,
                 borderStyle: 'solid',
                 borderWidth: '6px 6px 6px 0',
-                borderColor: `transparent ${isCurrentUser ? '#1976d2' : '#f5f5f5'} transparent transparent`,
+                borderColor: `transparent ${isCurrentUser ? '#1976d2' : '#e0e0e0'} transparent transparent`,
                 transform: isCurrentUser ? 'rotate(180deg)' : 'none'
               }
             }}
           >
             <Typography 
-              variant="body1" 
+              variant="body2" 
               sx={{ 
                 wordBreak: 'break-word',
                 lineHeight: 1.4
@@ -300,7 +301,7 @@ const MessageList = ({ selectedUser }) => {
                   display: 'block',
                   textAlign: 'right',
                   color: message?.isRead ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.9)',
-                  fontSize: '0.7rem',
+                  fontSize: '0.65rem',
                   mt: 0.5
                 }}
               >
@@ -315,7 +316,7 @@ const MessageList = ({ selectedUser }) => {
               textAlign: isCurrentUser ? 'right' : 'left',
               mt: 0.5,
               color: 'text.secondary',
-              fontSize: '0.75rem'
+              fontSize: '0.7rem'
             }}
           >
             {message?.timestamp ? format(new Date(message.timestamp), 'HH:mm', { locale: vi }) : ''}
@@ -325,8 +326,8 @@ const MessageList = ({ selectedUser }) => {
           <Avatar 
             sx={{ 
               ml: 1,
-              width: 36,
-              height: 36,
+              width: 32,
+              height: 32,
               bgcolor: 'primary.main'
             }}
           >

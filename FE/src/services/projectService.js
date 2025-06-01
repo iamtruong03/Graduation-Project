@@ -9,7 +9,7 @@ const getAuthHeader = () => ({
 const projectService = {
   // Lấy tất cả dự án với filter
   getAllProjects: (filter = {}) => {
-    return api.get('/api/projects', { 
+    return api.get('/api/projects/list', { 
       ...getAuthHeader(),
       params: filter 
     });
@@ -141,8 +141,8 @@ const projectService = {
     return api.post('/api/projects/search', 
       {
         search: filter.search || '',
-        projectType: filter.projectType,
-        state: filter.state
+        projectTypeId: filter.projectTypeId,
+        managerId: filter.managerId
       },
       {
         ...getAuthHeader(),

@@ -15,5 +15,6 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class ProjectFilter extends XDevBaseFilter {
-
+    String managerId;
+    Integer projectTypeId;
 }

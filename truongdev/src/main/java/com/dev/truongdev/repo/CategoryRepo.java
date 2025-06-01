@@ -2,6 +2,7 @@ package com.dev.truongdev.repo;
 
 import com.dev.truongdev.entity.Category;
 import com.dev.truongdev.xdevbase.repo.XDevBaseRepo;
+import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
@@ -16,10 +17,14 @@ public interface CategoryRepo extends XDevBaseRepo<Category> {
             "WHERE c.status = :status " +
             "AND (LOWER(c.code) LIKE LOWER(CONCAT('%', :search, '%')) " +
             "OR LOWER(c.name) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+            "AND (:categoryTypeId IS NULL OR c.categoryTypeId = :categoryTypeId) " +
             "ORDER BY c.createDate DESC")
     Page<Category> searchByCodeOrName(
             @Param("status") Integer status,
             @Param("search") String search,
+            @Param("categoryTypeId") Long categoryTypeId,
             Pageable pageable
     );
+
+    List<Category> findAllByCategoryTypeIdAndStatus(Long categoryTypeId, Integer status);
 } 

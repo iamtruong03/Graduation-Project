@@ -1,6 +1,8 @@
 package com.dev.truongdev.service;
 
 import com.dev.truongdev.dto.ProjectDTO;
+import com.dev.truongdev.dto.dashload.department.DepartmentStatsDTO;
+import com.dev.truongdev.dto.dashload.project.ProjectStatsDTO;
 import com.dev.truongdev.entity.Project;
 import com.dev.truongdev.payload.filter.ProjectFilter;
 import com.dev.truongdev.xdevbase.service.IXDevBaseService;
@@ -25,4 +27,9 @@ public interface IProjectService extends IXDevBaseService<Project, ProjectFilter
     
     // Thêm method lấy danh sách dự án chờ duyệt
     Page<Project> getPendingApprovalProjects(String approverId, ProjectFilter filter, Pageable pageable);
+
+    // Lấy tên dự án theo ID
+    String getProjectNameById(Long id);
+
+    ProjectStatsDTO getProjectStats(String uid, Long did , Long projectId);
 }

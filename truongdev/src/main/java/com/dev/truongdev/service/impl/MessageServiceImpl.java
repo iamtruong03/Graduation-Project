@@ -2,6 +2,7 @@ package com.dev.truongdev.service.impl;
 
 import com.dev.truongdev.dto.MessageDTO;
 import com.dev.truongdev.entity.Message;
+import com.dev.truongdev.entity.User;
 import com.dev.truongdev.payload.filter.MessageFilter;
 import com.dev.truongdev.repo.MessageRepo;
 import com.dev.truongdev.repo.UserRepo;
@@ -38,16 +39,20 @@ public class MessageServiceImpl
 
     // New WebSocket methods
     @Override
-    public MessageDTO sendMessage(MessageDTO messageDTO) {
+    public MessageDTO sendMessage(String uid, MessageDTO messageDTO) {
+
+        User user = userRepo.findById(Long.valueOf(uid))
+            .orElseThrow(() -> new RuntimeException("User not found"));
+
         // Tạo entity Message từ DTO
         Message message = Message.builder()
-                .senderId(messageDTO.getSenderId())
+                .senderId(uid)
                 .receiverId(messageDTO.getReceiverId())
                 .content(messageDTO.getContent())
                 .timestamp(new Date())
                 .isRead(false)
                 .messageType(messageDTO.getMessageType() != null ? messageDTO.getMessageType() : "TEXT")
-                .departmentId(messageDTO.getDepartmentId())
+                .departmentId(user.getDepartmentId())
                 .build();
 
         // Lưu tin nhắn vào database

@@ -19,11 +19,8 @@ public class StateNameUtils {
     public static String getRiskStateName(Integer state) {
         if (state == null) return "Unknown";
         switch (state) {
-            case 0: return "Chờ duyệt";
-            case 1: return "Từ chối";
-            case 2: return "Đang thực hiện";
-            case 3: return "Hoàn thành";
-            case 4: return "Quá hạn";
+            case 2: return "Đang xử lý";
+            case 3: return "Đã đóng";
             case 5: return "Đã hủy";
             default: return "Unknown";
         }

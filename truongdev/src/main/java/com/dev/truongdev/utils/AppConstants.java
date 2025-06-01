@@ -43,10 +43,10 @@ public class AppConstants {
     return "UNKNOWN_STATUS";
   }
 
-  public static String getPositionName(Integer position) {
-    if (position == null) return "NULL";
-    if (position.equals(POSITION_HEAD)) return "HEAD";
-    if (position.equals(POSITION_STAFF)) return "STAFF";
+  public static String getPositionName(Integer positionId) {
+    if (positionId == null) return "NULL";
+    if (positionId.equals(1)) return "Quản lý";
+    if (positionId.equals(2)) return "Nhân viên";
     return "UNKNOWN_POSITION";
   }
 

@@ -1,6 +1,5 @@
 package com.dev.truongdev.repo;
 
-import com.dev.truongdev.entity.Department;
 import com.dev.truongdev.entity.User;
 import com.dev.truongdev.xdevbase.repo.XDevBaseRepo;
 import java.util.List;
@@ -15,9 +14,9 @@ import java.util.Optional;
 @Repository
 public interface UserRepo extends XDevBaseRepo<User> {
 
-    Long countByDepartmentIn(List<Department> departments);
+    Long countByDepartmentIdIn(List<Long> departmentIds);
+
     Long countByDepartmentId(Long departmentId);
-    List<User> findByDepartmentId(Long departmentId);
 
     Boolean existsByCodeIgnoreCase(String code);
 

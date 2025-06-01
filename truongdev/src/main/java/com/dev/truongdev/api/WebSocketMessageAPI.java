@@ -13,6 +13,8 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 
 import java.security.Principal;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Controller
 @RequiredArgsConstructor
@@ -21,21 +23,25 @@ public class WebSocketMessageAPI {
     private final IMessageService messageService;
     private final SimpMessagingTemplate messagingTemplate;
     private final JwtTokenUtil jwtTokenUtil;
+    private final Map<String, String> userSessions = new ConcurrentHashMap<>();
 
     /**
      * Xử lý gửi tin nhắn qua WebSocket
      * @param messageDTO Tin nhắn cần gửi
-     * @param token JWT token để lấy thông tin user
+     * @param principal Principal của người gửi
      * @return Tin nhắn đã được lưu
      */
     @MessageMapping("/chat.sendMessage")
     public void sendMessage(@Payload MessageDTO messageDTO, 
-                           @Header("Authorization") String token) {
+                           Principal principal) {
         try {
-            // Lấy uid từ JWT token
-            String uid = jwtTokenUtil.extractSubject(token.replace("Bearer ", ""));
+            if (principal == null) {
+                throw new IllegalArgumentException("Unauthorized access");
+            }
+            
+            String uid = principal.getName();
             if (uid == null) {
-                throw new IllegalArgumentException("Invalid token");
+                throw new IllegalArgumentException("Invalid user session");
             }
             
             // Thiết lập senderId và action
@@ -43,7 +49,7 @@ public class WebSocketMessageAPI {
             messageDTO.setAction("SEND");
             
             // Lưu tin nhắn vào database
-            MessageDTO savedMessage = messageService.sendMessage(messageDTO);
+            MessageDTO savedMessage = messageService.sendMessage(uid, messageDTO);
             
             // Tạo room ID cho cuộc trò chuyện
             String chatRoomId = messageService.createChatRoomId(
@@ -72,11 +78,13 @@ public class WebSocketMessageAPI {
             errorMessage.setAction("ERROR");
             errorMessage.setContent("Không thể gửi tin nhắn: " + e.getMessage());
             
-            messagingTemplate.convertAndSendToUser(
-                messageDTO.getSenderId(),
-                "/queue/errors",
-                errorMessage
-            );
+            if (principal != null) {
+                messagingTemplate.convertAndSendToUser(
+                    principal.getName(),
+                    "/queue/errors",
+                    errorMessage
+                );
+            }
         }
     }
 
@@ -145,15 +153,17 @@ public class WebSocketMessageAPI {
     /**
      * Xử lý sự kiện người dùng tham gia chat
      * @param messageDTO Thông tin user join
-     * @param headerAccessor Header accessor
+     * @param principal Principal của người gửi
      * @return Thông báo join
      */
     @MessageMapping("/chat.addUser")
     @SendTo("/topic/public")
     public MessageDTO addUser(@Payload MessageDTO messageDTO,
-                             SimpMessageHeaderAccessor headerAccessor) {
-        // Thêm username vào WebSocket session
-        headerAccessor.getSessionAttributes().put("username", messageDTO.getSenderId());
+                             Principal principal) {
+        String uid = principal.getName();
+        if (uid != null) {
+            userSessions.put(uid, messageDTO.getSenderName());
+        }
         
         messageDTO.setAction("JOIN");
         messageDTO.setContent(messageDTO.getSenderName() + " đã tham gia chat!");

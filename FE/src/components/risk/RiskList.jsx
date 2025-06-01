@@ -25,35 +25,50 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
-  Alert,
-  CircularProgress
+  Alert as MuiAlert,
+  CircularProgress,
+  Snackbar
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import DeleteIcon from '@mui/icons-material/Delete';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import { Link } from 'react-router-dom';
 import riskService from '../../services/riskService';
+import categoryService from '../../services/categoryService';
+import staffService from '../../services/staffService';
+import CloseIcon from '@mui/icons-material/Close';
 
 const RiskList = () => {
   const [risks, setRisks] = useState([]);
   const [totalPages, setTotalPages] = useState(1);
   const [searchName, setSearchName] = useState('');
-  const [riskType, setRiskType] = useState('all');
-  const [riskLevel, setRiskLevel] = useState('all');
-  const [status, setStatus] = useState('all');
+  const [selectedRiskType, setSelectedRiskType] = useState('');
+  const [selectedReflector, setSelectedReflector] = useState('');
   const [page, setPage] = useState(1);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [selectedRisk, setSelectedRisk] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const rowsPerPage = 10;
+  const [riskTypes, setRiskTypes] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [impactLevels, setImpactLevels] = useState([]);
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
 
   // Fetch API
   const fetchRisks = async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await riskService.searchRisks({ search: searchName }, page - 1, rowsPerPage);
+      const response = await riskService.searchRisks({ 
+        search: searchName,
+        riskTypeId: selectedRiskType || undefined,
+        reflectorId: selectedReflector || undefined
+      }, page - 1, rowsPerPage);
       setRisks(response.data.content);
       setTotalPages(response.data.totalPages);
     } catch (err) {
@@ -66,7 +81,34 @@ const RiskList = () => {
   useEffect(() => {
     fetchRisks();
     // eslint-disable-next-line
-  }, [page, searchName]);
+  }, [page, searchName, selectedRiskType, selectedReflector]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Lấy danh sách loại rủi ro
+        const riskTypesResponse = await categoryService.getCategoriesByType('riskTypeId');
+        if (riskTypesResponse && riskTypesResponse.data) {
+          setRiskTypes(riskTypesResponse.data);
+        }
+
+        // Lấy danh sách mức độ ảnh hưởng
+        const impactLevelsResponse = await categoryService.getCategoriesByType('impactLevelId');
+        if (impactLevelsResponse && impactLevelsResponse.data) {
+          setImpactLevels(impactLevelsResponse.data);
+        }
+
+        // Lấy danh sách người dùng
+        const usersResponse = await staffService.getListUser();
+        if (usersResponse && usersResponse.data) {
+          setUsers(usersResponse.data);
+        }
+      } catch (error) {
+        console.error('Lỗi khi lấy dữ liệu:', error);
+      }
+    };
+    fetchData();
+  }, []);
 
   const handlePageChange = (event, newPage) => {
     setPage(newPage);
@@ -77,12 +119,29 @@ const RiskList = () => {
     setOpenDeleteDialog(true);
   };
 
-  const handleConfirmDelete = () => {
-    // Thực hiện xóa rủi ro
-    const newData = risks.filter(risk => risk.id !== selectedRisk.id);
-    // Cập nhật state hoặc gọi API xóa
+  const handleCloseSnackbar = () => {
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
+
+  const handleConfirmDelete = async () => {
+    try {
+      await riskService.deleteRisk(selectedRisk.id);
+      setSnackbar({
+        open: true,
+        message: 'Xóa rủi ro thành công',
+        severity: 'success'
+      });
     setOpenDeleteDialog(false);
     setSelectedRisk(null);
+      fetchRisks(); // Refresh lại danh sách sau khi xóa
+    } catch (error) {
+      console.error('Lỗi khi xóa rủi ro:', error);
+      setSnackbar({
+        open: true,
+        message: 'Không thể xóa rủi ro: ' + (error.response?.data?.message || error.message),
+        severity: 'error'
+      });
+    }
   };
 
   // Thêm hàm xử lý export
@@ -91,8 +150,8 @@ const RiskList = () => {
       setLoading(true);
       const filter = {
         search: searchName,
-        riskType: riskType !== 'all' ? riskType : undefined,
-        impactLevel: riskLevel !== 'all' ? riskLevel : undefined
+        riskTypeId: selectedRiskType || undefined,
+        reflectorId: selectedReflector || undefined
       };
       
       const response = await riskService.exportRisks(filter);
@@ -141,33 +200,19 @@ const RiskList = () => {
 
   // Hàm helper để chuyển đổi ID thành tên hiển thị
   const getRiskTypeName = (typeId) => {
-    switch (typeId) {
-      case 1: return 'Vận hành';
-      case 2: return 'Kỹ thuật';
-      case 3: return 'Bảo mật';
-      case 4: return 'Tài chính';
-      case 5: return 'Nghiệp vụ';
-      default: return 'Chưa xác định';
-    }
+    const riskType = riskTypes.find(type => type.id === typeId);
+    return riskType ? riskType.name : 'Chưa xác định';
   };
 
   const getImpactLevelName = (levelId) => {
-    switch (levelId) {
-      case 1: return 'Thấp';
-      case 2: return 'Trung bình';
-      case 3: return 'Cao';
-      case 4: return 'Rất cao';
-      default: return 'Chưa xác định';
-    }
+    const impactLevel = impactLevels.find(level => level.id === levelId);
+    return impactLevel ? impactLevel.name : 'Chưa xác định';
   };
 
   const getStateName = (stateId) => {
     switch (stateId) {
-      case 0: return 'Chờ duyệt';
-      case 1: return 'Từ chối';
-      case 2: return 'Đang thực hiện';
-      case 3: return 'Hoàn thành';
-      case 4: return 'Quá hạn';
+      case 2: return 'Đang xử lý';
+      case 3: return 'Đã đóng';
       case 5: return 'Đã hủy';
       default: return 'Chưa xác định';
     }
@@ -180,13 +225,25 @@ const RiskList = () => {
       return date.toLocaleDateString('vi-VN', {
         year: 'numeric',
         month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
+        day: '2-digit'
       });
     } catch (error) {
       return dateString;
     }
+  };
+
+  const getReflectorName = (reflectorId) => {
+    if (!reflectorId) return 'Chưa có';
+    const user = users.find(user => String(user.id) === String(reflectorId));
+    return user ? user.name : 'Chưa có';
+  };
+
+  const getRiskTypeColor = (typeId) => {
+    const riskType = riskTypes.find(type => type.id === typeId);
+    if (!riskType) return '#757575'; // Màu xám mặc định
+    
+    // Lấy màu từ thuộc tính color của riskType
+    return riskType.color || '#757575';
   };
 
   return (
@@ -230,13 +287,13 @@ const RiskList = () => {
         </Stack>
 
         {error && (
-          <Alert 
+          <MuiAlert 
             severity="error" 
             onClose={() => setError(null)}
             sx={{ mb: 3 }}
           >
             {error}
-          </Alert>
+          </MuiAlert>
         )}
 
         <Paper elevation={0} sx={{ p: 2, mb: 3, backgroundColor: '#f8f9fa', borderRadius: 2 }}>
@@ -248,61 +305,191 @@ const RiskList = () => {
               gap: 2
             }}
           >
-            <TextField
-              size="small"
-              placeholder="Tên, mã rủi ro"
-              value={searchName}
-              onChange={(e) => setSearchName(e.target.value)}
-              InputProps={{
-                startAdornment: <SearchIcon color="action" sx={{ mr: 1 }} />,
-                sx: { backgroundColor: '#fff' }
-              }}
+            <Box
               sx={{
+                position: 'relative',
+                flex: 1,
                 minWidth: 300,
-                flex: 1
+                backgroundColor: '#fff',
+                borderRadius: 2,
+                boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                '&:hover': {
+                  boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
+                },
+                transition: 'all 0.3s ease'
+              }}
+            >
+              <TextField
+                fullWidth
+                size="small"
+                placeholder="Tìm kiếm theo tên, mã rủi ro..."
+                value={searchName}
+                onChange={(e) => setSearchName(e.target.value)}
+                InputProps={{
+                  startAdornment: (
+                    <SearchIcon 
+                      sx={{ 
+                        color: '#1976d2',
+                        mr: 1,
+                        fontSize: '1.25rem'
               }}
             />
+                  ),
+                  endAdornment: searchName && (
+                    <IconButton
+                      size="small"
+                      onClick={() => setSearchName('')}
+                      sx={{
+                        color: '#757575',
+                        '&:hover': {
+                          color: '#1976d2',
+                          backgroundColor: 'rgba(25, 118, 210, 0.04)'
+                        }
+                      }}
+                    >
+                      <CloseIcon fontSize="small" />
+                    </IconButton>
+                  ),
+                  sx: {
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#e0e0e0'
+                    },
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#1976d2'
+                    },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#1976d2',
+                      borderWidth: '1px'
+                    },
+                    '& input': {
+                      py: 1.5,
+                      fontSize: '0.875rem'
+                    }
+                  }
+                }}
+              />
+              {searchName && (
+                <Typography
+                  variant="caption"
+                  sx={{
+                    position: 'absolute',
+                    bottom: -20,
+                    left: 0,
+                    color: '#666',
+                    fontSize: '0.75rem'
+                  }}
+                >
+                  Đang tìm kiếm: {searchName}
+                </Typography>
+              )}
+            </Box>
 
             <FormControl
               size="small"
               sx={{
                 minWidth: 200,
-                backgroundColor: '#fff'
+                backgroundColor: '#fff',
+                borderRadius: 2,
+                boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                '&:hover': {
+                  boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
+                },
+                transition: 'all 0.3s ease'
               }}
             >
               <InputLabel>Loại rủi ro</InputLabel>
               <Select
-                value={riskType}
+                value={selectedRiskType}
+                onChange={(e) => setSelectedRiskType(e.target.value)}
                 label="Loại rủi ro"
-                onChange={(e) => setRiskType(e.target.value)}
+                sx={{
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#e0e0e0'
+                  },
+                  '&:hover .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#1976d2'
+                  },
+                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#1976d2',
+                    borderWidth: '1px'
+                  }
+                }}
               >
-                <MenuItem value="all">Tất cả</MenuItem>
-                <MenuItem value="operation">Vận hành</MenuItem>
-                <MenuItem value="technical">Kỹ thuật</MenuItem>
-                <MenuItem value="security">Bảo mật</MenuItem>
-                <MenuItem value="financial">Tài chính</MenuItem>
-                <MenuItem value="business">Nghiệp vụ</MenuItem>
+                <MenuItem value="">Tất cả</MenuItem>
+                {riskTypes.map((type) => (
+                  <MenuItem key={type.id} value={type.id}>
+                    {type.name}
+                  </MenuItem>
+                ))}
               </Select>
+              {selectedRiskType && (
+                <Typography
+                  variant="caption"
+                  sx={{
+                    position: 'absolute',
+                    bottom: -20,
+                    left: 0,
+                    color: '#666',
+                    fontSize: '0.75rem'
+                  }}
+                >
+                  Đang lọc theo: {getRiskTypeName(selectedRiskType)}
+                </Typography>
+              )}
             </FormControl>
 
             <FormControl
               size="small"
               sx={{
                 minWidth: 200,
-                backgroundColor: '#fff'
+                backgroundColor: '#fff',
+                borderRadius: 2,
+                boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                '&:hover': {
+                  boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
+                },
+                transition: 'all 0.3s ease'
               }}
             >
-              <InputLabel>Mức độ ảnh hưởng</InputLabel>
+              <InputLabel>Người phản ánh</InputLabel>
               <Select
-                value={riskLevel}
-                label="Mức độ ảnh hưởng"
-                onChange={(e) => setRiskLevel(e.target.value)}
+                value={selectedReflector}
+                onChange={(e) => setSelectedReflector(e.target.value)}
+                label="Người phản ánh"
+                sx={{
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#e0e0e0'
+                  },
+                  '&:hover .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#1976d2'
+                  },
+                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#1976d2',
+                    borderWidth: '1px'
+                  }
+                }}
               >
-                <MenuItem value="all">Tất cả</MenuItem>
-                <MenuItem value="high">Cao</MenuItem>
-                <MenuItem value="medium">Trung bình</MenuItem>
-                <MenuItem value="low">Thấp</MenuItem>
+                <MenuItem value="">Tất cả</MenuItem>
+                {users.map((user) => (
+                  <MenuItem key={user.id} value={user.id}>
+                    {user.name}
+                  </MenuItem>
+                ))}
               </Select>
+              {selectedReflector && (
+                <Typography
+                  variant="caption"
+                  sx={{
+                    position: 'absolute',
+                    bottom: -20,
+                    left: 0,
+                    color: '#666',
+                    fontSize: '0.75rem'
+                  }}
+                >
+                  Đang lọc theo: {getReflectorName(selectedReflector)}
+                </Typography>
+              )}
             </FormControl>
 
             <Button
@@ -316,10 +503,15 @@ const RiskList = () => {
                   borderColor: '#1565c0',
                   backgroundColor: 'rgba(25, 118, 210, 0.04)'
                 },
-                minWidth: 140
+                minWidth: 140,
+                height: 40,
+                borderRadius: 2,
+                textTransform: 'none',
+                fontWeight: 500,
+                fontSize: '0.875rem'
               }}
             >
-              XUẤT DỮ LIỆU
+              Xuất dữ liệu
             </Button>
           </Stack>
         </Paper>
@@ -397,9 +589,10 @@ const RiskList = () => {
                       <Chip
                         label={getRiskTypeName(row.riskTypeId)}
                         size="small"
+                        variant="outlined"
                         sx={{
-                          backgroundColor: getRiskTypeColor(getRiskTypeName(row.riskTypeId)),
-                          color: '#fff',
+                          borderColor: '#1976d2',
+                          color: '#1976d2',
                           fontWeight: 500,
                           fontSize: '0.75rem'
                         }}
@@ -419,12 +612,12 @@ const RiskList = () => {
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2">
-                        {formatDate(row.createDate)}
+                        {formatDate(row.reflectionDay)}
                       </Typography>
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2">
-                        {row.reflectorId || 'Chưa có'}
+                        {getReflectorName(row.reflectorId)}
                       </Typography>
                     </TableCell>
                     <TableCell>
@@ -523,28 +716,28 @@ const RiskList = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Snackbar 
+        open={snackbar.open} 
+        autoHideDuration={1000} 
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <MuiAlert
+          elevation={6}
+          variant="filled"
+          onClose={handleCloseSnackbar}
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </MuiAlert>
+      </Snackbar>
     </Box>
   );
 };
 
 // Thêm các hàm helper để xác định màu sắc
-const getRiskTypeColor = (type) => {
-  switch (type) {
-    case 'Vận hành':
-      return '#1976d2'; // Blue
-    case 'Kỹ thuật':
-      return '#9c27b0'; // Purple
-    case 'Bảo mật':
-      return '#2e7d32'; // Green
-    case 'Tài chính':
-      return '#ed6c02'; // Orange
-    case 'Nghiệp vụ':
-      return '#9c27b0'; // Purple
-    default:
-      return '#757575'; // Grey
-  }
-};
-
 const getRiskLevelColor = (level) => {
   switch (level) {
     case 'Cao':
@@ -560,20 +753,14 @@ const getRiskLevelColor = (level) => {
 
 const getRiskStageColor = (stage) => {
   switch (stage) {
-    case 'Chờ duyệt':
-      return '#ed6c02'; // Orange
-    case 'Từ chối':
-      return '#d32f2f'; // Red
-    case 'Đang thực hiện':
-      return '#1976d2'; // Blue
-    case 'Hoàn thành':
-      return '#2e7d32'; // Green
-    case 'Quá hạn':
-      return '#d32f2f'; // Red
+    case 'Đang xử lý':
+      return '#2196f3'; // Màu xanh dương
+    case 'Đã đóng':
+      return '#4caf50'; // Màu xanh lá
     case 'Đã hủy':
-      return '#d32f2f'; // Red
+      return '#f44336'; // Màu đỏ
     default:
-      return '#757575'; // Grey
+      return '#757575'; // Màu xám
   }
 };
 

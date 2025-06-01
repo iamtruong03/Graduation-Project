@@ -1,6 +1,8 @@
 package com.dev.truongdev.config;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
@@ -8,7 +10,10 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 
 @Configuration
 @EnableWebSocketMessageBroker
+@RequiredArgsConstructor
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+
+    private final WebSocketAuthInterceptor webSocketAuthInterceptor;
 
     /**
      * Cấu hình message broker để xử lý tin nhắn
@@ -34,12 +39,17 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         // Endpoint cho WebSocket connection
         registry.addEndpoint("/ws")
-                .setAllowedOriginPatterns("*") // Cho phép tất cả origin (chỉ cho development)
+                .setAllowedOrigins("http://localhost:3000")
                 .withSockJS(); // Fallback cho các browser không support WebSocket
         
         // Endpoint cho chat messaging
         registry.addEndpoint("/chat")
                 .setAllowedOriginPatterns("*")
                 .withSockJS();
+    }
+
+    @Override
+    public void configureClientInboundChannel(ChannelRegistration registration) {
+        registration.interceptors(webSocketAuthInterceptor);
     }
 }

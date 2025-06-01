@@ -31,7 +31,7 @@ import {
 import SearchIcon from '@mui/icons-material/Search';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { Add as AddIcon } from '@mui/icons-material';
+import { Add as AddIcon, Close as CloseIcon } from '@mui/icons-material';
 import categoryService from '../../services/categoryService';
 import categoryTypeService from '../../services/categoryTypeService';
 
@@ -226,7 +226,7 @@ const CategoryManagement = () => {
     try {
       const filter = {
         search: searchTerm,
-        type: categoryType !== 'all' ? categoryType : undefined
+        categoryTypeId: categoryType !== 'all' ? categoryType : undefined
       };
       const response = await categoryService.searchCategories(filter, page - 1, rowsPerPage);
       setCategories(response.data.content);
@@ -286,41 +286,149 @@ const CategoryManagement = () => {
             gap: 2
           }}
         >
-          <TextField
-            size="small"
-            placeholder="Tìm kiếm theo mã, tên danh mục"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            InputProps={{
-              endAdornment: <SearchIcon color="action" />
-            }}
-            sx={{ 
-              minWidth: 250,
-              backgroundColor: '#fff'
-            }}
-          />
-          
-          <FormControl 
-            size="small" 
-            sx={{ 
-              minWidth: 200,
-              backgroundColor: '#fff'
+          <Box
+            sx={{
+              position: 'relative',
+              flex: 1,
+              minWidth: 300,
+              backgroundColor: '#fff',
+              borderRadius: 2,
+              boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+              '&:hover': {
+                boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
+              },
+              transition: 'all 0.3s ease'
             }}
           >
-            <InputLabel>Loại danh mục</InputLabel>
-            <Select
-              value={categoryType}
-              label="Loại danh mục"
-              onChange={(e) => setCategoryType(e.target.value)}
+            <TextField
+              fullWidth
+              size="small"
+              placeholder="Tìm kiếm theo mã, tên danh mục..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <SearchIcon 
+                    sx={{ 
+                      color: '#1976d2',
+                      mr: 1,
+                      fontSize: '1.25rem'
+                    }} 
+                  />
+                ),
+                endAdornment: searchTerm && (
+                  <IconButton
+                    size="small"
+                    onClick={() => setSearchTerm('')}
+                    sx={{
+                      color: '#757575',
+                      '&:hover': {
+                        color: '#1976d2',
+                        backgroundColor: 'rgba(25, 118, 210, 0.04)'
+                      }
+                    }}
+                  >
+                    <CloseIcon fontSize="small" />
+                  </IconButton>
+                ),
+                sx: {
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#e0e0e0'
+                  },
+                  '&:hover .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#1976d2'
+                  },
+                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#1976d2',
+                    borderWidth: '1px'
+                  },
+                  '& input': {
+                    py: 1.5,
+                    fontSize: '0.875rem'
+                  }
+                }
+              }}
+            />
+            {searchTerm && (
+              <Typography
+                variant="caption"
+                sx={{
+                  position: 'absolute',
+                  bottom: -20,
+                  left: 0,
+                  color: '#666',
+                  fontSize: '0.75rem'
+                }}
+              >
+                Đang tìm kiếm: {searchTerm}
+              </Typography>
+            )}
+          </Box>
+
+          <Box
+            sx={{
+              position: 'relative',
+              minWidth: 200,
+              backgroundColor: '#fff',
+              borderRadius: 2,
+              boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+              '&:hover': {
+                boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
+              },
+              transition: 'all 0.3s ease'
+            }}
+          >
+            <FormControl 
+              fullWidth
+              size="small"
+              sx={{
+                '& .MuiOutlinedInput-notchedOutline': {
+                  borderColor: '#e0e0e0'
+                },
+                '&:hover .MuiOutlinedInput-notchedOutline': {
+                  borderColor: '#1976d2'
+                },
+                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                  borderColor: '#1976d2',
+                  borderWidth: '1px'
+                }
+              }}
             >
-              <MenuItem value="all">Tất cả</MenuItem>
-              {categoryTypes.map((type) => (
-                <MenuItem key={type.id} value={type.id}>
-                  {type.name}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+              <InputLabel>Loại danh mục</InputLabel>
+              <Select
+                value={categoryType}
+                label="Loại danh mục"
+                onChange={(e) => setCategoryType(e.target.value)}
+                sx={{
+                  '& .MuiSelect-select': {
+                    py: 1.5,
+                    fontSize: '0.875rem'
+                  }
+                }}
+              >
+                <MenuItem value="all">Tất cả</MenuItem>
+                {categoryTypes.map((type) => (
+                  <MenuItem key={type.id} value={type.id}>
+                    {type.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            {categoryType !== 'all' && (
+              <Typography
+                variant="caption"
+                sx={{
+                  position: 'absolute',
+                  bottom: -20,
+                  left: 0,
+                  color: '#666',
+                  fontSize: '0.75rem'
+                }}
+              >
+                Đang lọc theo: {getCategoryTypeName(categoryType)}
+              </Typography>
+            )}
+          </Box>
 
           <Button
             variant="contained"
@@ -331,10 +439,15 @@ const CategoryManagement = () => {
               backgroundColor: '#1976d2',
               '&:hover': {
                 backgroundColor: '#1565c0'
-              }
+              },
+              height: 40,
+              borderRadius: 2,
+              textTransform: 'none',
+              fontWeight: 500,
+              fontSize: '0.875rem'
             }}
           >
-            THÊM DANH MỤC
+            Thêm danh mục
           </Button>
         </Stack>
 

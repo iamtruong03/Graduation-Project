@@ -3,6 +3,7 @@ package com.dev.truongdev.repo;
 import com.dev.truongdev.entity.Department;
 import com.dev.truongdev.entity.Project;
 import com.dev.truongdev.xdevbase.repo.XDevBaseRepo;
+import java.util.Date;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
@@ -20,10 +21,14 @@ public interface ProjectRepo extends XDevBaseRepo<Project> {
             "WHERE p.status = :status " +
             "AND (LOWER(p.code) LIKE LOWER(CONCAT('%', :search, '%')) " +
             "OR LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+            "AND (:projectTypeId IS NULL OR p.projectTypeId = :projectTypeId) " +
+            "AND (:managerId IS NULL OR p.managerId = :managerId) " +
             "ORDER BY p.createDate DESC")
     Page<Project> searchByCodeOrName(
             @Param("status") Integer status,
             @Param("search") String search,
+            @Param("projectTypeId") Integer projectTypeId,
+            @Param("managerId") String managerId,
             Pageable pageable
     );
 
@@ -32,11 +37,15 @@ public interface ProjectRepo extends XDevBaseRepo<Project> {
             "AND p.departmentId IN :departmentIds " +
             "AND (LOWER(p.code) LIKE LOWER(CONCAT('%', :search, '%')) " +
             "OR LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+            "AND (:projectTypeId IS NULL OR p.projectTypeId = :projectTypeId) " +
+            "AND (:managerId IS NULL OR p.managerId = :managerId) " +
             "ORDER BY p.createDate DESC")
     Page<Project> searchByCodeOrNameAndDepartments(
             @Param("status") Integer status,
             @Param("search") String search,
             @Param("departmentIds") List<Long> departmentIds,
+            @Param("projectTypeId") Integer projectTypeId,
+            @Param("managerId") String managerId,
             Pageable pageable
     );
 
@@ -68,4 +77,26 @@ public interface ProjectRepo extends XDevBaseRepo<Project> {
     List<Project> findByStatusAndDepartmentIdIn(
         Integer status, List<Long> departmentIds
     );
+
+    // Đếm số dự án theo danh sách phòng ban
+    Long countByDepartmentIdIn(List<Long> departmentIds);
+
+    // Đếm số dự án theo danh sách phòng ban và trạng thái
+    Long countByDepartmentIdInAndState(List<Long> departmentIds, Integer state);
+
+    // Đếm số dự án của một phòng ban
+    Long countByDepartmentId(Long departmentId);
+
+    // Đếm số dự án của một phòng ban theo trạng thái
+    Long countByDepartmentIdAndState(Long departmentId, Integer state);
+
+    // Lấy thống kê tiến độ dự án theo tháng cho nhiều phòng ban
+    Integer countByDepartmentIdInAndStatusAndStartDateBetween(
+        List<Long> departmentIds, Integer status, Date startDate, Date endDate
+    );
+    // Lấy thống kê tiến độ dự án theo tháng cho 1 phòng ban
+    Integer countByDepartmentIdAndStatusAndStartDateBetween(
+        Long departmentId, Integer status, Date startDate, Date endDate
+    );
+
 }

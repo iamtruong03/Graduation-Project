@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FileDownload as FileDownloadIcon, Search as SearchIcon, Edit as EditIcon, Visibility as VisibilityIcon, Delete as DeleteIcon, CheckCircle as ApproveIcon, Assignment as AssignmentIcon, Add as AddIcon, Cancel as CancelIcon } from '@mui/icons-material';
+import { FileDownload as FileDownloadIcon, Search as SearchIcon, Edit as EditIcon, Visibility as VisibilityIcon, Delete as DeleteIcon, CheckCircle as ApproveIcon, Assignment as AssignmentIcon, Add as AddIcon, Cancel as CancelIcon, Close as CloseIcon } from '@mui/icons-material';
 import {
   Box,
   Button,
@@ -36,16 +36,14 @@ import taskService from '../../services/taskService';
 import staffService from '../../services/staffService';
 import departmentService from '../../services/departmentService';
 import projectService from '../../services/projectService';
+import riskService from '../../services/riskService';
 
 const TaskList = () => {
   const [tasks, setTasks] = useState([]);
   const [totalPages, setTotalPages] = useState(1);
-  const [searchCode, setSearchCode] = useState('');
   const [searchName, setSearchName] = useState('');
-  const [taskType, setTaskType] = useState('all');
-  const [taskStatus, setTaskStatus] = useState('all');
-  const [taskPriority, setTaskPriority] = useState('all');
-  const [status, setStatus] = useState('all');
+  const [selectedTaskType, setSelectedTaskType] = useState('');
+  const [selectedAssignee, setSelectedAssignee] = useState('');
   const [page, setPage] = useState(1);
   const [openDialog, setOpenDialog] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
@@ -72,6 +70,8 @@ const TaskList = () => {
   const [projects, setProjects] = useState({});
   const projectsRef = useRef({});
   const [projectNames, setProjectNames] = useState({});
+  const [risks, setRisks] = useState({});
+  const risksRef = useRef({});
 
   const fetchTasks = async () => {
     setLoading(true);
@@ -79,12 +79,11 @@ const TaskList = () => {
     try {
       const filter = {
         search: searchName,
-        taskType: taskType !== 'all' ? taskType : null,
-        status: taskStatus !== 'all' ? taskStatus : null,
-        priority: taskPriority !== 'all' ? taskPriority : null
+        taskTypeId: selectedTaskType || undefined,
+        assigneeId: selectedAssignee || undefined
       };
 
-      const response = await taskService.searchTasks(filter, page - 1, rowsPerPage);
+      const response = await taskService.searchTasks(filter, page > 0 ? page - 1 : 0, rowsPerPage);
       setTasks(response.data.content);
       setTotalPages(response.data.totalPages);
     } catch (err) {
@@ -188,14 +187,36 @@ const TaskList = () => {
     }
   };
 
+  const fetchRisks = async () => {
+    try {
+      const response = await riskService.getAllRisks();
+      if (response && response.data) {
+        const riskMap = {};
+        response.data.forEach(risk => {
+          if (risk && risk.id) {
+            riskMap[risk.id] = {
+              name: risk.name,
+              code: risk.code
+            };
+          }
+        });
+        risksRef.current = riskMap;
+        setRisks(riskMap);
+      }
+    } catch (err) {
+      console.error('Error fetching risks:', err);
+    }
+  };
+
   useEffect(() => {
     fetchTasks();
     fetchPendingCount();
     fetchUsers();
     fetchDepartments();
     fetchProjects();
+    fetchRisks();
     // eslint-disable-next-line
-  }, [page, searchName]);
+  }, [page, searchName, selectedTaskType, selectedAssignee]);
 
   useEffect(() => {
     if (openPendingDialog) {
@@ -242,7 +263,7 @@ const TaskList = () => {
   };
 
   const handlePageChange = (event, newPage) => {
-    setPage(newPage);
+    setPage(newPage > 0 ? newPage : 1);
   };
 
   const handleApprove = (id) => {
@@ -295,10 +316,7 @@ const TaskList = () => {
     try {
       setLoading(true);
       const filter = {
-        search: searchName,
-        taskType: taskType !== 'all' ? taskType : null,
-        status: taskStatus !== 'all' ? taskStatus : null,
-        priority: taskPriority !== 'all' ? taskPriority : null
+        search: searchName
       };
 
       const response = await taskService.exportTasks(filter);
@@ -406,6 +424,35 @@ const TaskList = () => {
     return projectId;
   };
 
+  const getRiskName = (riskId) => {
+    if (!riskId) return 'Không xác định';
+    if (risks[riskId]) return risks[riskId].name;
+    
+    // Nếu chưa có trong cache, gọi API để lấy thông tin
+    riskService.getRiskById(riskId).then(res => {
+      if (res?.data?.name) {
+        setRisks(prev => ({
+          ...prev,
+          [riskId]: {
+            name: res.data.name,
+            code: res.data.code
+          }
+        }));
+      }
+    });
+    return riskId;
+  };
+
+  const handleTaskTypeChange = (event) => {
+    setSelectedTaskType(event.target.value);
+    setPage(1); // Reset về trang 1 khi thay đổi bộ lọc
+  };
+
+  const handleAssigneeChange = (event) => {
+    setSelectedAssignee(event.target.value);
+    setPage(1); // Reset về trang 1 khi thay đổi bộ lọc
+  };
+
   return (
     <Box sx={{ p: 4, backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
       <Paper elevation={3} sx={{ p: 3, borderRadius: 2, backgroundColor: '#fff' }}>
@@ -482,37 +529,120 @@ const TaskList = () => {
               gap: 2
             }}
           >
+            <Box
+              sx={{
+                position: 'relative',
+                flex: 1,
+                minWidth: 300,
+                backgroundColor: '#fff',
+                borderRadius: 2,
+                boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                '&:hover': {
+                  boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
+                },
+                transition: 'all 0.3s ease'
+            }}
+          >
             <TextField
+                fullWidth
               size="small"
-              placeholder="Tên, mã công việc"
+                placeholder="Tìm kiếm theo tên, mã công việc..."
               value={searchName}
               onChange={(e) => setSearchName(e.target.value)}
               InputProps={{
-                startAdornment: <SearchIcon color="action" sx={{ mr: 1 }} />,
-                sx: { backgroundColor: '#fff' }
-              }}
+                  startAdornment: (
+                    <SearchIcon 
+                      sx={{ 
+                        color: '#1976d2',
+                        mr: 1,
+                        fontSize: '1.25rem'
+                      }} 
+                    />
+                  ),
+                  endAdornment: searchName && (
+                    <IconButton
+                      size="small"
+                      onClick={() => setSearchName('')}
               sx={{
-                minWidth: 300,
-                flex: 1
+                        color: '#757575',
+                        '&:hover': {
+                          color: '#1976d2',
+                          backgroundColor: 'rgba(25, 118, 210, 0.04)'
+                        }
+                      }}
+                    >
+                      <CloseIcon fontSize="small" />
+                    </IconButton>
+                  ),
+                  sx: {
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#e0e0e0'
+                    },
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#1976d2'
+                    },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#1976d2',
+                      borderWidth: '1px'
+                    },
+                    '& input': {
+                      py: 1.5,
+                      fontSize: '0.875rem'
+                    }
+                  }
               }}
             />
+              {searchName && (
+                <Typography
+                  variant="caption"
+                  sx={{
+                    position: 'absolute',
+                    bottom: -20,
+                    left: 0,
+                    color: '#666',
+                    fontSize: '0.75rem'
+                  }}
+                >
+                  Đang tìm kiếm: {searchName}
+                </Typography>
+              )}
+            </Box>
 
             <FormControl
               size="small"
               sx={{
                 minWidth: 200,
-                backgroundColor: '#fff'
+                backgroundColor: '#fff',
+                borderRadius: 2,
+                boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                '&:hover': {
+                  boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
+                },
+                transition: 'all 0.3s ease'
               }}
             >
               <InputLabel>Loại công việc</InputLabel>
               <Select
-                value={taskType}
+                value={selectedTaskType}
+                onChange={handleTaskTypeChange}
                 label="Loại công việc"
-                onChange={(e) => setTaskType(e.target.value)}
+                sx={{
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#e0e0e0'
+                  },
+                  '&:hover .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#1976d2'
+                  },
+                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#1976d2',
+                    borderWidth: '1px'
+                  }
+                }}
               >
-                <MenuItem value="all">Tất cả</MenuItem>
-                <MenuItem value="3">Công việc phòng ban</MenuItem>
+                <MenuItem value="">Tất cả</MenuItem>
+                <MenuItem value="1">Công việc rủi ro</MenuItem>
                 <MenuItem value="2">Công việc dự án</MenuItem>
+                <MenuItem value="3">Công việc phòng ban</MenuItem>
               </Select>
             </FormControl>
 
@@ -520,42 +650,37 @@ const TaskList = () => {
               size="small"
               sx={{
                 minWidth: 200,
-                backgroundColor: '#fff'
+                backgroundColor: '#fff',
+                borderRadius: 2,
+                boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                '&:hover': {
+                  boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
+                },
+                transition: 'all 0.3s ease'
               }}
             >
-              <InputLabel>Trạng thái</InputLabel>
+              <InputLabel>Người thực hiện</InputLabel>
               <Select
-                value={taskStatus}
-                label="Trạng thái"
-                onChange={(e) => setTaskStatus(e.target.value)}
-              >
-                <MenuItem value="all">Tất cả</MenuItem>
-                <MenuItem value="pending">Chờ duyệt</MenuItem>
-                <MenuItem value="rejected">Từ chối</MenuItem>
-                <MenuItem value="in_progress">Đang thực hiện</MenuItem>
-                <MenuItem value="completed">Hoàn thành</MenuItem>
-                <MenuItem value="overdue">Quá hạn</MenuItem>
-                <MenuItem value="cancelled">Đã hủy</MenuItem>
-              </Select>
-            </FormControl>
-
-            <FormControl
-              size="small"
+                value={selectedAssignee}
+                onChange={handleAssigneeChange}
+                label="Người thực hiện"
               sx={{
-                minWidth: 200,
-                backgroundColor: '#fff'
-              }}
-            >
-              <InputLabel>Mức độ ưu tiên</InputLabel>
-              <Select
-                value={taskPriority}
-                label="Mức độ ưu tiên"
-                onChange={(e) => setTaskPriority(e.target.value)}
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#e0e0e0'
+                  },
+                  '&:hover .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#1976d2'
+                  },
+                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#1976d2',
+                    borderWidth: '1px'
+                  }
+                }}
               >
-                <MenuItem value="all">Tất cả</MenuItem>
-                <MenuItem value="high">Cao</MenuItem>
-                <MenuItem value="medium">Trung bình</MenuItem>
-                <MenuItem value="low">Thấp</MenuItem>
+                <MenuItem value="">Tất cả</MenuItem>
+                {Object.entries(users).map(([id, name]) => (
+                  <MenuItem key={id} value={id}>{name}</MenuItem>
+                ))}
               </Select>
             </FormControl>
 
@@ -570,10 +695,15 @@ const TaskList = () => {
                   borderColor: '#1565c0',
                   backgroundColor: 'rgba(25, 118, 210, 0.04)'
                 },
-                minWidth: 140
+                minWidth: 140,
+                height: 40,
+                borderRadius: 2,
+                textTransform: 'none',
+                fontWeight: 500,
+                fontSize: '0.875rem'
               }}
             >
-              XUẤT DỮ LIỆU
+              Xuất dữ liệu
             </Button>
           </Stack>
         </Paper>
@@ -628,7 +758,7 @@ const TaskList = () => {
                       }
                     }}
                   >
-                    <TableCell>{(page - 1) * rowsPerPage + index + 1}</TableCell>
+                    <TableCell>{((page - 1) * rowsPerPage) + index + 1}</TableCell>
                     <TableCell>
                       <Typography variant="body2" sx={{ fontWeight: 500 }}>
                         {row.code}
@@ -657,7 +787,7 @@ const TaskList = () => {
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2">
-                        {row.taskTypeId === 1 ? (row.riskName || row.riskId || 'N/A') :
+                        {row.taskTypeId === 1 ? getRiskName(row.riskId) :
                          row.taskTypeId === 2 ? getProjectName(row.projectId, row.projectName) :
                          row.taskTypeId === 3 ? getDepartmentName(row.departmentId) : 'N/A'}
                       </Typography>
@@ -724,18 +854,18 @@ const TaskList = () => {
 
                         {row.state === 0 && (
                           <>
-                            <IconButton
-                              size="small"
-                              onClick={() => handleApprove(row.id)}
-                              sx={{
-                                color: '#1976d2',
-                                '&:hover': {
-                                  backgroundColor: 'rgba(25, 118, 210, 0.04)'
-                                }
-                              }}
-                            >
-                              <ApproveIcon fontSize="small" />
-                            </IconButton>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleApprove(row.id)}
+                            sx={{
+                              color: '#1976d2',
+                              '&:hover': {
+                                backgroundColor: 'rgba(25, 118, 210, 0.04)'
+                              }
+                            }}
+                          >
+                            <ApproveIcon fontSize="small" />
+                          </IconButton>
                             <IconButton
                               size="small"
                               onClick={() => handleReject(row.id)}
@@ -1003,31 +1133,31 @@ const TaskList = () => {
                           </TableCell>
                           <TableCell align="center">
                             <Stack direction="row" spacing={1} justifyContent="center">
-                              <IconButton
-                                size="small"
-                                component={Link}
-                                to={`/task/detail/${task.id}`}
+                            <IconButton
+                              size="small"
+                              component={Link}
+                              to={`/task/detail/${task.id}`}
                                 sx={{
                                   color: '#1976d2',
                                   '&:hover': {
                                     backgroundColor: 'rgba(25, 118, 210, 0.04)'
                                   }
                                 }}
-                              >
-                                <VisibilityIcon fontSize="small" />
-                              </IconButton>
-                              <IconButton
-                                size="small"
-                                onClick={() => handleApprove(task.id)}
+                            >
+                              <VisibilityIcon fontSize="small" />
+                            </IconButton>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleApprove(task.id)}
                                 sx={{
                                   color: '#2e7d32',
                                   '&:hover': {
                                     backgroundColor: 'rgba(46, 125, 50, 0.04)'
                                   }
                                 }}
-                              >
-                                <ApproveIcon fontSize="small" />
-                              </IconButton>
+                            >
+                              <ApproveIcon fontSize="small" />
+                            </IconButton>
                               <IconButton
                                 size="small"
                                 onClick={() => handleReject(task.id)}

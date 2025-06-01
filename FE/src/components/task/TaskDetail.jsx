@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import taskService from '../../services/taskService';
 import projectService from '../../services/projectService';
 import departmentService from '../../services/departmentService';
 import staffService from '../../services/staffService';
+import riskService from '../../services/riskService';
 import TaskHistory from './TaskHistory';
 import {
   Box,
@@ -39,7 +40,7 @@ import {
 
 const getStatusColor = (state) => {
   if (!state) return 'default';
-
+  
   switch (state) {
     case 0: // Chờ duyệt
       return 'warning';
@@ -79,7 +80,7 @@ const getStatusName = (state) => {
 
 const getPriorityColor = (priorityId) => {
   if (!priorityId) return 'default';
-
+  
   switch (priorityId) {
     case 3: // Cao
       return 'error';
@@ -135,13 +136,14 @@ const TaskDetail = () => {
   const [project, setProject] = useState(null);
   const [departmentName, setDepartmentName] = useState(null);
   const [assigneeName, setAssigneeName] = useState(null);
+  const [risk, setRisk] = useState(null);
+  const riskFetchedRef = useRef(false);
 
   // Fetch lists for dropdowns in edit mode
   const [projectList, setProjectList] = useState([]);
   const [assigneeList, setAssigneeList] = useState([]);
   const [departmentList, setDepartmentList] = useState([]);
   const [approverList, setApproverList] = useState([]);
-  const [riskList, setRiskList] = useState([]);
 
   const fetchAssigneeName = async (departmentId, assigneeId) => {
     if (!departmentId || !assigneeId) return;
@@ -167,11 +169,29 @@ const TaskDetail = () => {
           taskService.getTaskById(id),
           taskService.getTaskHistory(id)
         ]);
-
+        
         const taskData = taskDataResponse?.data;
         const historyData = historyDataResponse?.data;
 
         if (taskData) {
+          console.log('Task Data:', taskData);
+
+          // Fetch risk details first if task is associated with a risk
+          let riskData = null;
+          if (taskData.riskId) {
+            try {
+              const riskResponse = await riskService.getRiskById(taskData.riskId);
+              console.log('Risk Response:', riskResponse);
+              if (riskResponse) { // Bỏ .data?.data vì response trả về trực tiếp object risk
+                riskData = riskResponse;
+                console.log('Risk Data:', riskData);
+                setRisk(riskData);
+              }
+            } catch (err) {
+              console.error('Error fetching risk details:', err);
+            }
+          }
+
           const mappedTask = {
             id: taskData.id,
             code: taskData.code,
@@ -201,9 +221,10 @@ const TaskDetail = () => {
             projectName: taskData.projectName || null,
             assigneeName: taskData.assigneeName || null,
             approverName: taskData.approverName || null,
-            riskName: taskData.riskName || null,
+            riskName: riskData?.name || taskData.riskName || null,
           };
 
+          console.log('Mapped Task:', mappedTask);
           setTask(mappedTask);
 
           // Fetch project details if task is associated with a project
@@ -263,7 +284,6 @@ const TaskDetail = () => {
       fetchProjectList();
       fetchDepartmentList();
       fetchApproverList();
-      fetchRiskList();
       if (editedTask?.departmentId) {
         fetchAssigneeListByDepartment(editedTask.departmentId);
       }
@@ -300,17 +320,6 @@ const TaskDetail = () => {
       }
     } catch (error) {
       console.error('Error fetching approvers:', error);
-    }
-  };
-
-  const fetchRiskList = async () => {
-    try {
-      const response = await taskService.getAllRisks(); // Assuming a service method to get all risks
-      if (response.data) {
-        setRiskList(response.data);
-      }
-    } catch (error) {
-      console.error('Error fetching risks:', error);
     }
   };
 
@@ -436,39 +445,120 @@ const TaskDetail = () => {
         const historyData = historyDataResponse?.data;
 
         if (taskData) {
-          const mappedTask = {
-            id: taskData.id,
-            code: taskData.code,
-            name: taskData.name,
-            description: taskData.description || '',
-            status: taskData.status,
-            createDate: taskData.createDate,
-            modifiedDate: taskData.modifiedDate,
-            version: taskData.version,
-            createBy: taskData.createBy,
-            updateBy: taskData.updateBy,
-            state: taskData.state,
-            taskTypeId: taskData.taskTypeId,
-            riskId: taskData.riskId,
-            departmentId: taskData.departmentId,
-            projectId: taskData.projectId,
-            priorityId: taskData.priorityId,
-            startDate: taskData.startDate,
-            dueDate: taskData.dueDate,
-            completedDate: taskData.completedDate,
-            assigneeId: taskData.assigneeId,
-            approverId: taskData.approverId,
-            isApproved: taskData.isApproved,
-            statusName: getStatusName(taskData.state),
-            priorityName: getPriorityName(taskData.priorityId),
-            departmentName: taskData.departmentName || null,
-            projectName: taskData.projectName || null,
-            assigneeName: taskData.assigneeName || null,
-            approverName: taskData.approverName || null,
-            riskName: taskData.riskName || null,
-          };
-
-          setTask(mappedTask);
+          if (taskData) {
+            // Fetch risk details first if task is associated with a risk
+            if (taskData.riskId) {
+              try {
+                const riskResponse = await riskService.getRiskById(taskData.riskId);
+                if (riskResponse?.data) {
+                  const riskData = riskResponse.data;
+                  setRisk(riskData);
+                  // Tạo mappedTask sau khi có dữ liệu risk
+                  const mappedTask = {
+                    id: taskData.id,
+                    code: taskData.code,
+                    name: taskData.name,
+                    description: taskData.description || '',
+                    status: taskData.status,
+                    createDate: taskData.createDate,
+                    modifiedDate: taskData.modifiedDate,
+                    version: taskData.version,
+                    createBy: taskData.createBy,
+                    updateBy: taskData.updateBy,
+                    state: taskData.state,
+                    taskTypeId: taskData.taskTypeId,
+                    riskId: taskData.riskId,
+                    departmentId: taskData.departmentId,
+                    projectId: taskData.projectId,
+                    priorityId: taskData.priorityId,
+                    startDate: taskData.startDate,
+                    dueDate: taskData.dueDate,
+                    completedDate: taskData.completedDate,
+                    assigneeId: taskData.assigneeId,
+                    approverId: taskData.approverId,
+                    isApproved: taskData.isApproved,
+                    statusName: getStatusName(taskData.state),
+                    priorityName: getPriorityName(taskData.priorityId),
+                    departmentName: taskData.departmentName || null,
+                    projectName: taskData.projectName || null,
+                    assigneeName: taskData.assigneeName || null,
+                    approverName: taskData.approverName || null,
+                    riskName: risk?.name || taskData.riskName || null,
+                  };
+                  setTask(mappedTask);
+                }
+              } catch (err) {
+                console.error('Error fetching risk details:', err);
+                // Nếu không lấy được risk data, vẫn tạo mappedTask với riskName từ taskData
+                const mappedTask = {
+                  id: taskData.id,
+                  code: taskData.code,
+                  name: taskData.name,
+                  description: taskData.description || '',
+                  status: taskData.status,
+                  createDate: taskData.createDate,
+                  modifiedDate: taskData.modifiedDate,
+                  version: taskData.version,
+                  createBy: taskData.createBy,
+                  updateBy: taskData.updateBy,
+                  state: taskData.state,
+                  taskTypeId: taskData.taskTypeId,
+                  riskId: taskData.riskId,
+                  departmentId: taskData.departmentId,
+                  projectId: taskData.projectId,
+                  priorityId: taskData.priorityId,
+                  startDate: taskData.startDate,
+                  dueDate: taskData.dueDate,
+                  completedDate: taskData.completedDate,
+                  assigneeId: taskData.assigneeId,
+                  approverId: taskData.approverId,
+                  isApproved: taskData.isApproved,
+                  statusName: getStatusName(taskData.state),
+                  priorityName: getPriorityName(taskData.priorityId),
+                  departmentName: taskData.departmentName || null,
+                  projectName: taskData.projectName || null,
+                  assigneeName: taskData.assigneeName || null,
+                  approverName: taskData.approverName || null,
+                  riskName: taskData.riskName || null,
+                };
+                setTask(mappedTask);
+              }
+            } else {
+              // Nếu không có riskId, tạo mappedTask bình thường
+              const mappedTask = {
+                id: taskData.id,
+                code: taskData.code,
+                name: taskData.name,
+                description: taskData.description || '',
+                status: taskData.status,
+                createDate: taskData.createDate,
+                modifiedDate: taskData.modifiedDate,
+                version: taskData.version,
+                createBy: taskData.createBy,
+                updateBy: taskData.updateBy,
+                state: taskData.state,
+                taskTypeId: taskData.taskTypeId,
+                riskId: taskData.riskId,
+                departmentId: taskData.departmentId,
+                projectId: taskData.projectId,
+                priorityId: taskData.priorityId,
+                startDate: taskData.startDate,
+                dueDate: taskData.dueDate,
+                completedDate: taskData.completedDate,
+                assigneeId: taskData.assigneeId,
+                approverId: taskData.approverId,
+                isApproved: taskData.isApproved,
+                statusName: getStatusName(taskData.state),
+                priorityName: getPriorityName(taskData.priorityId),
+                departmentName: taskData.departmentName || null,
+                projectName: taskData.projectName || null,
+                assigneeName: taskData.assigneeName || null,
+                approverName: taskData.approverName || null,
+                riskName: null,
+              };
+              setTask(mappedTask);
+            }
+          }
           setTaskHistory(historyData || []);
 
           // Fetch project details if task is associated with a project
@@ -499,6 +589,9 @@ const TaskDetail = () => {
           if (taskData.departmentId && taskData.assigneeId) {
             await fetchAssigneeName(taskData.departmentId, taskData.assigneeId);
           }
+        } else {
+          setTask(null);
+          setError('Không tìm thấy thông tin công việc cho ID này.');
         }
 
         setIsEditing(false);
@@ -687,12 +780,12 @@ const TaskDetail = () => {
                         sx={{ minWidth: 150 }}
                       />
                     ) : (
-                      <Chip
-                        icon={<AssignmentIcon />}
+                    <Chip
+                      icon={<AssignmentIcon />}
                         label={task?.code || ''}
-                        variant="outlined"
-                        sx={{ mr: 1 }}
-                      />
+                      variant="outlined"
+                      sx={{ mr: 1 }}
+                    />
                     )}
                     {isEditing ? (
                       <FormControl sx={{ minWidth: 150 }} size="small" required>
@@ -763,9 +856,9 @@ const TaskDetail = () => {
                           <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                             Rủi ro
                           </Typography>
-                          <Typography>
-                            {task?.riskName || task?.riskId || 'N/A'}
-                          </Typography>
+                            <Typography>
+                            {risk?.name || task?.riskName || 'N/A'}
+                            </Typography>
                         </Box>
                       )}
 
@@ -786,9 +879,9 @@ const TaskDetail = () => {
                             <BusinessIcon sx={{ fontSize: 16, mr: 1, verticalAlign: 'text-bottom' }} />
                             Phòng ban
                           </Typography>
-                          <Typography>
+                            <Typography>
                             {departmentName || task?.departmentName || task?.departmentId || 'N/A'}
-                          </Typography>
+                            </Typography>
                         </Box>
                       )}
                     </Stack>
@@ -854,7 +947,7 @@ const TaskDetail = () => {
                               InputLabelProps={{ shrink: true }}
                               required
                             />
-                            
+
                           </Stack>
                         ) : (
                           <Typography>

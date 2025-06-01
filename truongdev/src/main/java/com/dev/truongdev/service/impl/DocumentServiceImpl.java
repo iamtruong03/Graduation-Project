@@ -74,6 +74,43 @@ public class DocumentServiceImpl extends XDevBaseServiceImpl<Document, DocumentF
     }
 
     /**
+     * Xác định MIME type dựa trên phần mở rộng file
+     */
+    private String getMimeType(String fileExtension) {
+        switch (fileExtension.toLowerCase()) {
+            case ".pdf":
+                return "application/pdf";
+            case ".doc":
+                return "application/msword";
+            case ".docx":
+                return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+            case ".xls":
+                return "application/vnd.ms-excel";
+            case ".xlsx":
+                return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+            case ".ppt":
+                return "application/vnd.ms-powerpoint";
+            case ".pptx":
+                return "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+            case ".txt":
+                return "text/plain";
+            case ".jpg":
+            case ".jpeg":
+                return "image/jpeg";
+            case ".png":
+                return "image/png";
+            case ".gif":
+                return "image/gif";
+            case ".zip":
+                return "application/zip";
+            case ".rar":
+                return "application/x-rar-compressed";
+            default:
+                return "application/octet-stream";
+        }
+    }
+
+    /**
      * Upload tài liệu mới lên hệ thống.
      * - Tạo tên file duy nhất
      * - Lưu file vào thư mục upload
@@ -91,38 +128,35 @@ public class DocumentServiceImpl extends XDevBaseServiceImpl<Document, DocumentF
         try {
             // Generate unique filename
             String originalFilename = file.getOriginalFilename();
-            String fileExtension = originalFilename.substring(originalFilename.lastIndexOf("."));
+            if (originalFilename == null || originalFilename.isEmpty()) {
+                throw new RuntimeException("Original filename is required");
+            }
+
+            String fileExtension = "";
+            int lastDotIndex = originalFilename.lastIndexOf(".");
+            if (lastDotIndex > 0) {
+                fileExtension = originalFilename.substring(lastDotIndex);
+            }
+
             String fileName = UUID.randomUUID().toString() + fileExtension;
 
             // Save file
             Path targetLocation = uploadDir.resolve(fileName);
             Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
 
-            // Xác định MIME type dựa trên phần mở rộng
-            String mimeType;
-            switch (fileExtension.toLowerCase()) {
-                case ".pdf":
-                    mimeType = "application/pdf";
-                    break;
-                case ".doc":
-                case ".docx":
-                    mimeType = "application/msword";
-                    break;
-                case ".xls":
-                case ".xlsx":
-                    mimeType = "application/vnd.ms-excel";
-                    break;
-                case ".txt":
-                    mimeType = "text/plain";
-                    break;
-                default:
-                    mimeType = "application/octet-stream";
+            // Xác định MIME type
+            String mimeType = getMimeType(fileExtension);
+
+            // Đảm bảo tên file có extension
+            String documentName = documentDTO.getName() != null ? documentDTO.getName() : originalFilename;
+            if (!documentName.contains(".") && !fileExtension.isEmpty()) {
+                documentName = documentName + fileExtension;
             }
 
             // Create document record
             Document document = new Document();
             document.setCode(documentDTO.getCode());
-            document.setName(documentDTO.getName() != null ? documentDTO.getName() : originalFilename);
+            document.setName(documentName);
             document.setDescription(documentDTO.getDescription());
             document.setFilePath(targetLocation.toString());
             document.setDocumentTypeId(documentDTO.getDocumentTypeId());
@@ -144,11 +178,6 @@ public class DocumentServiceImpl extends XDevBaseServiceImpl<Document, DocumentF
      * Download tài liệu từ hệ thống.
      * - Tìm thông tin tài liệu trong database
      * - Đọc file từ đường dẫn lưu trữ
-     *
-     * @param uid ID người thực hiện download
-     * @param id ID tài liệu cần download
-     * @return Byte array của file
-     * @throws RuntimeException nếu không tìm thấy tài liệu hoặc file
      */
     @Override
     public byte[] downloadDocument(String uid, Long id) {
@@ -162,32 +191,17 @@ public class DocumentServiceImpl extends XDevBaseServiceImpl<Document, DocumentF
 
             // Đọc file và trả về byte array
             byte[] fileContent = Files.readAllBytes(filePath);
-            
+
             // Nếu chưa có MIME type, xác định và lưu lại
-            if (document.getMimeType() == null) {
+            if (document.getMimeType() == null || document.getMimeType().isEmpty()) {
                 String fileName = filePath.getFileName().toString();
-                String fileExtension = fileName.substring(fileName.lastIndexOf(".") + 1).toLowerCase();
-                
-                String mimeType;
-                switch (fileExtension) {
-                    case "pdf":
-                        mimeType = "application/pdf";
-                        break;
-                    case "doc":
-                    case "docx":
-                        mimeType = "application/msword";
-                        break;
-                    case "xls":
-                    case "xlsx":
-                        mimeType = "application/vnd.ms-excel";
-                        break;
-                    case "txt":
-                        mimeType = "text/plain";
-                        break;
-                    default:
-                        mimeType = "application/octet-stream";
+                String fileExtension = "";
+                int lastDotIndex = fileName.lastIndexOf(".");
+                if (lastDotIndex > 0) {
+                    fileExtension = fileName.substring(lastDotIndex);
                 }
-                
+
+                String mimeType = getMimeType(fileExtension);
                 document.setMimeType(mimeType);
                 documentRepo.save(document);
             }
@@ -219,12 +233,6 @@ public class DocumentServiceImpl extends XDevBaseServiceImpl<Document, DocumentF
      * Tìm kiếm tài liệu với kiểm soát truy cập theo phòng ban.
      * - Admin và trưởng phòng ban gốc: xem tất cả tài liệu
      * - Người dùng khác: chỉ xem tài liệu trong phòng ban và phòng ban con
-     *
-     * @param departmentId ID phòng ban
-     * @param uid ID người dùng
-     * @param filter Bộ lọc tìm kiếm
-     * @param pageable Thông tin phân trang
-     * @return Danh sách tài liệu phù hợp
      */
     @Override
     public Page<Document> searchAll(Long departmentId, String uid, DocumentFilter filter, Pageable pageable) {
@@ -240,6 +248,8 @@ public class DocumentServiceImpl extends XDevBaseServiceImpl<Document, DocumentF
             return documentRepo.searchByCodeOrName(
                 1, // STATUS_ACTIVE
                 filter.getSearch(),
+                filter.getDepartmentId(),
+                filter.getProjectId(),
                 pageable
             );
         }
@@ -261,6 +271,7 @@ public class DocumentServiceImpl extends XDevBaseServiceImpl<Document, DocumentF
             1, // STATUS_ACTIVE
             filter.getSearch(),
             departmentIds,
+            filter.getProjectId(),
             pageable
         );
     }

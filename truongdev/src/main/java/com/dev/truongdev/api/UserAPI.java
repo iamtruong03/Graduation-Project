@@ -57,6 +57,17 @@ public class UserAPI extends XDevBaseAPI<User, UserFilter> {
     }
   }
 
+  @GetMapping("/all")
+  ResponseEntity<ApiResponse<List<User>>> allUser(
+      @RequestAttribute String uid
+  ) {
+    try {
+      return ApiResponse.ok(userService.allUser(uid));
+    } catch (Exception e) {
+      return ApiResponse.error(e.getMessage());
+    }
+  }
+
   @GetMapping("/list-user-by-dep")
   ResponseEntity<ApiResponse<List<User>>> listUserByDep(
       @RequestAttribute String uid,

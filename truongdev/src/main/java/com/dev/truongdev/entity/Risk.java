@@ -34,9 +34,6 @@ public class Risk extends XDevBaseEntity {
     @Column(name = "project_id")
     Long projectId;
 
-    @Column(name = "approver_id")
-    String approverId;
-
     Long departmentId;
 
     // Mức độ ảnh hưởng (1: Low, 2: Medium, 3: High, 4: Critical)

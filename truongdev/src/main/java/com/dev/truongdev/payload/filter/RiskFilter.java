@@ -10,9 +10,6 @@ import lombok.experimental.FieldDefaults;
 @Setter
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class RiskFilter extends XDevBaseFilter {
-    Long projectId;
-    Long riskTypeId;
-    Integer state;
-    Integer impactLevelId;
     String reflectorId;
+    Long riskTypeId;
 } 

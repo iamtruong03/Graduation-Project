@@ -24,4 +24,6 @@ public interface CategoryTypeRepo extends XDevBaseRepo<CategoryType> {
     );
 
     boolean existsByCode(String code);
+
+    CategoryType findByCode(String code);
 } 

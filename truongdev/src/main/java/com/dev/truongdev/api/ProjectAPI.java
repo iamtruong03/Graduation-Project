@@ -1,5 +1,7 @@
 package com.dev.truongdev.api;
 
+import com.dev.truongdev.dto.dashload.department.DepartmentStatsDTO;
+import com.dev.truongdev.dto.dashload.project.ProjectStatsDTO;
 import com.dev.truongdev.entity.Project;
 import com.dev.truongdev.entity.ProjectHistory;
 import com.dev.truongdev.dto.ProjectDTO;
@@ -169,5 +171,19 @@ public class ProjectAPI extends XDevBaseAPI<Project, ProjectFilter> {
                     .body(("{\"error\":\"" + e.getMessage() + "\"}").getBytes());
         }
     }
+
+    @GetMapping("/stats")
+    ResponseEntity<ApiResponse<ProjectStatsDTO>> getProjectStats(
+        @RequestAttribute String uid,
+        @RequestAttribute Long did,
+        @RequestParam Long projectId
+    ) {
+        try {
+            return ApiResponse.ok(projectService.getProjectStats(uid, did, projectId));
+        } catch (Exception e) {
+            return ApiResponse.error(e.getMessage());
+        }
+    }
+
 }
 

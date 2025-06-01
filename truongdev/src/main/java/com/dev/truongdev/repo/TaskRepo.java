@@ -2,6 +2,7 @@ package com.dev.truongdev.repo;
 
 import com.dev.truongdev.entity.Task;
 import com.dev.truongdev.xdevbase.repo.XDevBaseRepo;
+import java.util.Date;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
@@ -17,10 +18,14 @@ public interface TaskRepo extends XDevBaseRepo<Task> {
             "WHERE t.status = :status " +
             "AND (LOWER(t.code) LIKE LOWER(CONCAT('%', :search, '%')) " +
             "OR LOWER(t.name) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+            "AND (:taskTypeId IS NULL OR t.taskTypeId = :taskTypeId) " +
+            "AND (:assigneeId IS NULL OR t.assigneeId = :assigneeId) " +
             "ORDER BY t.createDate DESC")
     Page<Task> searchByCodeOrName(
             @Param("status") Integer status,
             @Param("search") String search,
+            @Param("taskTypeId") Integer taskTypeId,
+            @Param("assigneeId") String assigneeId,
             Pageable pageable
     );
 
@@ -29,11 +34,15 @@ public interface TaskRepo extends XDevBaseRepo<Task> {
             "AND t.departmentId IN :departmentIds " +
             "AND (LOWER(t.code) LIKE LOWER(CONCAT('%', :search, '%')) " +
             "OR LOWER(t.name) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+            "AND (:taskTypeId IS NULL OR t.taskTypeId = :taskTypeId) " +
+            "AND (:assigneeId IS NULL OR t.assigneeId = :assigneeId) " +
             "ORDER BY t.createDate DESC")
     Page<Task> searchByCodeOrNameAndDepartments(
             @Param("status") Integer status,
             @Param("search") String search,
             @Param("departmentIds") List<Long> departmentIds,
+            @Param("taskTypeId") Integer taskTypeId,
+            @Param("assigneeId") String assigneeId,
             Pageable pageable
     );
 
@@ -61,4 +70,26 @@ public interface TaskRepo extends XDevBaseRepo<Task> {
     List<Task> findByProjectIdAndStatus(Long projectId, Integer status);
 
     List<Task> findByRiskIdAndStatus(Long riskId, Integer status);
+
+    Long countByAssigneeIdAndStatusAndState(String assigneeId, Integer status, Integer state);
+
+    Long countByAssigneeIdAndStatus(String assigneeId, Integer status);
+
+    Long countByAssigneeIdAndStatusAndStateAndStartDateBetween(
+        String assigneeId, Integer status, Integer state ,Date startDate, Date endDate
+    );
+
+    Long countByAssigneeIdAndStatusAndStartDateBetween(
+        String assigneeId, Integer status, Date startDate, Date endDate
+    );
+
+    // count By Project Id
+    Long countByProjectIdAndStatus(Long projectId, Integer status);
+
+    Long countByAssigneeIdAndProjectIdAndStatus(String assigneeId, Long projectId, Integer status);
+
+    Long countByAssigneeIdAndProjectIdAndStatusAndState(
+        String assigneeId, Long projectId, Integer status, Integer state);
+
+    Long countByProjectIdAndStatusAndState(Long projectId, Integer status, Integer state);
 }

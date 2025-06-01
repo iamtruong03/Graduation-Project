@@ -18,7 +18,6 @@ public class RiskDTO {
     private Integer possibilityId;
     private Integer priorityId;
     private String reflectorId;
-    private String approverId;
     private String rootCause;
     private String impactAnalysis;
     private String remedy;
@@ -40,6 +39,5 @@ public class RiskDTO {
     private String impactLevelName;
     private String scopeName;
     private String reflectorName;
-    private String approverName;
     private String stateName;
 } 

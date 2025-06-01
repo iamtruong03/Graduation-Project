@@ -75,9 +75,12 @@ const StaffManagement = () => {
   const [departmentList, setDepartmentList] = useState([]);
 
   useEffect(() => {
-    fetchStaffList();
     fetchDepartments();
-  }, [page, size, searchTerm, selectedDepartment, selectedStatus, positionId]);
+  }, []);
+
+  useEffect(() => {
+    fetchStaffList();
+  }, [page, size, searchTerm, selectedDepartment, selectedStatus, positionId, departmentList]);
 
   const fetchStaffList = async () => {
     try {
@@ -103,7 +106,8 @@ const StaffManagement = () => {
         code: staff.code,
         name: staff.name,
         position: positionOptions.find(p => p.id === staff.positionId)?.name || '---',
-        department: departmentList.find(d => d.id === staff.departmentId)?.name || '---',
+        departmentId: staff.departmentId,
+        departmentName: departmentList.find(d => d.id === staff.departmentId)?.name || '---',
         email: staff.email,
         phoneNumber: staff.phoneNumber,
         joinDate: staff.startDate
@@ -378,8 +382,7 @@ const StaffManagement = () => {
                     <TableCell>{staff.email}</TableCell>
                     <TableCell>{staff.phoneNumber}</TableCell>
                     <TableCell>
-                      {/* Map department ID to department name */}
-                      {departmentList.find(dept => dept.id === staff.department)?.name || staff.department}
+                      {staff.departmentName}
                     </TableCell>
                     <TableCell>{staff.position}</TableCell>
                     <TableCell>{staff.joinDate}</TableCell>

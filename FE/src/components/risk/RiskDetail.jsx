@@ -45,75 +45,73 @@ import { format } from 'date-fns';
 import vi from 'date-fns/locale/vi';
 import riskService from '../../services/riskService';
 import RiskHistory from './RiskHistory';
-import { message } from 'antd';
+import RiskActionList from './RiskActionList';
+import staffService from '../../services/staffService';
+import categoryService from '../../services/categoryService';
+import departmentService from '../../services/departmentService';
+import taskService from '../../services/taskService';
+import projectService from '../../services/projectService';
 
 const getRiskLevelColor = (level) => {
   switch (level) {
+    case 'Rất cao':
+      return '#d32f2f'; // Màu đỏ đậm
     case 'Cao':
-      return 'error';
+      return '#f44336'; // Màu đỏ
     case 'Trung bình':
-      return 'warning';
+      return '#ff9800'; // Màu cam
     case 'Thấp':
-      return 'success';
+      return '#4caf50'; // Màu xanh lá
+    case 'Chưa xác định':
+      return '#757575'; // Màu xám
     default:
-      return 'default';
+      return '#757575'; // Màu xám mặc định
   }
 };
 
 const getStatusColor = (status) => {
   switch (status) {
-    case 'Chờ duyệt':
-      return '#4caf50';
-    case 'Đang thực hiện':
-      return '#2196f3';
-    case 'COMPLETED':
-      return '#9c27b0';
-    case 'CANCELLED':
-      return '#f44336';
+    case 'Đang xử lý':
+      return '#2196f3'; // Màu xanh dương
+    case 'Đã đóng':
+      return '#4caf50'; // Màu xanh lá
+    case 'Đã hủy':
+      return '#f44336'; // Màu đỏ
     default:
-      return '#000000';
+      return '#757575'; // Màu xám
   }
 };
 
-const getPriorityColor = (priority) => {
-  switch (priority) {
-    case 'Cao':
-      return '#f44336';
-    case 'Trung bình':
-      return '#ff9800';
-    case 'Thấp':
-      return '#4caf50';
-    default:
-      return '#000000';
-  }
-};
 
 const RiskDetail = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const [risk, setRisk] = useState({
-    id: null,
     code: '',
     name: '',
-    type: '',
-    level: '',
-    stage: '',
-    updatedAt: '',
-    reporter: '',
-    department: '',
-    project: '',
     description: '',
-    impactLevel: '',
-    probability: '',
-    priority: '',
-    active: true,
+    status: 1,
+    riskTypeId: null,
+    projectId: null,
+    approverId: null,
+    departmentId: null,
+    impactLevelId: null,
+    scopeId: null,
+    possibilityId: null,
+    priorityId: null,
+    reflectorId: null,
+    rootCause: '',
+    impactAnalysis: '',
+    remedy: '',
+    precautions: '',
+    reflectionDay: null,
+    preventiveActions: [],
     analysis: {
       rootCause: '',
       impact: '',
       preventiveMeasures: '',
       remedialMeasures: ''
-    },
-    preventiveActions: []
+    }
   });
   const [riskHistory, setRiskHistory] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
@@ -133,48 +131,108 @@ const RiskDetail = () => {
     message: '',
     severity: 'success'
   });
+  const [managers, setManagers] = useState([]);
+  const [riskTypes, setRiskTypes] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [impactLevels, setImpactLevels] = useState([]);
+  const [department, setDepartment] = useState(null);
+  const [project, setProject] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [riskData, historyData] = await Promise.all([
-          riskService.getRiskById(id),
-          riskService.getRiskHistory(id)
-        ]);
+        // Lấy danh sách loại rủi ro
+        const riskTypesResponse = await categoryService.getCategoriesByType('riskTypeId');
+        if (riskTypesResponse && riskTypesResponse.data) {
+          setRiskTypes(riskTypesResponse.data);
+        }
 
+        // Lấy danh sách mức độ ảnh hưởng
+        const impactLevelsResponse = await categoryService.getCategoriesByType('impactLevelId');
+        if (impactLevelsResponse && impactLevelsResponse.data) {
+          setImpactLevels(impactLevelsResponse.data);
+        }
+
+        // Lấy danh sách người dùng
+        const usersResponse = await staffService.getListUser();
+        if (usersResponse && usersResponse.data) {
+          setUsers(usersResponse.data);
+        }
+
+        // Lấy thông tin chi tiết rủi ro
+        const riskData = await riskService.getRiskById(id);
         if (riskData) {
-          // Map dữ liệu từ API sang cấu trúc hiển thị
+          // Chuyển đổi dữ liệu phẳng thành cấu trúc có analysis
           const formattedRisk = {
-            id: riskData.id,
-            code: riskData.code || '',
-            name: riskData.name || '',
-            type: riskData.riskTypeId ? getRiskTypeName(riskData.riskTypeId) : '',
-            level: riskData.impactLevelId ? getImpactLevelName(riskData.impactLevelId) : '',
-            stage: riskData.state ? getRiskStateName(riskData.state) : '',
-            updatedAt: riskData.updatedAt || '',
-            reporter: riskData.reflectorId || '',
-            department: riskData.departmentId ? getDepartmentName(riskData.departmentId) : '',
-            project: riskData.projectId ? getProjectName(riskData.projectId) : '',
-            description: riskData.description || '',
-            impactLevel: riskData.impactLevelId ? getImpactLevelName(riskData.impactLevelId) : '',
-            probability: riskData.possibilityId ? getPossibilityName(riskData.possibilityId) : '',
-            priority: riskData.priorityId ? getPriorityName(riskData.priorityId) : '',
-            active: riskData.status === 1,
+            ...riskData,
+            preventiveActions: [],
             analysis: {
               rootCause: riskData.rootCause || '',
               impact: riskData.impactAnalysis || '',
               preventiveMeasures: riskData.precautions || '',
               remedialMeasures: riskData.remedy || ''
-            },
-            preventiveActions: riskData.preventiveActions || []
+            }
           };
           setRisk(formattedRisk);
+
+          // Lấy thông tin dự án nếu có projectId
+          if (riskData.projectId) {
+            try {
+              const projectResponse = await projectService.getProjectById(riskData.projectId);
+              if (projectResponse && projectResponse.data) {
+                setProject(projectResponse.data);
+              }
+            } catch (err) {
+              console.error('Error fetching project:', err);
+            }
+          }
         }
-        setRiskHistory(historyData || []);
+
+        // Lấy lịch sử rủi ro
+        const historyData = await riskService.getRiskHistory(id);
+        if (historyData) {
+          setRiskHistory(historyData);
+        }
+
+        // Lấy danh sách công việc liên quan
+        const tasksData = await taskService.getTasksByRiskId(id);
+        if (tasksData && tasksData.data) {
+          setRisk(prev => ({
+            ...prev,
+            preventiveActions: tasksData.data || []
+          }));
+        }
+
+        // Lấy thông tin đơn vị ghi nhận
+        if (riskData?.departmentId) {
+          try {
+            const departmentResponse = await departmentService.getDepartmentById(riskData.departmentId);
+            if (departmentResponse && departmentResponse.data) {
+              setDepartment(departmentResponse.data);
+            }
+          } catch (err) {
+            console.error('Error fetching department:', err);
+          }
+        }
+
+        // Lấy danh sách người thực hiện theo phòng ban
+        if (riskData?.departmentId) {
+          try {
+            const userResponse = await staffService.listUserByDep(riskData.departmentId);
+            if (userResponse && userResponse.data) {
+              setManagers(userResponse.data);
+            }
+          } catch (err) {
+            console.error('Error fetching managers:', err);
+          }
+        }
       } catch (error) {
-        console.error('Error fetching risk data:', error);
-        // Hiển thị thông báo lỗi cho người dùng
-        message.error('Không thể tải thông tin rủi ro. Vui lòng thử lại sau.');
+        console.error('Error fetching data:', error);
+        setSnackbar({
+          open: true,
+          message: 'Không thể tải thông tin rủi ro. Vui lòng thử lại sau.',
+          severity: 'error'
+        });
       }
     };
 
@@ -183,27 +241,19 @@ const RiskDetail = () => {
 
   // Các hàm helper để chuyển đổi ID thành tên
   const getRiskTypeName = (typeId) => {
-    // TODO: Implement mapping từ riskTypeId sang tên loại rủi ro
-    return 'Vận hành';
+    const riskType = riskTypes.find(type => type.id === typeId);
+    return riskType ? riskType.name : 'Chưa xác định';
   };
 
   const getImpactLevelName = (levelId) => {
-    switch (levelId) {
-      case 1: return 'Thấp';
-      case 2: return 'Trung bình';
-      case 3: return 'Cao';
-      case 4: return 'Rất cao';
-      default: return 'Chưa xác định';
-    }
+    const impactLevel = impactLevels.find(level => level.id === levelId);
+    return impactLevel ? impactLevel.name : 'Chưa xác định';
   };
 
   const getRiskStateName = (stateId) => {
     switch (stateId) {
-      case 0: return 'Khởi tạo';
-      case 1: return 'Từ chối';
       case 2: return 'Đang xử lý';
-      case 3: return 'Hoàn thành';
-      case 4: return 'Quá hạn';
+      case 3: return 'Đã đóng';
       case 5: return 'Đã hủy';
       default: return 'Chưa xác định';
     }
@@ -228,13 +278,13 @@ const RiskDetail = () => {
   };
 
   const getDepartmentName = (departmentId) => {
-    // TODO: Implement mapping từ departmentId sang tên phòng ban
-    return 'Phòng ban';
+    if (!department) return 'Chưa xác định';
+    return department.name || 'Chưa xác định';
   };
 
   const getProjectName = (projectId) => {
-    // TODO: Implement mapping từ projectId sang tên dự án
-    return 'Dự án';
+    if (!project) return 'Chưa xác định';
+    return project.name || 'Chưa xác định';
   };
 
   const formatDate = (dateString) => {
@@ -250,16 +300,17 @@ const RiskDetail = () => {
   };
 
   const handleEdit = () => {
+    console.log('Current risk state:', risk.state);
     if (risk.state !== 2) {
       setSnackbar({
         open: true,
-        message: 'Chỉ có thể chỉnh sửa rủi ro khi đang ở trạng thái "Đang xử lý"',
+        message: 'Chỉ có thể chỉnh sửa rủi ro khi đang ở trạng thái "Đang thực hiện"',
         severity: 'error'
       });
       return;
     }
     setIsEditing(true);
-    setEditedRisk({...risk});
+    setEditedRisk({ ...risk });
   };
 
   const handleCancelEdit = () => {
@@ -269,8 +320,30 @@ const RiskDetail = () => {
 
   const handleSave = async () => {
     try {
-      await riskService.updateRisk(editedRisk.id, editedRisk);
-      setRisk(editedRisk);
+      const updatedRisk = {
+        id: risk.id,
+        code: editedRisk.code,
+        name: editedRisk.name,
+        description: editedRisk.description,
+        status: editedRisk.status,
+        state: editedRisk.state,
+        riskTypeId: editedRisk.riskTypeId,
+        projectId: editedRisk.projectId,
+        departmentId: editedRisk.departmentId,
+        impactLevelId: editedRisk.impactLevelId,
+        scopeId: editedRisk.scopeId,
+        possibilityId: editedRisk.possibilityId,
+        priorityId: editedRisk.priorityId,
+        reflectorId: editedRisk.reflectorId,
+        reflectionDay: editedRisk.reflectionDay,
+        rootCause: editedRisk?.analysis?.rootCause || '',
+        impactAnalysis: editedRisk?.analysis?.impact || '',
+        remedy: editedRisk?.analysis?.remedialMeasures || '',
+        precautions: editedRisk?.analysis?.preventiveMeasures || ''
+      };
+      
+      await riskService.updateRisk(risk.id, updatedRisk);
+      setRisk(updatedRisk);
       setIsEditing(false);
       setSnackbar({
         open: true,
@@ -318,65 +391,168 @@ const RiskDetail = () => {
     setSelectedAction(null);
   };
 
-  const handleSaveAction = () => {
-    let updatedActions;
-    if (selectedAction) {
-      updatedActions = risk.preventiveActions.map(action =>
-        action.id === selectedAction.id
-          ? { ...newAction, id: action.id }
-          : action
-      );
-    } else {
-      const newActionWithId = {
-        ...newAction,
-        id: risk.preventiveActions.length + 1
+  const handleSaveAction = async () => {
+    try {
+      const taskData = {
+        code: newAction.code,
+        name: newAction.name,
+        description: newAction.description,
+        departmentId: risk.departmentId,
+        projectId: risk.projectId,
+        assigneeId: newAction.assigneeId,
+        priorityId: newAction.priorityId,
+        startDate: newAction.startDate,
+        dueDate: newAction.endDate,
+        riskId: risk.id,
+        taskTypeId: 1
       };
-      updatedActions = [...risk.preventiveActions, newActionWithId];
-    }
 
+      // Kiểm tra quyền tạo hành động phòng ngừa
+      const currentUserId = localStorage.getItem('userId');
+      if (currentUserId !== risk.reflectorId) {
+        setSnackbar({
+          open: true,
+          message: 'Chỉ có người phản ánh mới được phép thêm hành động phòng ngừa',
+          severity: 'error'
+        });
+        return;
+      }
+
+      if (selectedAction) {
+        // TODO: Implement update task
+        setSnackbar({
+          open: true,
+          message: 'Chức năng cập nhật hành động chưa được hỗ trợ',
+          severity: 'error'
+        });
+        return;
+      }
+
+      const response = await taskService.createTask(taskData);
+      if (response && response.data) {
+        // Refresh danh sách hành động sau khi thêm mới
+        const tasksResponse = await taskService.getTasksByRiskId(risk.id);
+        if (tasksResponse && tasksResponse.data) {
     setRisk({
       ...risk,
-      preventiveActions: updatedActions
+            preventiveActions: tasksResponse.data
+          });
+        }
+        setSnackbar({
+          open: true,
+          message: 'Thêm hành động mới thành công',
+          severity: 'success'
     });
     handleCloseActionDialog();
+      }
+    } catch (error) {
+      console.error('Error saving action:', error);
+      setSnackbar({
+        open: true,
+        message: 'Có lỗi xảy ra khi thêm hành động mới: ' + (error.response?.data?.message || error.message),
+        severity: 'error'
+      });
+    }
+  };
+
+  const handleAddAction = () => {
+    setSelectedAction(null);
+    setNewAction({
+      name: '',
+      assigneeId: '',
+      startDate: '',
+      endDate: '',
+      priorityId: 2
+    });
+    setOpenActionDialog(true);
   };
 
   const handleEditAction = (action) => {
     setSelectedAction(action);
     setNewAction({
       name: action.name,
-      assignee: action.assignee,
+      assigneeId: action.assigneeId,
       startDate: action.startDate,
       endDate: action.endDate,
-      priority: action.priority,
-      status: action.status
+      priorityId: action.priorityId,
+      state: action.state
     });
     setOpenActionDialog(true);
   };
 
-  const handleDeleteAction = (actionId) => {
+  const handleDeleteAction = async (actionId) => {
+    try {
+      await taskService.changeStatus(actionId);
+      
+      // Cập nhật lại danh sách hành động
     const updatedActions = risk.preventiveActions.filter(action => action.id !== actionId);
     setRisk({
       ...risk,
       preventiveActions: updatedActions
     });
+
+      setSnackbar({
+        open: true,
+        message: 'Xóa hành động thành công',
+        severity: 'success'
+      });
+    } catch (error) {
+      console.error('Error deleting action:', error);
+      setSnackbar({
+        open: true,
+        message: error.response?.data?.message || 'Không thể xóa hành động',
+        severity: 'error'
+      });
+    }
   };
 
   const handleCloseSnackbar = () => {
     setSnackbar(prev => ({ ...prev, open: false }));
   };
 
+  const getReflectorName = (reflectorId) => {
+    if (!reflectorId) return 'Chưa có';
+    const user = users.find(user => String(user.id) === String(reflectorId));
+    return user ? user.name : 'Chưa có';
+  };
+
   return (
     <Box sx={{ p: 3, backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
       <Paper elevation={0} sx={{ p: 3, borderRadius: 2 }}>
-        <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 3 }}>
-          <IconButton onClick={handleClose} sx={{ color: 'text.secondary' }}>
+        {/* Header */}
+        <Stack 
+          direction="row" 
+          alignItems="center" 
+          spacing={2} 
+          sx={{ 
+            mb: 3,
+            pb: 2,
+            borderBottom: '2px solid #1976d2'
+          }}
+        >
+          <IconButton 
+            onClick={handleClose} 
+            sx={{ 
+              color: '#1976d2',
+              '&:hover': {
+                backgroundColor: 'rgba(25, 118, 210, 0.04)'
+              }
+            }}
+          >
             <ArrowBackIcon />
           </IconButton>
-          <Typography variant="h5" sx={{ fontWeight: 600 }}>Chi tiết rủi ro</Typography>
+          <Typography 
+            variant="h5" 
+            sx={{ 
+              fontWeight: 600,
+              color: '#1976d2'
+            }}
+          >
+            Chi tiết rủi ro
+          </Typography>
           <Box sx={{ flexGrow: 1 }} />
           {isEditing ? (
-            <>
+            <Stack direction="row" spacing={2}>
               <Button
                 variant="outlined"
                 startIcon={<CancelIcon />}
@@ -386,7 +562,6 @@ const RiskDetail = () => {
                   color: '#929292',
                   '&:hover': {
                     borderColor: '#6f6f6f',
-                    color: '#6f6f6f',
                     backgroundColor: 'rgba(0, 0, 0, 0.04)'
                   }
                 }}
@@ -406,7 +581,7 @@ const RiskDetail = () => {
               >
                 LƯU
               </Button>
-            </>
+            </Stack>
           ) : (
             <Button
               variant="contained"
@@ -417,6 +592,10 @@ const RiskDetail = () => {
                 backgroundColor: '#1976d2',
                 '&:hover': {
                   backgroundColor: '#1565c0'
+                },
+                '&.Mui-disabled': {
+                  backgroundColor: '#e0e0e0',
+                  color: '#9e9e9e'
                 }
               }}
             >
@@ -428,109 +607,198 @@ const RiskDetail = () => {
         <Grid container spacing={3}>
           {/* Thông tin chính */}
           <Grid item xs={12} md={8}>
-            <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>
+            <Paper 
+              elevation={1} 
+              sx={{ 
+                p: 3, 
+                borderRadius: 2,
+                backgroundColor: '#fff',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+              }}
+            >
               <Stack spacing={3}>
                 <Box>
-                  <Typography variant="h6" sx={{ mb: 2, color: 'primary.main', fontWeight: 600 }}>
-                    {risk.name}
-                  </Typography>
-                  <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
-                    <Chip
-                      icon={<WarningIcon />}
-                      label={risk.code}
-                      variant="outlined"
-                    />
+                  <Typography 
+                    variant="h6" 
+                    sx={{ 
+                      mb: 2, 
+                      color: '#1976d2', 
+                      fontWeight: 600,
+                      fontSize: '1.25rem'
+                    }}
+                  >
                     {isEditing ? (
-                      <FormControl sx={{ minWidth: 150 }}>
-                        <Select
-                          name="type"
-                          value={editedRisk.type}
+                      <TextField
+                        fullWidth
+                        name="name"
+                        value={editedRisk.name}
+                        onChange={handleRiskChange}
+                        size="small"
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            '&:hover fieldset': {
+                              borderColor: '#1976d2'
+                            }
+                          }
+                        }}
+                      />
+                    ) : (
+                      risk.name
+                    )}
+                  </Typography>
+                  <Stack 
+                    direction="row" 
+                    spacing={2} 
+                    sx={{ 
+                      mb: 2,
+                      flexWrap: 'wrap',
+                      gap: 1
+                    }}
+                  >
+                    {isEditing ? (
+                      <>
+                        <TextField
+                          name="code"
+                          value={editedRisk.code}
                           onChange={handleRiskChange}
                           size="small"
-                        >
-                          <MenuItem value="Vận hành">Vận hành</MenuItem>
-                          <MenuItem value="Kỹ thuật">Kỹ thuật</MenuItem>
-                          <MenuItem value="Quản lý">Quản lý</MenuItem>
-                          <MenuItem value="Tài chính">Tài chính</MenuItem>
+                          sx={{
+                            width: '150px',
+                            '& .MuiOutlinedInput-root': {
+                              '&:hover fieldset': {
+                                borderColor: '#1976d2'
+                              }
+                            }
+                          }}
+                        />
+                        <FormControl size="small" sx={{ minWidth: 150 }}>
+                          <Select
+                            name="riskTypeId"
+                            value={editedRisk.riskTypeId || ''}
+                            onChange={handleRiskChange}
+                            sx={{
+                              '& .MuiOutlinedInput-notchedOutline': {
+                                borderColor: '#e0e0e0'
+                              },
+                              '&:hover .MuiOutlinedInput-notchedOutline': {
+                                borderColor: '#1976d2'
+                              }
+                            }}
+                          >
+                            {riskTypes.map(type => (
+                              <MenuItem key={type.id} value={type.id}>
+                                {type.name}
+                              </MenuItem>
+                            ))}
                         </Select>
                       </FormControl>
+                      </>
                     ) : (
+                      <>
                       <Chip
-                        label={risk.type}
-                        color="primary"
+                          icon={<WarningIcon />}
+                          label={risk.code}
                         variant="outlined"
-                      />
+                          sx={{
+                            borderColor: '#1976d2',
+                            color: '#1976d2',
+                            '& .MuiChip-icon': {
+                              color: '#1976d2'
+                            }
+                          }}
+                        />
+                        <Chip
+                          label={getRiskTypeName(risk.riskTypeId)}
+                          sx={{
+                            backgroundColor: '#e3f2fd',
+                            color: '#1976d2',
+                            fontWeight: 500
+                          }}
+                        />
+                      </>
                     )}
-                    
                   </Stack>
                 </Box>
 
-                <Divider />
+                <Divider sx={{ borderColor: '#e0e0e0' }} />
 
                 <Grid container spacing={3}>
                   <Grid item xs={12} sm={6}>
                     <Stack spacing={2}>
                       <Box>
-                        <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                          <BusinessIcon sx={{ fontSize: 16, mr: 1, verticalAlign: 'text-bottom' }} />
-                          Phòng ban
+                        <Typography 
+                          variant="subtitle2" 
+                          color="text.secondary" 
+                          gutterBottom
+                          sx={{ 
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1,
+                            color: '#666'
+                          }}
+                        >
+                          <BusinessIcon sx={{ fontSize: 18 }} />
+                          Đơn vị ghi nhận
                         </Typography>
-                        {isEditing ? (
-                          <TextField
-                            fullWidth
-                            name="department"
-                            value={editedRisk.department}
-                            onChange={handleRiskChange}
-                            size="small"
-                          />
-                        ) : (
-                          <Typography>{risk.department}</Typography>
-                        )}
+                        <Typography sx={{ color: '#333', fontWeight: 500 }}>
+                          {getDepartmentName(risk.departmentId)}
+                        </Typography>
                       </Box>
 
                       <Box>
-                        <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                          <BusinessIcon sx={{ fontSize: 16, mr: 1, verticalAlign: 'text-bottom' }} />
+                        <Typography 
+                          variant="subtitle2" 
+                          color="text.secondary" 
+                          gutterBottom
+                          sx={{ 
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1,
+                            color: '#666'
+                          }}
+                        >
+                          <BusinessIcon sx={{ fontSize: 18 }} />
                           Dự án
                         </Typography>
-                        {isEditing ? (
-                          <FormControl fullWidth size="small">
-                            <Select
-                              name="project"
-                              value={editedRisk.project}
-                              onChange={handleRiskChange}
-                            >
-                              <MenuItem value="Dự án A">Dự án A</MenuItem>
-                              <MenuItem value="Dự án B">Dự án B</MenuItem>
-                              <MenuItem value="Dự án C">Dự án C</MenuItem>
-                            </Select>
-                          </FormControl>
-                        ) : (
-                          <Typography>{risk.project}</Typography>
-                        )}
+                        <Typography sx={{ color: '#333', fontWeight: 500 }}>
+                          {getProjectName(risk.projectId)}
+                        </Typography>
                       </Box>
 
                       <Box>
-                        <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                          <PersonIcon sx={{ fontSize: 16, mr: 1, verticalAlign: 'text-bottom' }} />
+                        <Typography 
+                          variant="subtitle2" 
+                          color="text.secondary" 
+                          gutterBottom
+                          sx={{ 
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1,
+                            color: '#666'
+                          }}
+                        >
+                          <PersonIcon sx={{ fontSize: 18 }} />
                           Người phản ánh
                         </Typography>
-                        {isEditing ? (
-                          <TextField
-                            fullWidth
-                            name="reporter"
-                            value={editedRisk.reporter}
-                            onChange={handleRiskChange}
-                            size="small"
-                          />
-                        ) : (
-                          <Stack direction="row" spacing={1} alignItems="center">
-                            <Avatar sx={{ width: 24, height: 24 }}>
-                              {risk.reporter ? risk.reporter.charAt(0) : '?'}
+                        <Stack 
+                          direction="row" 
+                          spacing={1} 
+                          alignItems="center"
+                        >
+                          <Avatar 
+                            sx={{ 
+                              width: 32, 
+                              height: 32,
+                              backgroundColor: '#1976d2',
+                              fontSize: '0.875rem'
+                            }}
+                          >
+                            {getReflectorName(risk.reflectorId).charAt(0)}
                             </Avatar>
-                            <Typography>{risk.reporter || 'Chưa có người phản ánh'}</Typography>
+                          <Typography sx={{ color: '#333', fontWeight: 500 }}>
+                            {getReflectorName(risk.reflectorId)}
+                          </Typography>
                           </Stack>
-                        )}
                       </Box>
                     </Stack>
                   </Grid>
@@ -538,34 +806,69 @@ const RiskDetail = () => {
                   <Grid item xs={12} sm={6}>
                     <Stack spacing={2}>
                       <Box>
-                        <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                          <ScheduleIcon sx={{ fontSize: 16, mr: 1, verticalAlign: 'text-bottom' }} />
-                          Ngày cập nhật
+                        <Typography 
+                          variant="subtitle2" 
+                          color="text.secondary" 
+                          gutterBottom
+                          sx={{ 
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1,
+                            color: '#666'
+                          }}
+                        >
+                          <ScheduleIcon sx={{ fontSize: 18 }} />
+                          Ngày phản ánh
                         </Typography>
-                        <Typography>{formatDate(risk.updatedAt)}</Typography>
+                        <Typography sx={{ color: '#333', fontWeight: 500 }}>
+                          {formatDate(risk.reflectionDay)}
+                        </Typography>
                       </Box>
 
                       <Box>
-                        <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                        <Typography 
+                          variant="subtitle2" 
+                          color="text.secondary" 
+                          gutterBottom
+                          sx={{ 
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1,
+                            color: '#666'
+                          }}
+                        >
                           Trạng thái
                         </Typography>
                         {isEditing ? (
                           <FormControl fullWidth size="small">
                             <Select
-                              name="stage"
-                              value={editedRisk.stage}
+                              name="state"
+                              value={editedRisk.state}
                               onChange={handleRiskChange}
+                              sx={{
+                                '& .MuiOutlinedInput-notchedOutline': {
+                                  borderColor: '#e0e0e0'
+                                },
+                                '&:hover .MuiOutlinedInput-notchedOutline': {
+                                  borderColor: '#1976d2'
+                                }
+                              }}
                             >
-                              <MenuItem value="Chưa xử lý">Chưa xử lý</MenuItem>
-                              <MenuItem value="Đang xử lý">Đang xử lý</MenuItem>
-                              <MenuItem value="Đã xử lý">Đã xử lý</MenuItem>
-                              <MenuItem value="Đã đóng">Đã đóng</MenuItem>
+                              <MenuItem value={2}>Đang xử lý</MenuItem>
+                              <MenuItem value={3}>Đã đóng</MenuItem>
+                              <MenuItem value={5}>Đã hủy</MenuItem>
                             </Select>
                           </FormControl>
                         ) : (
                           <Chip
-                            label={risk.stage}
-                            color={getRiskLevelColor(risk.level)}
+                            label={getRiskStateName(risk.state)}
+                            sx={{
+                              backgroundColor: getStatusColor(getRiskStateName(risk.state)),
+                              color: '#fff',
+                              fontWeight: 500,
+                              fontSize: '0.875rem',
+                              height: 28
+                            }}
                             size="small"
                           />
                         )}
@@ -574,10 +877,19 @@ const RiskDetail = () => {
                   </Grid>
                 </Grid>
 
-                <Divider />
+                <Divider sx={{ borderColor: '#e0e0e0' }} />
 
                 <Box>
-                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                  <Typography 
+                    variant="subtitle2" 
+                    color="text.secondary" 
+                    gutterBottom
+                    sx={{ 
+                      color: '#666',
+                      fontWeight: 600,
+                      mb: 1
+                    }}
+                  >
                     Mô tả chi tiết
                   </Typography>
                   {isEditing ? (
@@ -588,66 +900,158 @@ const RiskDetail = () => {
                       name="description"
                       value={editedRisk.description}
                       onChange={handleRiskChange}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          '&:hover fieldset': {
+                            borderColor: '#1976d2'
+                          }
+                        }
+                      }}
                     />
                   ) : (
-                    <Typography variant="body1" sx={{ whiteSpace: 'pre-line' }}>
+                    <Typography 
+                      variant="body1" 
+                      sx={{ 
+                        whiteSpace: 'pre-line',
+                        color: '#333',
+                        lineHeight: 1.6
+                      }}
+                    >
                       {risk.description}
                     </Typography>
                   )}
                 </Box>
 
                 <Box>
-                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                  <Typography 
+                    variant="subtitle2" 
+                    color="text.secondary" 
+                    gutterBottom
+                    sx={{ 
+                      color: '#666',
+                      fontWeight: 600,
+                      mb: 1
+                    }}
+                  >
                     Đánh giá mức độ
                   </Typography>
-                  <Stack direction="row" spacing={2}>
+                  <Stack 
+                    direction="row" 
+                    spacing={2}
+                    sx={{
+                      flexWrap: 'wrap',
+                      gap: 1
+                    }}
+                  >
                     {isEditing ? (
                       <>
                         <FormControl fullWidth size="small">
                           <InputLabel>Mức độ ảnh hưởng</InputLabel>
                           <Select
-                            name="impactLevel"
-                            value={editedRisk.impactLevel}
+                            name="impactLevelId"
+                            value={editedRisk.impactLevelId || ''}
                             onChange={handleRiskChange}
                             label="Mức độ ảnh hưởng"
+                            sx={{
+                              '& .MuiOutlinedInput-notchedOutline': {
+                                borderColor: '#e0e0e0'
+                              },
+                              '&:hover .MuiOutlinedInput-notchedOutline': {
+                                borderColor: '#1976d2'
+                              }
+                            }}
                           >
-                            <MenuItem value="Cao">Cao</MenuItem>
-                            <MenuItem value="Trung bình">Trung bình</MenuItem>
-                            <MenuItem value="Thấp">Thấp</MenuItem>
+                            {impactLevels.map((level) => (
+                              <MenuItem key={level.id} value={level.id}>
+                                {level.name}
+                              </MenuItem>
+                            ))}
                           </Select>
                         </FormControl>
                         <FormControl fullWidth size="small">
                           <InputLabel>Khả năng xảy ra</InputLabel>
                           <Select
-                            name="probability"
-                            value={editedRisk.probability}
+                            name="possibilityId"
+                            value={editedRisk.possibilityId}
                             onChange={handleRiskChange}
                             label="Khả năng xảy ra"
+                            sx={{
+                              '& .MuiOutlinedInput-notchedOutline': {
+                                borderColor: '#e0e0e0'
+                              },
+                              '&:hover .MuiOutlinedInput-notchedOutline': {
+                                borderColor: '#1976d2'
+                              }
+                            }}
                           >
-                            <MenuItem value="Cao">Cao</MenuItem>
-                            <MenuItem value="Trung bình">Trung bình</MenuItem>
-                            <MenuItem value="Thấp">Thấp</MenuItem>
+                            <MenuItem value={1}>Thấp</MenuItem>
+                            <MenuItem value={2}>Trung bình</MenuItem>
+                            <MenuItem value={3}>Cao</MenuItem>
                           </Select>
                         </FormControl>
                         <FormControl fullWidth size="small">
                           <InputLabel>Mức độ ưu tiên</InputLabel>
                           <Select
-                            name="priority"
-                            value={editedRisk.priority}
+                            name="priorityId"
+                            value={editedRisk.priorityId}
                             onChange={handleRiskChange}
                             label="Mức độ ưu tiên"
+                            sx={{
+                              '& .MuiOutlinedInput-notchedOutline': {
+                                borderColor: '#e0e0e0'
+                              },
+                              '&:hover .MuiOutlinedInput-notchedOutline': {
+                                borderColor: '#1976d2'
+                              }
+                            }}
                           >
-                            <MenuItem value="Cao">Cao</MenuItem>
-                            <MenuItem value="Trung bình">Trung bình</MenuItem>
-                            <MenuItem value="Thấp">Thấp</MenuItem>
+                            <MenuItem value={1}>Thấp</MenuItem>
+                            <MenuItem value={2}>Trung bình</MenuItem>
+                            <MenuItem value={3}>Cao</MenuItem>
                           </Select>
                         </FormControl>
                       </>
                     ) : (
                       <>
-                        <Chip label={`Mức độ ảnh hưởng: ${risk.impactLevel}`} color={getRiskLevelColor(risk.impactLevel)} />
-                        <Chip label={`Khả năng xảy ra: ${risk.probability}`} color={getRiskLevelColor(risk.probability)} />
-                        <Chip label={`Mức độ ưu tiên: ${risk.priority}`} color={getRiskLevelColor(risk.priority)} />
+                        <Chip 
+                          label={`Mức độ ảnh hưởng: ${getImpactLevelName(risk.impactLevelId)}`} 
+                          sx={{
+                            backgroundColor: getRiskLevelColor(getImpactLevelName(risk.impactLevelId)),
+                            color: '#fff',
+                            fontWeight: 500,
+                            fontSize: '0.875rem',
+                            height: 28,
+                            '& .MuiChip-label': {
+                              px: 2
+                            }
+                          }}
+                        />
+                        <Chip 
+                          label={`Khả năng xảy ra: ${getPossibilityName(risk.possibilityId)}`} 
+                          sx={{
+                            backgroundColor: getRiskLevelColor(getPossibilityName(risk.possibilityId)),
+                            color: '#fff',
+                            fontWeight: 500,
+                            fontSize: '0.875rem',
+                            height: 28,
+                            '& .MuiChip-label': {
+                              px: 2
+                            }
+                          }}
+                        />
+                        <Chip 
+                          label={`Mức độ ưu tiên: ${getPriorityName(risk.priorityId)}`} 
+                          sx={{
+                            backgroundColor: getRiskLevelColor(getPriorityName(risk.priorityId)),
+                            color: '#fff',
+                            fontWeight: 500,
+                            fontSize: '0.875rem',
+                            height: 28,
+                            '& .MuiChip-label': {
+                              px: 2
+                            }
+                          }}
+                        />
                       </>
                     )}
                   </Stack>
@@ -656,13 +1060,39 @@ const RiskDetail = () => {
             </Paper>
 
             {/* Phân tích đánh giá */}
-            <Paper elevation={1} sx={{ p: 3, borderRadius: 2, mt: 3 }}>
-              <Typography variant="h6" sx={{ mb: 3, color: 'primary.main', fontWeight: 600 }}>
+            <Paper 
+              elevation={1} 
+              sx={{ 
+                p: 3, 
+                borderRadius: 2, 
+                mt: 3,
+                backgroundColor: '#fff',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+              }}
+            >
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  mb: 3, 
+                  color: '#1976d2', 
+                  fontWeight: 600,
+                  fontSize: '1.25rem'
+                }}
+              >
                 Phân tích đánh giá
               </Typography>
               <Stack spacing={3}>
                 <Box>
-                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                  <Typography 
+                    variant="subtitle2" 
+                    color="text.secondary" 
+                    gutterBottom
+                    sx={{ 
+                      color: '#666',
+                      fontWeight: 600,
+                      mb: 1
+                    }}
+                  >
                     Nguyên nhân gốc rễ
                   </Typography>
                   {isEditing ? (
@@ -673,14 +1103,32 @@ const RiskDetail = () => {
                       name="rootCause"
                       value={editedRisk?.analysis?.rootCause || ''}
                       onChange={handleAnalysisChange}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          '&:hover fieldset': {
+                            borderColor: '#1976d2'
+                          }
+                        }
+                      }}
                     />
                   ) : (
-                    <Typography>{risk?.analysis?.rootCause || 'Chưa có thông tin'}</Typography>
+                    <Typography sx={{ color: '#333', lineHeight: 1.6 }}>
+                      {risk?.analysis?.rootCause || 'Chưa có thông tin'}
+                    </Typography>
                   )}
                 </Box>
 
                 <Box>
-                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                  <Typography 
+                    variant="subtitle2" 
+                    color="text.secondary" 
+                    gutterBottom
+                    sx={{ 
+                      color: '#666',
+                      fontWeight: 600,
+                      mb: 1
+                    }}
+                  >
                     Phân tích ảnh hưởng
                   </Typography>
                   {isEditing ? (
@@ -691,14 +1139,32 @@ const RiskDetail = () => {
                       name="impact"
                       value={editedRisk?.analysis?.impact || ''}
                       onChange={handleAnalysisChange}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          '&:hover fieldset': {
+                            borderColor: '#1976d2'
+                          }
+                        }
+                      }}
                     />
                   ) : (
-                    <Typography>{risk?.analysis?.impact || 'Chưa có thông tin'}</Typography>
+                    <Typography sx={{ color: '#333', lineHeight: 1.6 }}>
+                      {risk?.analysis?.impact || 'Chưa có thông tin'}
+                    </Typography>
                   )}
                 </Box>
 
                 <Box>
-                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                  <Typography 
+                    variant="subtitle2" 
+                    color="text.secondary" 
+                    gutterBottom
+                    sx={{ 
+                      color: '#666',
+                      fontWeight: 600,
+                      mb: 1
+                    }}
+                  >
                     Biện pháp phòng ngừa
                   </Typography>
                   {isEditing ? (
@@ -709,14 +1175,32 @@ const RiskDetail = () => {
                       name="preventiveMeasures"
                       value={editedRisk?.analysis?.preventiveMeasures || ''}
                       onChange={handleAnalysisChange}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          '&:hover fieldset': {
+                            borderColor: '#1976d2'
+                          }
+                        }
+                      }}
                     />
                   ) : (
-                    <Typography>{risk?.analysis?.preventiveMeasures || 'Chưa có thông tin'}</Typography>
+                    <Typography sx={{ color: '#333', lineHeight: 1.6 }}>
+                      {risk?.analysis?.preventiveMeasures || 'Chưa có thông tin'}
+                    </Typography>
                   )}
                 </Box>
 
                 <Box>
-                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                  <Typography 
+                    variant="subtitle2" 
+                    color="text.secondary" 
+                    gutterBottom
+                    sx={{ 
+                      color: '#666',
+                      fontWeight: 600,
+                      mb: 1
+                    }}
+                  >
                     Biện pháp khắc phục
                   </Typography>
                   {isEditing ? (
@@ -727,9 +1211,18 @@ const RiskDetail = () => {
                       name="remedialMeasures"
                       value={editedRisk?.analysis?.remedialMeasures || ''}
                       onChange={handleAnalysisChange}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          '&:hover fieldset': {
+                            borderColor: '#1976d2'
+                          }
+                        }
+                      }}
                     />
                   ) : (
-                    <Typography>{risk?.analysis?.remedialMeasures || 'Chưa có thông tin'}</Typography>
+                    <Typography sx={{ color: '#333', lineHeight: 1.6 }}>
+                      {risk?.analysis?.remedialMeasures || 'Chưa có thông tin'}
+                    </Typography>
                   )}
                 </Box>
               </Stack>
@@ -739,158 +1232,31 @@ const RiskDetail = () => {
           {/* Sidebar */}
           <Grid item xs={12} md={4}>
             <Stack spacing={3}>
-              {/* Hành động phòng ngừa */}
-              <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                  <Typography variant="h6" sx={{ color: 'primary.main', fontWeight: 600 }}>
-                    Hành động phòng ngừa
-                  </Typography>
-                  <Button
-                    variant="contained"
-                    size="small"
-                    startIcon={<AddIcon />}
-                    onClick={() => {
-                      setSelectedAction(null);
-                      setOpenActionDialog(true);
-                    }}
-                    sx={{
-                      backgroundColor: '#2e7d32',
-                      '&:hover': {
-                        backgroundColor: '#1b5e20'
-                      }
-                    }}
-                  >
-                    THÊM
-                  </Button>
-                </Box>
-
-                <Stack spacing={2}>
-                  {risk.preventiveActions.map((action) => (
-                    <Paper
-                      key={action.id}
-                      elevation={0}
-                      sx={{
-                        p: 2,
-                        borderRadius: 1,
-                        bgcolor: '#f8f9fa',
-                        border: '1px solid #e0e0e0',
-                        '&:hover': {
-                          bgcolor: '#f5f5f5',
-                          borderColor: '#bdbdbd'
-                        }
-                      }}
-                    >
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
-                        <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#2196f3' }}>
-                          {action.name}
-                        </Typography>
-                        <Stack direction="row" spacing={1}>
-                          <IconButton
-                            size="small"
-                            onClick={() => handleEditAction(action)}
-                            sx={{ 
-                              color: 'primary.main',
-                              p: 0.5,
-                              '&:hover': {
-                                bgcolor: 'rgba(33, 150, 243, 0.08)'
-                              }
-                            }}
-                          >
-                            <EditIcon fontSize="small" />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            onClick={() => handleDeleteAction(action.id)}
-                            sx={{ 
-                              color: 'error.main',
-                              p: 0.5,
-                              '&:hover': {
-                                bgcolor: 'rgba(244, 67, 54, 0.08)'
-                              }
-                            }}
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </Stack>
-                      </Box>
-
-                      <Stack spacing={1}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Typography variant="body2" color="text.secondary" sx={{ minWidth: 85 }}>
-                            Thực hiện:
-                          </Typography>
-                          <Typography variant="body2">
-                            {action.assignee}
-                          </Typography>
-                        </Box>
-
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Typography variant="body2" color="text.secondary" sx={{ minWidth: 85 }}>
-                            Thời gian:
-                          </Typography>
-                          <Typography variant="body2">
-                            {formatDate(action.startDate)} - {formatDate(action.endDate)}
-                          </Typography>
-                        </Box>
-
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Typography variant="body2" color="text.secondary" sx={{ minWidth: 85 }}>
-                            Trạng thái:
-                          </Typography>
-                          <Chip
-                            label={action.status}
-                            size="small"
-                            sx={{
-                              height: '24px',
-                              fontSize: '0.75rem',
-                              bgcolor: getStatusColor(action.status),
-                              color: 'white',
-                              '& .MuiChip-label': {
-                                px: 1
-                              }
-                            }}
-                          />
-                        </Box>
-
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Typography variant="body2" color="text.secondary" sx={{ minWidth: 85 }}>
-                            Độ ưu tiên:
-                          </Typography>
-                          <Chip
-                            label={action.priority}
-                            size="small"
-                            sx={{
-                              height: '24px',
-                              fontSize: '0.75rem',
-                              bgcolor: getPriorityColor(action.priority),
-                              color: 'white',
-                              '& .MuiChip-label': {
-                                px: 1
-                              }
-                            }}
-                          />
-                        </Box>
-                      </Stack>
-                    </Paper>
-                  ))}
-                </Stack>
-              </Paper>
-
               {/* Lịch sử xử lý */}
               <RiskHistory history={riskHistory} />
+
+              {/* Hành động phòng ngừa */}
+              <RiskActionList
+                actions={risk?.preventiveActions || []}
+                riskState={risk?.state}
+                onAddAction={handleAddAction}
+                onDeleteAction={handleDeleteAction}
+                formatDate={formatDate}
+                managers={managers || []}
+                          />
             </Stack>
           </Grid>
         </Grid>
       </Paper>
 
       {/* Dialog thêm/sửa hành động */}
-      <Dialog 
-        open={openActionDialog} 
+      <Dialog
+        open={openActionDialog}
         onClose={handleCloseActionDialog}
-        maxWidth="sm"
+        maxWidth="md"
         fullWidth
       >
-        <DialogTitle sx={{ 
+        <DialogTitle sx={{
           pb: 2,
           borderBottom: '1px solid #e0e0e0',
           color: '#1976d2',
@@ -899,71 +1265,123 @@ const RiskDetail = () => {
           {selectedAction ? 'Chỉnh sửa hành động' : 'Thêm hành động mới'}
         </DialogTitle>
         <DialogContent sx={{ pt: 3 }}>
-          <Grid container spacing={2}>
-            <Grid item xs={12}>
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
+                size="small"
+                label="Mã hành động"
+                name="code"
+                value={newAction.code || ''}
+                onChange={(e) => setNewAction({ ...newAction, code: e.target.value })}
+                required
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                size="small"
                 label="Tên hành động"
-                value={newAction.name}
+                name="name"
+                value={newAction.name || ''}
                 onChange={(e) => setNewAction({ ...newAction, name: e.target.value })}
+                required
               />
             </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Người thực hiện"
-                value={newAction.assignee}
-                onChange={(e) => setNewAction({ ...newAction, assignee: e.target.value })}
-              />
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth size="small" required>
+                <InputLabel>Phòng ban</InputLabel>
+                <Select
+                  name="departmentId"
+                  value={risk.departmentId}
+                  label="Phòng ban"
+                  disabled
+                  sx={{
+                    '& .MuiSelect-select': {
+                      color: 'text.primary'
+                    }
+                  }}
+                >
+                  <MenuItem value={risk.departmentId}>
+                    {getDepartmentName(risk.departmentId)}
+                  </MenuItem>
+                </Select>
+              </FormControl>
             </Grid>
-            <Grid item xs={6}>
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth size="small" required>
+                <InputLabel>Người thực hiện</InputLabel>
+                <Select
+                  name="assigneeId"
+                  value={newAction.assigneeId || ''}
+                  label="Người thực hiện"
+                  onChange={(e) => setNewAction({ ...newAction, assigneeId: e.target.value })}
+                >
+                  <MenuItem value="">-- Chọn người thực hiện --</MenuItem>
+                  {managers.map((user) => (
+                    <MenuItem key={user.id} value={user.id}>
+                      {user.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth size="small" required>
+                <InputLabel>Mức độ ưu tiên</InputLabel>
+                <Select
+                  name="priorityId"
+                  value={newAction.priorityId || 2}
+                  label="Mức độ ưu tiên"
+                  onChange={(e) => setNewAction({ ...newAction, priorityId: e.target.value })}
+                >
+                  <MenuItem value={3}>Cao</MenuItem>
+                  <MenuItem value={2}>Trung bình</MenuItem>
+                  <MenuItem value={1}>Thấp</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
+                size="small"
                 type="date"
                 label="Ngày bắt đầu"
-                value={newAction.startDate}
+                name="startDate"
+                value={newAction.startDate || ''}
                 onChange={(e) => setNewAction({ ...newAction, startDate: e.target.value })}
                 InputLabelProps={{ shrink: true }}
+                required
               />
             </Grid>
-            <Grid item xs={6}>
+            <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
+                size="small"
                 type="date"
                 label="Ngày kết thúc"
-                value={newAction.endDate}
+                name="endDate"
+                value={newAction.endDate || ''}
                 onChange={(e) => setNewAction({ ...newAction, endDate: e.target.value })}
                 InputLabelProps={{ shrink: true }}
+                required
               />
             </Grid>
-            <Grid item xs={6}>
-              <FormControl fullWidth>
-                <InputLabel>Độ ưu tiên</InputLabel>
-                <Select
-                  value={newAction.priority}
-                  label="Độ ưu tiên"
-                  onChange={(e) => setNewAction({ ...newAction, priority: e.target.value })}
-                >
-                  <MenuItem value="HIGH">Cao</MenuItem>
-                  <MenuItem value="MEDIUM">Trung bình</MenuItem>
-                  <MenuItem value="LOW">Thấp</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={6}>
-              <FormControl fullWidth>
-                <InputLabel>Trạng thái</InputLabel>
-                <Select
-                  value={newAction.status}
-                  label="Trạng thái"
-                  onChange={(e) => setNewAction({ ...newAction, status: e.target.value })}
-                >
-                  <MenuItem value="NEW">Mới</MenuItem>
-                  <MenuItem value="IN_PROGRESS">Đang thực hiện</MenuItem>
-                  <MenuItem value="COMPLETED">Hoàn thành</MenuItem>
-                  <MenuItem value="CANCELLED">Đã hủy</MenuItem>
-                </Select>
-              </FormControl>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                multiline
+                minRows={4}
+                placeholder="Mô tả chi tiết hành động"
+                name="description"
+                value={newAction.description || ''}
+                onChange={(e) => setNewAction({ ...newAction, description: e.target.value })}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    fontFamily: 'inherit'
+                  }
+                }}
+              />
             </Grid>
           </Grid>
         </DialogContent>
@@ -974,7 +1392,7 @@ const RiskDetail = () => {
           <Button
             variant="contained"
             onClick={handleSaveAction}
-            disabled={!newAction.name || !newAction.assignee || !newAction.startDate || !newAction.endDate}
+            disabled={!newAction.name || !newAction.assigneeId || !newAction.startDate || !newAction.endDate}
           >
             {selectedAction ? 'LƯU' : 'THÊM'}
           </Button>
@@ -983,12 +1401,14 @@ const RiskDetail = () => {
 
       <Snackbar
         open={snackbar.open}
-        autoHideDuration={3000}
+        autoHideDuration={1000} 
         onClose={handleCloseSnackbar}
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
-        <MuiAlert 
-          onClose={handleCloseSnackbar} 
+        <MuiAlert
+          elevation={6}
+          variant="filled"
+          onClose={handleCloseSnackbar}
           severity={snackbar.severity}
           sx={{ width: '100%' }}
         >

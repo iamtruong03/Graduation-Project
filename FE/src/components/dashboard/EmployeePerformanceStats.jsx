@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Box,
   FormControl,
@@ -15,8 +15,6 @@ import {
   TableRow,
   LinearProgress,
   Grid,
-  ToggleButtonGroup,
-  ToggleButton,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -30,7 +28,9 @@ import {
   Tooltip,
   CircularProgress,
   Snackbar,
-  Alert as MuiAlert
+  Alert as MuiAlert,
+  Card,
+  CardContent
 } from '@mui/material';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import CloseIcon from '@mui/icons-material/Close';
@@ -39,56 +39,18 @@ import GroupIcon from '@mui/icons-material/Group';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import TaskIcon from '@mui/icons-material/Task';
+import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import PercentIcon from '@mui/icons-material/Percent';
 
-const mockDepartments = [
-  { id: 1, name: 'Phòng kế toán' },
-  { id: 2, name: 'Phòng hành chính' },
-  { id: 3, name: 'Phòng kỹ thuật' },
-];
-
-const mockProjects = [
-  { id: 1, name: 'Dự án A' },
-  { id: 2, name: 'Dự án B' },
-  { id: 3, name: 'Dự án C' },
-];
-
-const mockEmployeeStats = [
-  {
-    id: 1,
-    name: 'Nguyễn Văn A',
-    department: 'Phòng kế toán',
-    project: 'Dự án A',
-    inProgress: 3,
-    completed: 5,
-    completionRate: 62.5,
-    deadline: '2024-03-15',
-  },
-  {
-    id: 2,
-    name: 'Trần Thị B',
-    department: 'Phòng kỹ thuật',
-    project: 'Dự án A',
-    inProgress: 2,
-    completed: 8,
-    completionRate: 80,
-    deadline: '2024-03-20',
-  },
-  {
-    id: 3,
-    name: 'Lê Văn C',
-    department: 'Phòng hành chính',
-    project: 'Dự án B',
-    inProgress: 4,
-    completed: 2,
-    completionRate: 33.3,
-    deadline: '2024-03-25',
-  },
-];
+import projectService from '../../services/projectService';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
 const EmployeePerformanceStats = () => {
   const theme = useTheme();
+  const [projects, setProjects] = useState([]);
   const [selectedValue, setSelectedValue] = useState('');
   const [openDetailDialog, setOpenDetailDialog] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
@@ -102,37 +64,100 @@ const EmployeePerformanceStats = () => {
     severity: 'success'
   });
 
-  // Simulate loading
-  React.useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 1000);
-    return () => clearTimeout(timer);
+  const [employeeStats, setEmployeeStats] = useState([]);
+  const [projectStats, setProjectStats] = useState(null);
+
+  // Fetch projects when component mounts
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        const response = await projectService.getAllProjects();
+        if (response.status === 200) {
+          setProjects(response.data);
+        }
+      } catch (err) {
+        console.error('Error fetching projects:', err);
+        setSnackbar({
+          open: true,
+          message: 'Không thể tải danh sách dự án',
+          severity: 'error'
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProjects();
   }, []);
 
   const handleCloseSnackbar = () => {
     setSnackbar(prev => ({ ...prev, open: false }));
   };
 
-  const handleValueChange = (event) => {
+  const handleValueChange = async (event) => {
+    const projectId = event.target.value;
+    setSelectedValue(projectId);
+    
+    if (!projectId) {
+      setEmployeeStats([]);
+      setProjectStats(null);
+      return;
+    }
+    
+    setLoading(true);
     try {
-      setSelectedValue(event.target.value);
-      setLoading(true);
-      // Simulate API call
-      setTimeout(() => {
-        setLoading(false);
-        setSnackbar({
-          open: true,
-          message: 'Đã cập nhật thông tin dự án',
-          severity: 'success'
-        });
-      }, 500);
-    } catch (err) {
-      setSnackbar({
-        open: true,
-        message: 'Không thể cập nhật thông tin dự án',
-        severity: 'error'
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:8080/api/projects/stats?projectId=${projectId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
+      
+      if (!response.ok) throw new Error('API error');
+      
+      const result = await response.json();
+      
+      if (result.status === 200 && result.data) {
+        const data = result.data;
+        
+        // Map employee statistics
+        setEmployeeStats(
+          data.userProjectStatsDTOS.map((emp, index) => ({
+            id: index + 1,
+            name: emp.nameUser,
+            department: emp.departmentName || 'Chưa phân bổ',
+            project: emp.projectName,
+            inProgress: emp.taskProcess,
+            completed: emp.taskComplete,
+            totalTasks: emp.totalTask,
+            completionRate: emp.completionRate,
+            projectCompletionRate: emp.projectCompletionRate
+          }))
+        );
+        
+        // Map project statistics
+        setProjectStats({
+          totalProjectTask: data.totalProjectTask,
+          projectTaskProcess: data.projectTaskProcess,
+          projectTaskComplete: data.projectTaskComplete,
+          projectRate: data.projectRate
+        });
+        
+        setSnackbar({ 
+          open: true, 
+          message: 'Đã cập nhật thông tin dự án', 
+          severity: 'success' 
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching project stats:', err);
+      setSnackbar({ 
+        open: true, 
+        message: 'Không thể cập nhật thông tin dự án', 
+        severity: 'error' 
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -140,13 +165,8 @@ const EmployeePerformanceStats = () => {
     setPage(newPage);
   };
 
-  // Lọc nhân viên theo dự án
-  const filteredEmployees = useMemo(() => {
-    return mockEmployeeStats.filter(emp => {
-      if (!selectedValue) return true;
-      return emp.project === mockProjects.find(p => p.id === selectedValue)?.name;
-    });
-  }, [selectedValue]);
+  // Use employeeStats for filtered data
+  const filteredEmployees = employeeStats;
 
   const paginatedEmployees = filteredEmployees.slice(
     page * rowsPerPage,
@@ -168,14 +188,6 @@ const EmployeePerformanceStats = () => {
     }));
   }, [filteredEmployees]);
 
-  // Thêm dữ liệu thống kê theo thời gian
-  const timelineData = [
-    { month: 'T1', completed: 10, inProgress: 5 },
-    { month: 'T2', completed: 15, inProgress: 8 },
-    { month: 'T3', completed: 12, inProgress: 6 },
-    { month: 'T4', completed: 20, inProgress: 4 },
-  ];
-
   const handleEmployeeClick = (employee) => {
     try {
       setSelectedEmployee(employee);
@@ -192,6 +204,82 @@ const EmployeePerformanceStats = () => {
         severity: 'error'
       });
     }
+  };
+
+  // Project Statistics Cards Component
+  const ProjectStatsCards = () => {
+    if (!projectStats) return null;
+
+    const statsData = [
+      {
+        title: 'Tổng công việc',
+        value: projectStats.totalProjectTask,
+        icon: <TaskIcon />,
+        color: theme.palette.info.main,
+        bgColor: theme.palette.info.light
+      },
+      {
+        title: 'Đang thực hiện',
+        value: projectStats.projectTaskProcess,
+        icon: <PlayCircleOutlineIcon />,
+        color: theme.palette.warning.main,
+        bgColor: theme.palette.warning.light
+      },
+      {
+        title: 'Đã hoàn thành',
+        value: projectStats.projectTaskComplete,
+        icon: <CheckCircleIcon />,
+        color: theme.palette.success.main,
+        bgColor: theme.palette.success.light
+      },
+      {
+        title: 'Tiến độ dự án',
+        value: `${Math.round(projectStats.projectRate)}%`,
+        icon: <PercentIcon />,
+        color: theme.palette.primary.main,
+        bgColor: theme.palette.primary.light
+      }
+    ];
+
+    return (
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        {statsData.map((stat, index) => (
+          <Grid item xs={12} sm={6} md={3} key={index}>
+            <Card 
+              elevation={2}
+              sx={{ 
+                borderRadius: 2,
+                background: `linear-gradient(135deg, ${stat.bgColor}20 0%, ${stat.color}10 100%)`,
+                border: `1px solid ${stat.color}30`
+              }}
+            >
+              <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      {stat.title}
+                    </Typography>
+                    <Typography variant="h5" sx={{ fontWeight: 600, color: stat.color }}>
+                      {stat.value}
+                    </Typography>
+                  </Box>
+                  <Box 
+                    sx={{ 
+                      p: 1.5, 
+                      borderRadius: '50%', 
+                      backgroundColor: stat.color,
+                      color: '#fff'
+                    }}
+                  >
+                    {stat.icon}
+                  </Box>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
+    );
   };
 
   if (error) {
@@ -259,8 +347,8 @@ const EmployeePerformanceStats = () => {
                 onChange={handleValueChange}
                 disabled={loading}
               >
-                <MenuItem value="">Tất cả</MenuItem>
-                {mockProjects.map((project) => (
+                <MenuItem value="">Chọn dự án</MenuItem>
+                {projects.map((project) => (
                   <MenuItem key={project.id} value={project.id}>
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       <WorkIcon sx={{ mr: 1, fontSize: 20 }} />
@@ -272,218 +360,246 @@ const EmployeePerformanceStats = () => {
             </FormControl>
           </Box>
 
-          <TableContainer 
-            component={Paper} 
-            sx={{ 
-              mb: 4,
-              borderRadius: 2,
-              overflow: 'hidden'
-            }}
-          >
-            <Table>
-              <TableHead>
-                <TableRow sx={{ backgroundColor: theme.palette.primary.main }}>
-                  <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Tên nhân viên</TableCell>
-                  <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Phòng ban</TableCell>
-                  <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Dự án</TableCell>
-                  <TableCell align="center" sx={{ color: '#fff', fontWeight: 600 }}>Đang thực hiện</TableCell>
-                  <TableCell align="center" sx={{ color: '#fff', fontWeight: 600 }}>Đã hoàn thành</TableCell>
-                  <TableCell align="center" sx={{ color: '#fff', fontWeight: 600 }}>Tỷ lệ hoàn thành</TableCell>
-                  <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Tiến độ</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {loading ? (
-                  Array.from(new Array(rowsPerPage)).map((_, index) => (
-                    <TableRow key={index}>
-                      {Array.from(new Array(8)).map((_, cellIndex) => (
-                        <TableCell key={cellIndex}>
-                          <Skeleton animation="wave" />
-                        </TableCell>
-                      ))}
+          {/* Project Statistics Cards */}
+          {selectedValue && <ProjectStatsCards />}
+
+          {/* Employee Table */}
+          {selectedValue && (
+            <>
+              <TableContainer 
+                component={Paper} 
+                sx={{ 
+                  mb: 4,
+                  borderRadius: 2,
+                  overflow: 'hidden'
+                }}
+              >
+                <Table>
+                  <TableHead>
+                    <TableRow sx={{ backgroundColor: theme.palette.primary.main }}>
+                      <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Tên nhân viên</TableCell>
+                      <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Phòng ban</TableCell>
+                      <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Dự án</TableCell>
+                      <TableCell align="center" sx={{ color: '#fff', fontWeight: 600 }}>Tổng công việc</TableCell>
+                      <TableCell align="center" sx={{ color: '#fff', fontWeight: 600 }}>Đang thực hiện</TableCell>
+                      <TableCell align="center" sx={{ color: '#fff', fontWeight: 600 }}>Đã hoàn thành</TableCell>
+                      <TableCell align="center" sx={{ color: '#fff', fontWeight: 600 }}>Tỷ lệ hoàn thành</TableCell>
+                      <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Tiến độ</TableCell>
                     </TableRow>
-                  ))
-                ) : paginatedEmployees.map((employee) => (
-                  <TableRow 
-                    key={employee.id}
-                    hover
-                    sx={{ 
-                      cursor: 'pointer',
-                      '&:hover': {
-                        backgroundColor: theme.palette.action.hover
-                      }
-                    }}
-                    onClick={() => handleEmployeeClick(employee)}
-                  >
-                    <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <GroupIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
-                        <Typography
-                          component="span"
-                          sx={{
-                            color: theme.palette.primary.main,
-                            fontWeight: 500,
-                            '&:hover': {
-                              textDecoration: 'underline'
-                            }
-                          }}
-                        >
-                          {employee.name}
-                        </Typography>
-                      </Box>
-                    </TableCell>
-                    <TableCell>{employee.department}</TableCell>
-                    <TableCell>
-                      <Chip
-                        icon={<WorkIcon />}
-                        label={employee.project}
-                        size="small"
-                        sx={{ backgroundColor: theme.palette.primary.light, color: '#fff' }}
-                      />
-                    </TableCell>
-                    <TableCell align="center">
-                      <Chip
-                        label={employee.inProgress}
-                        size="small"
-                        color="warning"
-                      />
-                    </TableCell>
-                    <TableCell align="center">
-                      <Chip
-                        label={employee.completed}
-                        size="small"
-                        color="success"
-                      />
-                    </TableCell>
-                    <TableCell align="center">
-                      <Tooltip title={`${employee.completionRate}% hoàn thành`}>
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <CircularProgress
-                            variant="determinate"
-                            value={employee.completionRate}
-                            size={30}
-                            thickness={4}
-                            sx={{
-                              color: employee.completionRate >= 100 ? theme.palette.success.main :
-                                employee.completionRate >= 50 ? theme.palette.primary.main :
-                                theme.palette.error.main
-                            }}
-                          />
-                          <Typography variant="body2" sx={{ ml: 1 }}>
-                            {`${Math.round(employee.completionRate)}%`}
-                          </Typography>
-                        </Box>
-                      </Tooltip>
-                    </TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                        <Box sx={{ width: '100%', mr: 1 }}>
-                          <LinearProgress
-                            variant="determinate"
-                            value={employee.completionRate}
-                            sx={{
-                              height: 8,
-                              borderRadius: 5,
-                              backgroundColor: theme.palette.grey[200],
-                              '& .MuiLinearProgress-bar': {
-                                backgroundColor: employee.completionRate >= 100 ? theme.palette.success.main :
-                                  employee.completionRate >= 50 ? theme.palette.primary.main :
-                                  theme.palette.error.main,
-                                borderRadius: 5
-                              }
-                            }}
-                          />
-                        </Box>
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center',
-            mb: 3,
-            px: 2,
-            flexDirection: { xs: 'column', sm: 'row' },
-            gap: { xs: 2, sm: 0 }
-          }}>
-            <Typography variant="body2" color="text.secondary">
-              Tổng {filteredEmployees.length} bản ghi
-            </Typography>
-            <Pagination
-              count={Math.ceil(filteredEmployees.length / rowsPerPage)}
-              page={page + 1}
-              onChange={(e, p) => handleChangePage(e, p - 1)}
-              color="primary"
-              size="small"
-              showFirstButton
-              showLastButton
-            />
-          </Box>
-
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
-              <Paper sx={{ p: 2, borderRadius: 2, height: '100%' }}>
-                <Typography variant="h6" sx={{ mb: 2, fontWeight: 500 }}>
-                  <AssignmentIcon sx={{ mr: 1, verticalAlign: 'middle', color: theme.palette.primary.main }} />
-                  Số lượng công việc theo nhân viên
-                </Typography>
-                {loading ? (
-                  <Skeleton variant="rectangular" height={300} animation="wave" />
-                ) : (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={barChartData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <RechartsTooltip />
-                      <Legend />
-                      <Bar dataKey="Đang thực hiện" fill={theme.palette.warning.main} />
-                      <Bar dataKey="Đã hoàn thành" fill={theme.palette.success.main} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                )}
-              </Paper>
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <Paper sx={{ p: 2, borderRadius: 2, height: '100%' }}>
-                <Typography variant="h6" sx={{ mb: 2, fontWeight: 500 }}>
-                  <TrendingUpIcon sx={{ mr: 1, verticalAlign: 'middle', color: theme.palette.primary.main }} />
-                  Tỷ lệ hoàn thành công việc
-                </Typography>
-                {loading ? (
-                  <Skeleton variant="rectangular" height={300} animation="wave" />
-                ) : (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={pieChartData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={80}
-                        fill={theme.palette.primary.main}
-                        paddingAngle={5}
-                        dataKey="value"
-                        label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                  </TableHead>
+                  <TableBody>
+                    {loading ? (
+                      Array.from(new Array(rowsPerPage)).map((_, index) => (
+                        <TableRow key={index}>
+                          {Array.from(new Array(8)).map((_, cellIndex) => (
+                            <TableCell key={cellIndex}>
+                              <Skeleton animation="wave" />
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))
+                    ) : paginatedEmployees.map((employee) => (
+                      <TableRow 
+                        key={employee.id}
+                        hover
+                        sx={{ 
+                          cursor: 'pointer',
+                          '&:hover': {
+                            backgroundColor: theme.palette.action.hover
+                          }
+                        }}
+                        onClick={() => handleEmployeeClick(employee)}
                       >
-                        {pieChartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <RechartsTooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
-                )}
-              </Paper>
-            </Grid>
-          </Grid>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <GroupIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
+                            <Typography
+                              component="span"
+                              sx={{
+                                color: theme.palette.primary.main,
+                                fontWeight: 500,
+                                '&:hover': {
+                                  textDecoration: 'underline'
+                                }
+                              }}
+                            >
+                              {employee.name}
+                            </Typography>
+                          </Box>
+                        </TableCell>
+                        <TableCell>{employee.department}</TableCell>
+                        <TableCell>
+                          <Chip
+                            icon={<WorkIcon />}
+                            label={employee.project}
+                            size="small"
+                            sx={{ backgroundColor: theme.palette.primary.light, color: '#fff' }}
+                          />
+                        </TableCell>
+                        <TableCell align="center">
+                          <Chip
+                            label={employee.totalTasks}
+                            size="small"
+                            color="info"
+                          />
+                        </TableCell>
+                        <TableCell align="center">
+                          <Chip
+                            label={employee.inProgress}
+                            size="small"
+                            color="warning"
+                          />
+                        </TableCell>
+                        <TableCell align="center">
+                          <Chip
+                            label={employee.completed}
+                            size="small"
+                            color="success"
+                          />
+                        </TableCell>
+                        <TableCell align="center">
+                          <Tooltip title={`${employee.completionRate}% hoàn thành`}>
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              <CircularProgress
+                                variant="determinate"
+                                value={employee.completionRate}
+                                size={30}
+                                thickness={4}
+                                sx={{
+                                  color: employee.completionRate >= 100 ? theme.palette.success.main :
+                                    employee.completionRate >= 50 ? theme.palette.primary.main :
+                                    theme.palette.error.main
+                                }}
+                              />
+                              <Typography variant="body2" sx={{ ml: 1 }}>
+                                {`${Math.round(employee.completionRate)}%`}
+                              </Typography>
+                            </Box>
+                          </Tooltip>
+                        </TableCell>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                            <Box sx={{ width: '100%', mr: 1 }}>
+                              <LinearProgress
+                                variant="determinate"
+                                value={employee.completionRate}
+                                sx={{
+                                  height: 8,
+                                  borderRadius: 5,
+                                  backgroundColor: theme.palette.grey[200],
+                                  '& .MuiLinearProgress-bar': {
+                                    backgroundColor: employee.completionRate >= 100 ? theme.palette.success.main :
+                                      employee.completionRate >= 50 ? theme.palette.primary.main :
+                                      theme.palette.error.main,
+                                    borderRadius: 5
+                                  }
+                                }}
+                              />
+                            </Box>
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
 
+              {/* Pagination */}
+              {filteredEmployees.length > 0 && (
+                <Box sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  mb: 3,
+                  px: 2,
+                  flexDirection: { xs: 'column', sm: 'row' },
+                  gap: { xs: 2, sm: 0 }
+                }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Tổng {filteredEmployees.length} bản ghi
+                  </Typography>
+                  <Pagination
+                    count={Math.ceil(filteredEmployees.length / rowsPerPage)}
+                    page={page + 1}
+                    onChange={(e, p) => handleChangePage(e, p - 1)}
+                    color="primary"
+                    size="small"
+                    showFirstButton
+                    showLastButton
+                  />
+                </Box>
+              )}
+
+              {/* Charts */}
+              {filteredEmployees.length > 0 && (
+                <Grid container spacing={3}>
+                  <Grid item xs={12} md={6}>
+                    <Paper sx={{ p: 2, borderRadius: 2, height: '100%' }}>
+                      <Typography variant="h6" sx={{ mb: 2, fontWeight: 500 }}>
+                        <AssignmentIcon sx={{ mr: 1, verticalAlign: 'middle', color: theme.palette.primary.main }} />
+                        Số lượng công việc theo nhân viên
+                      </Typography>
+                      <ResponsiveContainer width="100%" height={300}>
+                        <BarChart data={barChartData}>
+                          <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
+                          <XAxis dataKey="name" />
+                          <YAxis />
+                          <RechartsTooltip />
+                          <Legend />
+                          <Bar dataKey="Đang thực hiện" fill={theme.palette.warning.main} />
+                          <Bar dataKey="Đã hoàn thành" fill={theme.palette.success.main} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </Paper>
+                  </Grid>
+
+                  <Grid item xs={12} md={6}>
+                    <Paper sx={{ p: 2, borderRadius: 2, height: '100%' }}>
+                      <Typography variant="h6" sx={{ mb: 2, fontWeight: 500 }}>
+                        <TrendingUpIcon sx={{ mr: 1, verticalAlign: 'middle', color: theme.palette.primary.main }} />
+                        Tỷ lệ hoàn thành công việc
+                      </Typography>
+                      <ResponsiveContainer width="100%" height={300}>
+                        <PieChart>
+                          <Pie
+                            data={pieChartData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={60}
+                            outerRadius={80}
+                            fill={theme.palette.primary.main}
+                            paddingAngle={5}
+                            dataKey="value"
+                            label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                          >
+                            {pieChartData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                            ))}
+                          </Pie>
+                          <RechartsTooltip />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </Paper>
+                  </Grid>
+                </Grid>
+              )}
+            </>
+          )}
+
+          {/* No Data Message */}
+          {!selectedValue && (
+            <Box sx={{ textAlign: 'center', py: 8 }}>
+              <WorkIcon sx={{ fontSize: 64, color: theme.palette.grey[400], mb: 2 }} />
+              <Typography variant="h6" color="text.secondary" gutterBottom>
+                Chọn dự án để xem thống kê
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Vui lòng chọn một dự án từ dropdown để hiển thị thống kê hiệu suất nhân viên
+              </Typography>
+            </Box>
+          )}
+
+          {/* Employee Detail Dialog */}
           <Dialog
             open={openDetailDialog}
             onClose={() => setOpenDetailDialog(false)}
@@ -544,7 +660,12 @@ const EmployeePerformanceStats = () => {
                     </Typography>
                     <Paper sx={{ p: 2, borderRadius: 2 }}>
                       <Box sx={{ '& > *': { mb: 1.5 } }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                          <Chip
+                            label={`Tổng: ${selectedEmployee.totalTasks}`}
+                            color="info"
+                            size="small"
+                          />
                           <Chip
                             label={`Đang thực hiện: ${selectedEmployee.inProgress}`}
                             color="warning"
@@ -572,7 +693,7 @@ const EmployeePerformanceStats = () => {
                                 verticalAlign: 'middle'
                               }}
                             />
-                            {selectedEmployee.completionRate}%
+                            {Math.round(selectedEmployee.completionRate)}%
                           </Box>
                         </Typography>
                       </Box>
@@ -584,14 +705,18 @@ const EmployeePerformanceStats = () => {
                     </Typography>
                     <Paper sx={{ p: 2, borderRadius: 2 }}>
                       <ResponsiveContainer width="100%" height={300}>
-                        <BarChart data={[selectedEmployee]}>
+                        <BarChart data={[{
+                          name: selectedEmployee.name,
+                          'Đang thực hiện': selectedEmployee.inProgress,
+                          'Đã hoàn thành': selectedEmployee.completed
+                        }]}>
                           <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
                           <XAxis dataKey="name" />
                           <YAxis />
                           <RechartsTooltip />
                           <Legend />
-                          <Bar dataKey="inProgress" name="Đang thực hiện" fill={theme.palette.warning.main} />
-                          <Bar dataKey="completed" name="Đã hoàn thành" fill={theme.palette.success.main} />
+                          <Bar dataKey="Đang thực hiện" fill={theme.palette.warning.main} />
+                          <Bar dataKey="Đã hoàn thành" fill={theme.palette.success.main} />
                         </BarChart>
                       </ResponsiveContainer>
                     </Paper>

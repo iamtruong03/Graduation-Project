@@ -669,7 +669,7 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
             Long userId = u.getId();
 
             String nameUser = userService.getUserDisplayName(String.valueOf(userId));
-            String departmentName = departmentService.getDepartmentNameById(userId);
+            String departmentName = departmentService.getDepartmentNameById(u.getDepartmentId());
             String projectName = project.getName();
 
             Long taskProcess =  taskRepo.countByAssigneeIdAndProjectIdAndStatusAndState(

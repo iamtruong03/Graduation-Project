@@ -87,7 +87,8 @@ const TaskProjectList = ({
   onEditTask, 
   onDeleteTask,
   formatDate,
-  managers
+  managers,
+  isManager
 }) => {
   const navigate = useNavigate();
 
@@ -105,7 +106,7 @@ const TaskProjectList = ({
         <Typography variant="h6" sx={{ color: 'primary.main', fontWeight: 600 }}>
           Danh sách công việc
         </Typography>
-        {projectState === 2 && (
+        {projectState === 2 && isManager && (
           <Button
             variant="contained"
             size="small"
@@ -155,9 +156,21 @@ const TaskProjectList = ({
               >
                 {task.name}
               </Typography>
-              {projectState === 2 && (
+              {projectState === 2 && isManager && (
                 <Stack direction="row" spacing={1}>
-               
+                  <IconButton
+                    size="small"
+                    onClick={() => onEditTask(task)}
+                    sx={{
+                      color: 'primary.main',
+                      p: 0.5,
+                      '&:hover': {
+                        bgcolor: 'rgba(25, 118, 210, 0.08)'
+                      }
+                    }}
+                  >
+                    <EditIcon fontSize="small" />
+                  </IconButton>
                   <IconButton
                     size="small"
                     onClick={() => onDeleteTask(task.id)}

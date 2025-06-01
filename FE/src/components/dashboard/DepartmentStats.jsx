@@ -113,7 +113,6 @@ const DepartmentStats = () => {
       setSelectedDepartment(key);
       setSnackbar({
         open: true,
-        message: 'Đã cập nhật thông tin phòng ban',
         severity: 'success'
       });
     } catch (err) {

@@ -47,6 +47,7 @@ import {
 import projectService from '../../services/projectService';
 import departmentService from '../../services/departmentService';
 import staffService from '../../services/staffService';
+import documentService from '../../services/documentService';
 import { PROJECT_STATES, PROJECT_TYPES } from '../../utils/constants';
 import ProjectHistory from './ProjectHistory';
 import TaskProjectList from './TaskProjectList';
@@ -95,6 +96,70 @@ const ProjectDetail = () => {
     severity: 'success'
   });
   const [projectTypes, setProjectTypes] = useState({});
+  const [openUploadDialog, setOpenUploadDialog] = useState(false);
+  const [uploadForm, setUploadForm] = useState({
+    file: null,
+    code: '',
+    name: '',
+    documentTypeId: '',
+    projectId: id
+  });
+  const [documentTypes] = useState([
+    { id: 1, name: 'Quy định' },
+    { id: 2, name: 'Tài liệu Dự án' },
+    { id: 3, name: 'Báo cáo' }
+  ]);
+  const [selectedDocument, setSelectedDocument] = useState(null);
+  const [openEditDialog, setOpenEditDialog] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: '',
+    code: '',
+    documentTypeId: '',
+    description: ''
+  });
+  const [departmentUsers, setDepartmentUsers] = useState([]);
+
+  // Lấy uid từ token
+  const currentManagerId = (() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      console.error('Không tìm thấy token trong localStorage');
+      return null;
+    }
+    try {
+      // Giải mã token để lấy sub (user id)
+      const tokenData = JSON.parse(atob(token.split('.')[1]));
+      console.log('Token data:', tokenData);
+      const userId = Number(tokenData.sub);
+      if (isNaN(userId)) {
+        console.error('sub không phải là số hợp lệ:', tokenData.sub);
+        return null;
+      }
+      console.log('User ID from token:', userId);
+      return userId;
+    } catch (error) {
+      console.error('Lỗi khi giải mã token:', error);
+      return null;
+    }
+  })();
+
+  const fetchDocuments = async () => {
+    try {
+      const response = await documentService.searchDocuments({
+        search: "",
+        projectId: id
+      });
+      
+      if (response.status === 200) {
+        setProject(prev => ({
+          ...prev,
+          attachments: response.data.content || []
+        }));
+      }
+    } catch (err) {
+      console.error('Error fetching documents:', err);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -107,17 +172,21 @@ const ProjectDetail = () => {
           categoryService.getCategoriesByType('projectTypeId')
         ]);
 
-        console.log('Project Response:', projectResponse);
-        console.log('Tasks Response:', tasksResponse);
-
         if (projectResponse && projectResponse.status === 200) {
           const projectData = {
             ...projectResponse.data,
-            attachments: projectResponse.data.attachments || [],
+            attachments: [], // Khởi tạo mảng rỗng, sẽ được cập nhật sau
             tasks: tasksResponse?.data || []
           };
           setProject(projectData);
           setEditedProject(projectData);
+
+          // Log để debug
+          console.log('Current Manager ID (from token sub):', currentManagerId);
+          console.log('Project Manager ID:', projectData.managerId);
+          console.log('Is Manager:', currentManagerId === Number(projectData.managerId));
+          console.log('Current User ID type:', typeof currentManagerId);
+          console.log('Project Manager ID type:', typeof projectData.managerId);
 
           // Lấy thông tin phòng ban và danh sách người phụ trách
           if (projectData.departmentId) {
@@ -127,29 +196,24 @@ const ProjectDetail = () => {
                 staffService.listUserByDep(projectData.departmentId)
               ]);
 
-              console.log('Department Response:', deptResponse);
-              console.log('User Response:', userResponse);
-
               if (deptResponse && deptResponse.data) {
                 setDepartments([deptResponse.data]);
               }
 
               if (userResponse && userResponse.data) {
-                console.log('Setting managers:', userResponse.data);
                 setManagers(userResponse.data);
-        }
+                setDepartmentUsers(userResponse.data); // Lưu danh sách người dùng
+                // Log danh sách managers để debug
+                console.log('Managers loaded:', userResponse.data);
+              }
             } catch (err) {
               console.error('Error fetching department and managers:', err);
             }
           }
-        } else {
-          setError('Không thể tải thông tin dự án');
         }
 
         if (Array.isArray(historyResponse)) {
           setProjectHistory(historyResponse);
-        } else {
-          setProjectHistory([]);
         }
 
         if (projectTypesResponse && projectTypesResponse.data) {
@@ -159,6 +223,10 @@ const ProjectDetail = () => {
           });
           setProjectTypes(typeMap);
         }
+
+        // Lấy danh sách tài liệu sau khi đã lấy thông tin dự án
+        await fetchDocuments();
+
       } catch (err) {
         console.error('Error fetching data:', err);
         setError('Có lỗi xảy ra khi tải thông tin');
@@ -263,7 +331,7 @@ const ProjectDetail = () => {
         startDate: editedProject.startDate ? editedProject.startDate.toISOString() : null,
         endDate: editedProject.endDate ? editedProject.endDate.toISOString() : null,
         completedDate: editedProject.completedDate ? editedProject.completedDate.toISOString() : null,
-        updateBy: localStorage.getItem('userId')
+        updateBy: currentManagerId
       };
 
       const response = await projectService.updateProject(id, projectDataToSave);
@@ -290,12 +358,12 @@ const ProjectDetail = () => {
             setProjectHistory(historyResponse);
           }
 
-        setIsEditing(false);
-        setSnackbar({
-          open: true,
+          setIsEditing(false);
+          setSnackbar({
+            open: true,
             message: 'Cập nhật dự án thành công!',
-          severity: 'success'
-        });
+            severity: 'success'
+          });
         } catch (fetchError) {
           console.error('Error fetching updated data:', fetchError);
           setSnackbar({
@@ -369,9 +437,6 @@ const ProjectDetail = () => {
     // Implement download logic here
   };
 
-  const handleAddAttachment = () => {
-    setOpenAttachmentDialog(true);
-  };
 
   const handleEditAttachment = (attachment) => {
     setSelectedAttachment(attachment);
@@ -384,8 +449,19 @@ const ProjectDetail = () => {
     setOpenAttachmentDialog(true);
   };
 
-  const handleDeleteAttachment = (attachmentId) => {
-    const updatedAttachments = project.attachments.filter(doc => doc.id !== attachmentId);
+  const handleDeleteAttachment = (docId) => {
+    // Kiểm tra quyền xóa - chỉ manager mới được xóa
+    if (currentManagerId !== Number(project.managerId)) {
+      setSnackbar({
+        open: true,
+        message: 'Chỉ quản lý dự án mới được phép xóa tài liệu',
+        severity: 'error'
+      });
+      return;
+    }
+
+    // Xử lý xóa tài liệu
+    const updatedAttachments = project.attachments.filter(doc => doc.id !== docId);
     setProject({
       ...project,
       attachments: updatedAttachments
@@ -449,19 +525,19 @@ const ProjectDetail = () => {
     try {
       setLoading(true);
       await taskService.changeStatus(taskId);
-      
-      // Cập nhật lại danh sách task
-    const updatedTasks = project.tasks.filter(task => task.id !== taskId);
-    setProject({
-      ...project,
-      tasks: updatedTasks
-    });
 
-    setSnackbar({
-      open: true,
-      message: 'Xóa công việc thành công',
-      severity: 'success'
-    });
+      // Cập nhật lại danh sách task
+      const updatedTasks = project.tasks.filter(task => task.id !== taskId);
+      setProject({
+        ...project,
+        tasks: updatedTasks
+      });
+
+      setSnackbar({
+        open: true,
+        message: 'Xóa công việc thành công',
+        severity: 'success'
+      });
     } catch (error) {
       console.error('Error deleting task:', error);
       setSnackbar({
@@ -523,11 +599,11 @@ const ProjectDetail = () => {
       setOpenTaskDialog(true);
     } catch (error) {
       console.error('Error in handleEditTask:', error);
-    setSnackbar({
-      open: true,
+      setSnackbar({
+        open: true,
         message: 'Không thể tải thông tin công việc',
         severity: 'error'
-    });
+      });
     }
   };
 
@@ -551,7 +627,7 @@ const ProjectDetail = () => {
         .then(response => {
           if (response.data) {
             setManagers(response.data);
-      }
+          }
         })
         .catch(err => {
           console.error('Error fetching assignees:', err);
@@ -579,6 +655,9 @@ const ProjectDetail = () => {
 
       // Log dữ liệu để debug
       console.log('Task data being sent:', taskData);
+      console.log('Current Manager ID:', currentManagerId);
+      console.log('Project Manager ID:', project.managerId);
+      console.log('Is Manager:', currentManagerId === Number(project.managerId));
 
       // Validate dữ liệu trước khi gửi
       if (!taskData.name || !taskData.assigneeId || !taskData.startDate || !taskData.dueDate) {
@@ -592,8 +671,7 @@ const ProjectDetail = () => {
 
       // Kiểm tra quyền tạo task khi taskTypeId == 2
       if (taskData.taskTypeId === 2) {
-        const currentUserId = localStorage.getItem('userId');
-        if (currentUserId !== project.managerId) {
+        if (currentManagerId !== Number(project.managerId)) {
           setSnackbar({
             open: true,
             message: 'Chỉ có quản lý dự án mới được phép tạo công việc',
@@ -623,10 +701,10 @@ const ProjectDetail = () => {
 
       if (response && response.data) {
         // Cập nhật lại danh sách task
-        const updatedTasks = selectedTask 
+        const updatedTasks = selectedTask
           ? project.tasks.map(task => task.id === selectedTask.id ? response.data : task)
           : [...project.tasks, response.data];
-        
+
         setProject({
           ...project,
           tasks: updatedTasks
@@ -652,6 +730,128 @@ const ProjectDetail = () => {
     }
   };
 
+  const handleFileChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      setUploadForm(prev => ({
+        ...prev,
+        file: file,
+        name: file.name
+      }));
+    }
+  };
+
+  const handleUpload = async () => {
+    try {
+      setLoading(true);
+      console.log('Uploading document with data:', uploadForm);
+
+      // Kiểm tra quyền thêm tài liệu - chỉ manager mới được thêm
+      if (currentManagerId !== Number(project.managerId)) {
+        setSnackbar({
+          open: true,
+          message: 'Chỉ quản lý dự án mới được phép thêm tài liệu',
+          severity: 'error'
+        });
+        return;
+      }
+
+      const response = await documentService.uploadDocument(uploadForm.file, {
+        name: uploadForm.name,
+        code: uploadForm.code,
+        documentTypeId: uploadForm.documentTypeId,
+        projectId: uploadForm.projectId
+      });
+      
+      console.log('Upload response:', response);
+
+      if (response.status === 200) {
+        setOpenUploadDialog(false);
+        setUploadForm({
+          file: null,
+          code: '',
+          name: '',
+          documentTypeId: '',
+          projectId: id
+        });
+        setSnackbar({
+          open: true,
+          message: 'Tải lên tài liệu thành công',
+          severity: 'success'
+        });
+        // Refresh danh sách tài liệu
+        await fetchDocuments();
+      }
+    } catch (err) {
+      setError('Không thể tải lên tài liệu');
+      console.error('Error uploading document:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditDocument = (doc) => {
+    // Kiểm tra quyền sửa - chỉ manager mới được sửa
+    if (currentManagerId !== Number(project.managerId)) {
+      setSnackbar({
+        open: true,
+        message: 'Chỉ quản lý dự án mới được phép sửa tài liệu',
+        severity: 'error'
+      });
+      return;
+    }
+
+    setSelectedDocument(doc);
+    setEditForm({
+      name: doc.name,
+      code: doc.code,
+      documentTypeId: doc.documentTypeId,
+      description: doc.description || ''
+    });
+    setOpenEditDialog(true);
+  };
+
+  const handleUpdateDocument = async () => {
+    try {
+      setLoading(true);
+      // Chỉ cập nhật các trường được chỉ định và giữ nguyên các trường khác
+      const updateData = {
+        ...selectedDocument,
+        code: editForm.code,
+        name: editForm.name,
+        description: editForm.description,
+        documentTypeId: editForm.documentTypeId
+      };
+      const response = await documentService.updateDocument(selectedDocument.id, updateData);
+      
+      if (response.status === 200) {
+        // Hiển thị thông báo thành công
+        setError(null);
+        setSnackbar({
+          open: true,
+          message: 'Cập nhật tài liệu thành công',
+          severity: 'success'
+        });
+        // Refresh thông tin tài liệu
+        const updatedDoc = await documentService.getDocumentById(selectedDocument.id);
+        setSelectedDocument(updatedDoc.data);
+        fetchDocuments(); // Refresh danh sách
+        setOpenEditDialog(false);
+      }
+    } catch (err) {
+      setError('Không thể cập nhật tài liệu');
+      console.error('Error updating document:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Thêm hàm để lấy tên người tạo
+  const getCreatorName = (createBy) => {
+    const creator = departmentUsers.find(user => String(user.id) === String(createBy));
+    return creator ? creator.name : createBy;
+  };
+
   return (
     <Box sx={{ p: 3 }}>
       <Paper elevation={3} sx={{ p: 3, mb: 3, borderRadius: 2 }}>
@@ -663,7 +863,7 @@ const ProjectDetail = () => {
             <CloseIcon />
           </IconButton>
           <Stack direction="row" alignItems="center" spacing={2}>
-          <Typography variant="h5" sx={{ fontWeight: 600 }}>Chi tiết dự án</Typography>
+            <Typography variant="h5" sx={{ fontWeight: 600 }}>Chi tiết dự án</Typography>
             {isEditing ? (
               <FormControl size="small" sx={{ minWidth: 150 }}>
                 <Select
@@ -791,16 +991,16 @@ const ProjectDetail = () => {
 
                 <Grid item xs={12} sm={6}>
                   <Typography variant="subtitle2" color="text.secondary">
-                    Người phụ trách
+                    Người quản lý
                   </Typography>
                   {isEditing ? (
                     <FormControl fullWidth size="small" sx={{ mt: 1 }}>
                       <Select
-                      name="managerId"
+                        name="managerId"
                         value={editedProject.managerId || ''}
-                      onChange={handleProjectChange}
+                        onChange={handleProjectChange}
                       >
-                        <MenuItem value="">-- Chọn người phụ trách --</MenuItem>
+                        <MenuItem value="">-- Chọn người quản lý --</MenuItem>
                         {managers && managers.length > 0 && managers.map((user) => (
                           <MenuItem key={user.id} value={user.id}>
                             {user.name}
@@ -813,7 +1013,7 @@ const ProjectDetail = () => {
                       {(() => {
                         console.log('Managers:', managers);
                         console.log('Project Manager ID:', project.managerId);
-                        const manager = managers && managers.length > 0 ? 
+                        const manager = managers && managers.length > 0 ?
                           managers.find(m => String(m.id) === String(project.managerId)) : null;
                         console.log('Found Manager:', manager);
                         return manager ? manager.name : 'Chưa có người phụ trách';
@@ -830,7 +1030,7 @@ const ProjectDetail = () => {
                     <FormControl fullWidth size="small" required>
                       <InputLabel>Phòng ban</InputLabel>
                       <Select
-                      name="departmentId"
+                        name="departmentId"
                         value={project.departmentId}
                         label="Phòng ban"
                         disabled
@@ -959,13 +1159,21 @@ const ProjectDetail = () => {
                 <Typography variant="h6" sx={{ color: 'primary.main', fontWeight: 600 }}>
                   Tài liệu đính kèm
                 </Typography>
-                {project.state === 2 && (
+                {project.state === 2 && currentManagerId === Number(project.managerId) && (
                   <Button
                     variant="contained"
                     startIcon={<CloudUploadIcon />}
                     onClick={() => {
-                      setSelectedAttachment(null);
-                      handleAddAttachment();
+                      // Kiểm tra quyền thêm tài liệu trước khi mở dialog
+                      if (currentManagerId !== Number(project.managerId)) {
+                        setSnackbar({
+                          open: true,
+                          message: 'Chỉ quản lý dự án mới được phép thêm tài liệu',
+                          severity: 'error'
+                        });
+                        return;
+                      }
+                      setOpenUploadDialog(true);
                     }}
                     sx={{
                       backgroundColor: '#2e7d32',
@@ -978,16 +1186,103 @@ const ProjectDetail = () => {
                   </Button>
                 )}
               </Box>
+
+              <Dialog
+                open={openUploadDialog}
+                onClose={() => setOpenUploadDialog(false)}
+                maxWidth="sm"
+                fullWidth
+              >
+                <DialogTitle>Tải lên tài liệu</DialogTitle>
+                <DialogContent>
+                  <Grid container spacing={2} sx={{ mt: 1 }}>
+                    <Grid item xs={12}>
+                      <Button
+                        variant="outlined"
+                        component="label"
+                        fullWidth
+                        sx={{ height: 100 }}
+                      >
+                        {uploadForm.file ? uploadForm.file.name : 'Chọn tệp để tải lên'}
+                        <input
+                          type="file"
+                          hidden
+                          onChange={handleFileChange}
+                        />
+                      </Button>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <TextField
+                        fullWidth
+                        label="Mã tài liệu"
+                        value={uploadForm.code}
+                        onChange={(e) => setUploadForm(prev => ({ ...prev, code: e.target.value }))}
+                        required
+                      />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <TextField
+                        fullWidth
+                        label="Tên tài liệu"
+                        value={uploadForm.name}
+                        onChange={(e) => setUploadForm(prev => ({ ...prev, name: e.target.value }))}
+                        required
+                      />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <FormControl fullWidth>
+                        <InputLabel>Phân loại</InputLabel>
+                        <Select
+                          label="Phân loại"
+                          value={uploadForm.documentTypeId}
+                          onChange={(e) => setUploadForm(prev => ({ ...prev, documentTypeId: e.target.value }))}
+                        >
+                          {documentTypes.map(type => (
+                            <MenuItem key={type.id} value={type.id}>
+                              {type.name}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <TextField
+                        fullWidth
+                        label="Dự án"
+                        value={project.name}
+                        disabled
+                        sx={{
+                          '& .MuiInputBase-input': {
+                            color: 'text.primary'
+                          }
+                        }}
+                      />
+                    </Grid>
+                  </Grid>
+                </DialogContent>
+                <DialogActions>
+                  <Button onClick={() => setOpenUploadDialog(false)}>Hủy</Button>
+                  <Button
+                    variant="contained"
+                    onClick={handleUpload}
+                    disabled={!uploadForm.file || !uploadForm.name || !uploadForm.documentTypeId || loading}
+                  >
+                    {loading ? 'Đang tải lên...' : 'Tải lên'}
+                  </Button>
+                </DialogActions>
+              </Dialog>
+
               <TableContainer>
                 <Table>
                   <TableHead>
                     <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                      <TableCell sx={{ fontWeight: 600 }}>Mã tài liệu</TableCell>
                       <TableCell sx={{ fontWeight: 600 }}>Tên tài liệu</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Loại tài liệu</TableCell>
                       <TableCell sx={{ fontWeight: 600 }}>Phiên bản</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Tệp đính kèm</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Người cập nhật</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Ngày tải lên</TableCell>
-                      {project.state === 2 && (
+                      <TableCell sx={{ fontWeight: 600 }}>Người tạo</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Ngày tạo</TableCell>
+                      {project.state === 2 && currentManagerId === Number(project.managerId) && (
                         <TableCell align="center" sx={{ fontWeight: 600 }}>Thao tác</TableCell>
                       )}
                     </TableRow>
@@ -995,32 +1290,28 @@ const ProjectDetail = () => {
                   <TableBody>
                     {project.attachments.map((doc) => (
                       <TableRow key={doc.id}>
+                        <TableCell>{doc.code}</TableCell>
                         <TableCell>{doc.name}</TableCell>
-                        <TableCell>{doc.version}</TableCell>
                         <TableCell>
-                          <Typography
-                            component="span"
-                            sx={{
-                              cursor: 'pointer',
-                              color: 'primary.main',
-                              '&:hover': {
-                                textDecoration: 'underline'
-                              }
-                            }}
-                            onClick={() => handleDownload(doc.fileName)}
-                          >
-                            {doc.fileName}
-                          </Typography>
+                          {documentTypes.find(type => type.id === doc.documentTypeId)?.name || 'Không xác định'}
                         </TableCell>
-                        <TableCell>{doc.updatedBy}</TableCell>
-                        <TableCell>{formatDate(doc.uploadDate)}</TableCell>
-                        {project.state === 2 && (
+                        <TableCell>{doc.version}</TableCell>
+                        <TableCell>{getCreatorName(doc.createBy)}</TableCell>
+                        <TableCell>{formatDate(doc.createDate)}</TableCell>
+                        {project.state === 2 && currentManagerId === Number(project.managerId) && (
                           <TableCell align="center">
                             <Stack direction="row" spacing={1} justifyContent="center">
                               <IconButton
                                 size="small"
                                 color="primary"
-                                onClick={() => handleEditAttachment(doc)}
+                                onClick={() => handleDownload(doc.filePath)}
+                              >
+                                <CloudDownloadIcon />
+                              </IconButton>
+                              <IconButton
+                                size="small"
+                                color="primary"
+                                onClick={() => handleEditDocument(doc)}
                               >
                                 <EditIcon />
                               </IconButton>
@@ -1056,7 +1347,8 @@ const ProjectDetail = () => {
               formatDate={formatDate}
               getPriorityColor={getPriorityColor}
               managers={managers}
-                        />
+              isManager={currentManagerId !== null && currentManagerId === Number(project.managerId)}
+            />
           </Grid>
         </Grid>
       </Paper>
@@ -1284,6 +1576,83 @@ const ProjectDetail = () => {
           </DialogActions>
         </Dialog>
       )}
+
+      {/* Dialog sửa tài liệu */}
+      <Dialog
+        open={openEditDialog}
+        onClose={() => setOpenEditDialog(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{
+          pb: 2,
+          borderBottom: '1px solid #e0e0e0',
+          color: '#1976d2',
+          fontWeight: 600
+        }}>
+          Chỉnh sửa tài liệu
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3 }}>
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Mã tài liệu"
+                value={editForm.code}
+                onChange={(e) => setEditForm(prev => ({ ...prev, code: e.target.value }))}
+                required
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Tên tài liệu"
+                value={editForm.name}
+                onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+                required
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <FormControl fullWidth>
+                <InputLabel>Phân loại</InputLabel>
+                <Select
+                  label="Phân loại"
+                  value={editForm.documentTypeId}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, documentTypeId: e.target.value }))}
+                >
+                  {documentTypes.map(type => (
+                    <MenuItem key={type.id} value={type.id}>
+                      {type.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                multiline
+                rows={4}
+                label="Mô tả tài liệu"
+                value={editForm.description}
+                onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, pt: 1, borderTop: '1px solid #e0e0e0' }}>
+          <Button onClick={() => setOpenEditDialog(false)}>
+            HỦY
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleUpdateDocument}
+            disabled={!editForm.name || !editForm.code || !editForm.documentTypeId || loading}
+          >
+            {loading ? 'ĐANG CẬP NHẬT...' : 'LƯU'}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Snackbar
         open={snackbar.open}

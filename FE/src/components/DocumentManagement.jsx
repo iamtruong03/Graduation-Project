@@ -73,7 +73,7 @@ const DocumentManagement = () => {
   const [departments, setDepartments] = useState([]);
   const [documentTypes] = useState([
     { id: 1, name: 'Quy định' },
-    { id: 2, name: 'Dự án' },
+    { id: 2, name: 'Tài liệu Dự án' },
     { id: 3, name: 'Báo cáo' }
   ]);
   const [openViewDialog, setOpenViewDialog] = useState(false);

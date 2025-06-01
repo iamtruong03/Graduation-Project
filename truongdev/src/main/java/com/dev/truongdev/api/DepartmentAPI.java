@@ -1,8 +1,10 @@
 package com.dev.truongdev.api;
 
+import com.dev.truongdev.dto.dashload.department.DepartmentStatsDTO;
 import com.dev.truongdev.entity.Department;
 import com.dev.truongdev.payload.filter.DepartmentFilter;
 import com.dev.truongdev.service.IDepartmentService;
+import com.dev.truongdev.utils.ApiResponse;
 import com.dev.truongdev.xdevbase.api.XDevBaseAPI;
 import com.dev.truongdev.xdevbase.service.IXDevBaseService;
 import java.util.List;
@@ -13,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -33,6 +36,19 @@ public class DepartmentAPI extends XDevBaseAPI<Department, DepartmentFilter> {
       @RequestAttribute String uid
   ) {
     return ResponseEntity.ok(departmentService.getActiveDepartments(uid));
+  }
+
+  @GetMapping("/stats")
+  ResponseEntity<ApiResponse<DepartmentStatsDTO>> getDepartmentStats(
+      @RequestAttribute String uid,
+      @RequestAttribute Long did,
+      @RequestParam(required = false) Long departmentId
+  ) {
+    try {
+      return ApiResponse.ok(departmentService.getDepartmentStats(uid, did, departmentId));
+    } catch (Exception e) {
+      return ApiResponse.error(e.getMessage());
+    }
   }
 
 }

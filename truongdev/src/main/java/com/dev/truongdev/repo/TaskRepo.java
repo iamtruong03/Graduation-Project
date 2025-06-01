@@ -2,6 +2,7 @@ package com.dev.truongdev.repo;
 
 import com.dev.truongdev.entity.Task;
 import com.dev.truongdev.xdevbase.repo.XDevBaseRepo;
+import java.util.Date;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
@@ -69,4 +70,26 @@ public interface TaskRepo extends XDevBaseRepo<Task> {
     List<Task> findByProjectIdAndStatus(Long projectId, Integer status);
 
     List<Task> findByRiskIdAndStatus(Long riskId, Integer status);
+
+    Long countByAssigneeIdAndStatusAndState(String assigneeId, Integer status, Integer state);
+
+    Long countByAssigneeIdAndStatus(String assigneeId, Integer status);
+
+    Long countByAssigneeIdAndStatusAndStateAndStartDateBetween(
+        String assigneeId, Integer status, Integer state ,Date startDate, Date endDate
+    );
+
+    Long countByAssigneeIdAndStatusAndStartDateBetween(
+        String assigneeId, Integer status, Date startDate, Date endDate
+    );
+
+    // count By Project Id
+    Long countByProjectIdAndStatus(Long projectId, Integer status);
+
+    Long countByAssigneeIdAndProjectIdAndStatus(String assigneeId, Long projectId, Integer status);
+
+    Long countByAssigneeIdAndProjectIdAndStatusAndState(
+        String assigneeId, Long projectId, Integer status, Integer state);
+
+    Long countByProjectIdAndStatusAndState(Long projectId, Integer status, Integer state);
 }

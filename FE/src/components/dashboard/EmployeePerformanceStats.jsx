@@ -289,7 +289,6 @@ const EmployeePerformanceStats = () => {
                   <TableCell align="center" sx={{ color: '#fff', fontWeight: 600 }}>Đang thực hiện</TableCell>
                   <TableCell align="center" sx={{ color: '#fff', fontWeight: 600 }}>Đã hoàn thành</TableCell>
                   <TableCell align="center" sx={{ color: '#fff', fontWeight: 600 }}>Tỷ lệ hoàn thành</TableCell>
-                  <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Deadline</TableCell>
                   <TableCell sx={{ color: '#fff', fontWeight: 600 }}>Tiến độ</TableCell>
                 </TableRow>
               </TableHead>
@@ -376,7 +375,6 @@ const EmployeePerformanceStats = () => {
                         </Box>
                       </Tooltip>
                     </TableCell>
-                    <TableCell>{new Date(employee.deadline).toLocaleDateString('vi-VN')}</TableCell>
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
                         <Box sx={{ width: '100%', mr: 1 }}>
@@ -484,23 +482,6 @@ const EmployeePerformanceStats = () => {
                 )}
               </Paper>
             </Grid>
-
-            <Grid item xs={12}>
-              <Paper sx={{ p: 2 }}>
-                <Typography variant="h6" sx={{ mb: 2 }}>
-                  Xu hướng công việc theo thời gian
-                </Typography>
-                <BarChart width={1100} height={300} data={timelineData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <RechartsTooltip />
-                  <Legend />
-                  <Bar dataKey="completed" name="Đã hoàn thành" fill="#82ca9d" />
-                  <Bar dataKey="inProgress" name="Đang thực hiện" fill="#8884d8" />
-                </BarChart>
-              </Paper>
-            </Grid>
           </Grid>
 
           <Dialog
@@ -593,9 +574,6 @@ const EmployeePerformanceStats = () => {
                             />
                             {selectedEmployee.completionRate}%
                           </Box>
-                        </Typography>
-                        <Typography>
-                          <strong>Deadline:</strong> {new Date(selectedEmployee.deadline).toLocaleDateString('vi-VN')}
                         </Typography>
                       </Box>
                     </Paper>

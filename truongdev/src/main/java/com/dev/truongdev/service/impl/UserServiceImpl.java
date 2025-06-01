@@ -7,6 +7,7 @@ import com.dev.truongdev.repo.UserRepo;
 import com.dev.truongdev.repo.ProjectRepo;
 import com.dev.truongdev.repo.TaskRepo;
 import com.dev.truongdev.entity.Department;
+import com.dev.truongdev.service.IDepartmentService;
 import com.dev.truongdev.service.IUserService;
 import com.dev.truongdev.utils.AppConstants;
 import com.dev.truongdev.xdevbase.service.impl.XDevBaseServiceImpl;
@@ -17,12 +18,9 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
-import org.springframework.beans.BeanUtils;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -36,12 +34,12 @@ public class UserServiceImpl extends XDevBaseServiceImpl<User, UserFilter, UserR
         implements IUserService {
 
   final UserRepo userRepo;
-  final DepartmentServiceImpl departmentService;
+  final IDepartmentService departmentService; // Thay đổi kiểu từ DepartmentServiceImpl sang interface
   final ProjectRepo projectRepo;
   final TaskRepo taskRepo;
 
-  public UserServiceImpl(UserRepo repo, DepartmentServiceImpl departmentService, 
-                        ProjectRepo projectRepo, TaskRepo taskRepo) {
+  public UserServiceImpl(UserRepo repo, @Lazy IDepartmentService departmentService,
+                        ProjectRepo projectRepo, TaskRepo taskRepo) { // Thêm @Lazy
     super(repo);
     this.userRepo = repo;
     this.departmentService = departmentService;
@@ -200,7 +198,7 @@ public class UserServiceImpl extends XDevBaseServiceImpl<User, UserFilter, UserR
       );
     } else {
       List<Department> departments = new ArrayList<>();
-      Department currentDepartment = departmentService.getById(uid, did);
+      Department currentDepartment = (Department) departmentService.getById(uid, did);
       departments.add(currentDepartment);
       departments.addAll(departmentService.getAllSubDepartments(did));
 
@@ -235,7 +233,7 @@ public class UserServiceImpl extends XDevBaseServiceImpl<User, UserFilter, UserR
     if (user.getRole().equals("1")) {
       return userRepo.findAllByStatus(AppConstants.STATUS_ACTIVE);
     }
-    Department department = departmentService.getById(uid, user.getDepartmentId());
+    Department department = (Department) departmentService.getById(uid, user.getDepartmentId());
 
     return userRepo.findByDepartmentIdAndStatus(department.getParentId(), AppConstants.STATUS_ACTIVE);
   }
@@ -335,7 +333,7 @@ public class UserServiceImpl extends XDevBaseServiceImpl<User, UserFilter, UserR
       return userRepo.findAllByStatus(AppConstants.STATUS_ACTIVE);
     } else {
       List<Department> departments = new ArrayList<>();
-      Department currentDepartment = departmentService.getById(uid, did);
+      Department currentDepartment = (Department) departmentService.getById(uid, did);
       departments.add(currentDepartment);
       departments.addAll(departmentService.getAllSubDepartments(did));
 

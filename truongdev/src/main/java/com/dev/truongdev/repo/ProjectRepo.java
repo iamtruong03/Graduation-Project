@@ -2,6 +2,7 @@ package com.dev.truongdev.repo;
 
 import com.dev.truongdev.entity.Project;
 import com.dev.truongdev.xdevbase.repo.XDevBaseRepo;
+import java.util.Date;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
@@ -73,4 +74,26 @@ public interface ProjectRepo extends XDevBaseRepo<Project> {
     List<Project> findByStatusAndDepartmentIdIn(
         Integer status, List<Long> departmentIds
     );
+
+    // Đếm số dự án theo danh sách phòng ban
+    Long countByDepartmentIdIn(List<Long> departmentIds);
+
+    // Đếm số dự án theo danh sách phòng ban và trạng thái
+    Long countByDepartmentIdInAndState(List<Long> departmentIds, Integer state);
+
+    // Đếm số dự án của một phòng ban
+    Long countByDepartmentId(Long departmentId);
+
+    // Đếm số dự án của một phòng ban theo trạng thái
+    Long countByDepartmentIdAndState(Long departmentId, Integer state);
+
+    // Lấy thống kê tiến độ dự án theo tháng cho nhiều phòng ban
+    Integer countByDepartmentIdInAndStatusAndStartDateBetween(
+        List<Long> departmentIds, Integer status, Date startDate, Date endDate
+    );
+    // Lấy thống kê tiến độ dự án theo tháng cho 1 phòng ban
+    Integer countByDepartmentIdAndStatusAndStartDateBetween(
+        Long departmentId, Integer status, Date startDate, Date endDate
+    );
+
 }

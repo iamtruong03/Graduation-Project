@@ -102,8 +102,9 @@ const MessageInput = ({ selectedUser, onMessageSent }) => {
       onSubmit={handleSendMessage}
       sx={{
         display: 'flex',
-        gap: 1,
-        alignItems: 'flex-end'
+        gap: 1.5,
+        alignItems: 'flex-end',
+        p: 1
       }}
     >
       <TextField
@@ -117,10 +118,10 @@ const MessageInput = ({ selectedUser, onMessageSent }) => {
         disabled={!selectedUser || isSending}
         sx={{
           '& .MuiOutlinedInput-root': {
-            borderRadius: 3,
-            backgroundColor: '#f8f9fa',
+            borderRadius: 25,
+            backgroundColor: '#f1f1f1',
             '&:hover': {
-              backgroundColor: '#f5f5f5'
+              backgroundColor: '#e0e0e0'
             },
             '& fieldset': {
               borderColor: 'transparent'
@@ -139,8 +140,8 @@ const MessageInput = ({ selectedUser, onMessageSent }) => {
         color="primary"
         disabled={!message.trim() || !selectedUser || isSending}
         sx={{
-          width: 45,
-          height: 45,
+          width: 48,
+          height: 48,
           backgroundColor: 'primary.main',
           color: 'white',
           '&:hover': {

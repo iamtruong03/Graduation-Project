@@ -1,5 +1,6 @@
 package com.dev.truongdev.service;
 
+import com.dev.truongdev.dto.dashload.department.DepartmentStatsDTO;
 import com.dev.truongdev.entity.Department;
 import com.dev.truongdev.payload.filter.DepartmentFilter;
 import com.dev.truongdev.xdevbase.service.IXDevBaseService;
@@ -14,4 +15,6 @@ public interface IDepartmentService<E, F> extends IXDevBaseService<Department, D
 
   // Lấy tên phòng ban theo ID
   String getDepartmentNameById(Long id);
+
+  DepartmentStatsDTO getDepartmentStats(String uid, Long did , Long departmentId);
 }

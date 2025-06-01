@@ -27,8 +27,50 @@ const DepartmentStats = () => {
         if (response.status === 200) {
           setDepartments(response.data);
         }
+
+        // Fetch department stats
+        const statsResponse = await fetch('http://localhost:8080/department/stats', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          }
+        });
+        const statsData = await statsResponse.json();
+        
+        if (statsData.status === 200) {
+          setStats({
+            totalDepartments: statsData.data.totalDepartments,
+            totalUsers: statsData.data.totalUsers,  // Mapping totalUsers từ API vào totalUsers trong UI
+            totalProjects: statsData.data.totalProjects,
+            activeProjects: statsData.data.totalProjectsProcess,
+            completedProjects: statsData.data.totalProjectsComplete
+          });
+
+          setProjectProgressData(statsData.data.monthlyProgress);
+          
+          const mappedEmployeeList = statsData.data.userStatsList.map(user => ({
+            id: user.name, // Using name as ID since no ID provided
+            name: user.name,
+            role: user.position === 'NULL' ? 'Chưa phân công' : user.position,
+            tasks: user.totalTasks,
+            completed: user.tasksCompleted,
+            performanceData: [{ month: 'Current', completed: user.tasksCompleted, total: user.totalTasks }]
+          }));
+
+          setDepartmentDetails(prev => ({
+            ...prev,
+            1: {
+              ...prev[1],
+              employeeList: mappedEmployeeList
+            }
+          }));
+        }
       } catch (err) {
-        console.error('Error fetching departments:', err);
+        console.error('Error fetching data:', err);
+        setSnackbar({
+          open: true,
+          message: 'Không thể tải dữ liệu. Vui lòng thử lại sau.',
+          severity: 'error'
+        });
       } finally {
         setLoading(false);
       }
@@ -96,7 +138,7 @@ const DepartmentStats = () => {
 
   const stats = {
     totalDepartments: departments.length,
-    totalEmployees: 42,
+    totalUsers: 42,
     totalProjects: 15,
     activeProjects: 8,
     completedProjects: 7,
@@ -124,26 +166,95 @@ const DepartmentStats = () => {
     try {
       setLoading(true);
       setSelectedDepartment(key);
-      
+  
       if (key !== 'all') {
-        const response = await departmentService.getAll();
-        if (response.status === 200) {
-          const departmentData = response.data.find(dept => dept.id === Number(key));
-          if (departmentData) {
-            // Cập nhật dữ liệu phòng ban
-            setDepartmentDetails(prev => ({
-              ...prev,
-              [key]: {
-                ...departmentData,
-                projectProgress: departmentData.projectProgress || [],
-                employeeList: departmentData.employeeList || []
-              }
-            }));
-          }
+        // Gọi API /department/stats với departmentId
+        const statsResponse = await fetch(`http://localhost:8080/department/stats?departmentId=${key}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          },
+        });
+        const statsData = await statsResponse.json();
+  
+        if (statsData.status === 200) {
+          setDepartmentDetails(prev => ({
+            ...prev,
+            [key]: {
+              employees: statsData.data.totalUsers,
+              activeProjects: statsData.data.totalProjectsProcess,
+              completedProjects: statsData.data.totalProjectsComplete,
+              projectProgress: statsData.data.monthlyProgress || [],
+              employeeList: statsData.data.userStatsList.map(user => ({
+                id: user.name,
+                name: user.name,
+                role: user.position === 'NULL' ? 'Chưa phân công' : user.position,
+                tasks: user.totalTasks,
+                completed: user.tasksCompleted,
+                performanceData: user.monthlyPerformance
+                  ? user.monthlyPerformance.map(data => ({
+                      month: data.month,
+                      completed: data.completed,
+                      total: data.total,
+                    }))
+                  : [{ month: 'Current', completed: user.tasksCompleted, total: user.totalTasks }],
+              })),
+            },
+          }));
         }
+      } else {
+        // Gọi API /department/stats cho tất cả phòng ban
+        const statsResponse = await fetch('http://localhost:8080/department/stats', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          },
+        });
+        const statsData = await statsResponse.json();
+  
+        if (statsData.status === 200) {
+          setStats({
+            totalDepartments: statsData.data.totalDepartments,
+            totalUsers: statsData.data.totalUsers,
+            totalProjects: statsData.data.totalProjects,
+            activeProjects: statsData.data.totalProjectsProcess,
+            completedProjects: statsData.data.totalProjectsComplete,
+          });
+          setProjectProgressData(statsData.data.monthlyProgress);
+          // Cập nhật employeeList cho tổng quát (nếu cần)
+          setDepartmentDetails(prev => ({
+            ...prev,
+            1: {
+              ...prev[1],
+              employeeList: statsData.data.userStatsList.map(user => ({
+                id: user.name,
+                name: user.name,
+                role: user.position === 'NULL' ? 'Chưa phân công' : user.position,
+                tasks: user.totalTasks,
+                completed: user.tasksCompleted,
+                performanceData: user.monthlyPerformance
+                  ? user.monthlyPerformance.map(data => ({
+                      month: data.month,
+                      completed: data.completed,
+                      total: data.total,
+                    }))
+                  : [{ month: 'Current', completed: user.tasksCompleted, total: user.totalTasks }],
+              })),
+            },
+          }));
+        }
+      }
+  
+      // Lấy danh sách phòng ban
+      const response = await departmentService.getAll();
+      if (response.status === 200) {
+        setDepartments(response.data);
       }
     } catch (err) {
       console.error('Error fetching department data:', err);
+      setSnackbar({
+        open: true,
+        message: 'Không thể tải dữ liệu. Vui lòng thử lại sau.',
+        severity: 'error',
+      });
     } finally {
       setLoading(false);
     }
@@ -260,7 +371,7 @@ const DepartmentStats = () => {
               <Card hoverable style={{ borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
                 <Statistic 
                   title={<span style={{ fontSize: '16px', color: '#666' }}>Tổng nhân viên</span>}
-                  value={stats.totalEmployees}
+                  value={stats.totalUsers}
                   prefix={<TeamOutlined style={{ color: '#52c41a' }} />}
                   valueStyle={{ color: '#52c41a', fontSize: '24px' }}
                 />

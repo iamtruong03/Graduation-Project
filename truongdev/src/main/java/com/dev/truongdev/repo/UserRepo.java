@@ -14,6 +14,10 @@ import java.util.Optional;
 @Repository
 public interface UserRepo extends XDevBaseRepo<User> {
 
+    Long countByDepartmentIdIn(List<Long> departmentIds);
+
+    Long countByDepartmentId(Long departmentId);
+
     Boolean existsByCodeIgnoreCase(String code);
 
     Optional<User> findByCode(String code);

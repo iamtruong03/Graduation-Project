@@ -7,7 +7,6 @@ import com.dev.truongdev.service.IDepartmentService;
 import com.dev.truongdev.utils.ApiResponse;
 import com.dev.truongdev.xdevbase.api.XDevBaseAPI;
 import com.dev.truongdev.xdevbase.service.IXDevBaseService;
-import java.util.List;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;

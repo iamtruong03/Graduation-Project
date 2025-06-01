@@ -17,4 +17,5 @@ public interface IRiskService extends IXDevBaseService<Risk, RiskFilter> {
     Page<Risk> searchAll(Long departmentId, String uid, RiskFilter filter, Pageable pageable);
     void addRiskHistory(Long riskId, Integer previousState, Integer newState, String changedBy, String comment);
     List<RiskHistoryDTO> getRiskHistory(Long riskId);
+    String getRiskNameById(Long id);
 } 

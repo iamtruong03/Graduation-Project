@@ -187,6 +187,16 @@ public class RiskServiceImpl extends XDevBaseServiceImpl<Risk, RiskFilter, RiskR
             .collect(Collectors.toList());
     }
 
+    @Override
+    public String getRiskNameById(Long id) {
+        if (id == null) {
+            return "";
+        }
+        return riskRepo.findById(id)
+            .map(Risk::getName)
+            .orElse("");
+    }
+
     private RiskHistoryDTO convertHistoryToDTO(RiskHistory history) {
         RiskHistoryDTO dto = new RiskHistoryDTO();
         dto.setId(history.getId());

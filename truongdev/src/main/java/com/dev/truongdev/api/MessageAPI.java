@@ -50,7 +50,7 @@ public class MessageAPI extends XDevBaseAPI<Message, MessageFilter> {
             messageDTO.setContent(content);
             messageDTO.setMessageType("TEXT");
             
-            MessageDTO message = messageService.sendMessage(messageDTO);
+            MessageDTO message = messageService.sendMessage(uid, messageDTO);
             return ApiResponse.ok(message);
         } catch (Exception e) {
             return ApiResponse.error(e.getMessage());
@@ -121,7 +121,7 @@ public class MessageAPI extends XDevBaseAPI<Message, MessageFilter> {
             messageDTO.setSenderId(uid);
             messageDTO.setDepartmentId(did);
             
-            MessageDTO sentMessage = messageService.sendMessage(messageDTO);
+            MessageDTO sentMessage = messageService.sendMessage(uid, messageDTO);
             return ApiResponse.ok(sentMessage);
         } catch (Exception e) {
             return ApiResponse.error(e.getMessage());

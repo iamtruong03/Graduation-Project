@@ -1243,7 +1243,7 @@ const RiskDetail = () => {
                 onDeleteAction={handleDeleteAction}
                 formatDate={formatDate}
                 managers={managers || []}
-              />
+                          />
             </Stack>
           </Grid>
         </Grid>

@@ -162,4 +162,14 @@ public class DepartmentServiceImpl extends
     return page;
   }
 
+  @Override
+  public String getDepartmentNameById(Long id) {
+    if (id == null) {
+      return "";
+    }
+    return departmentRepo.findById(id)
+        .map(Department::getName)
+        .orElse("");
+  }
+
 }

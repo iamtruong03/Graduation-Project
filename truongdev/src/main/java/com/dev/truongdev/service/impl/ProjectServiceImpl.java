@@ -405,6 +405,16 @@ public class ProjectServiceImpl extends XDevBaseServiceImpl<Project, ProjectFilt
         createProjectHistory(projectId, previousState, newState, changedBy, comment);
     }
 
+    @Override
+    public String getProjectNameById(Long id) {
+        if (id == null) {
+            return "";
+        }
+        return projectRepo.findById(id)
+            .map(Project::getName)
+            .orElse("");
+    }
+
     // Private helper methods
     private void validateProjectDTO(ProjectDTO projectDTO) {
         if (projectDTO == null) {

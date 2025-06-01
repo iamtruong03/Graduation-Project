@@ -541,15 +541,15 @@ const TaskList = () => {
                   boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
                 },
                 transition: 'all 0.3s ease'
-              }}
-            >
-              <TextField
+            }}
+          >
+            <TextField
                 fullWidth
-                size="small"
+              size="small"
                 placeholder="Tìm kiếm theo tên, mã công việc..."
-                value={searchName}
-                onChange={(e) => setSearchName(e.target.value)}
-                InputProps={{
+              value={searchName}
+              onChange={(e) => setSearchName(e.target.value)}
+              InputProps={{
                   startAdornment: (
                     <SearchIcon 
                       sx={{ 
@@ -563,7 +563,7 @@ const TaskList = () => {
                     <IconButton
                       size="small"
                       onClick={() => setSearchName('')}
-                      sx={{
+              sx={{
                         color: '#757575',
                         '&:hover': {
                           color: '#1976d2',
@@ -590,8 +590,8 @@ const TaskList = () => {
                       fontSize: '0.875rem'
                     }
                   }
-                }}
-              />
+              }}
+            />
               {searchName && (
                 <Typography
                   variant="caption"
@@ -608,9 +608,9 @@ const TaskList = () => {
               )}
             </Box>
 
-            <FormControl 
-              size="small" 
-              sx={{ 
+            <FormControl
+              size="small"
+              sx={{
                 minWidth: 200,
                 backgroundColor: '#fff',
                 borderRadius: 2,
@@ -646,9 +646,9 @@ const TaskList = () => {
               </Select>
             </FormControl>
 
-            <FormControl 
-              size="small" 
-              sx={{ 
+            <FormControl
+              size="small"
+              sx={{
                 minWidth: 200,
                 backgroundColor: '#fff',
                 borderRadius: 2,
@@ -664,7 +664,7 @@ const TaskList = () => {
                 value={selectedAssignee}
                 onChange={handleAssigneeChange}
                 label="Người thực hiện"
-                sx={{
+              sx={{
                   '& .MuiOutlinedInput-notchedOutline': {
                     borderColor: '#e0e0e0'
                   },
@@ -688,7 +688,7 @@ const TaskList = () => {
               variant="outlined"
               onClick={handleExport}
               startIcon={<FileDownloadIcon />}
-              sx={{ 
+              sx={{
                 borderColor: '#1976d2',
                 color: '#1976d2',
                 '&:hover': {
@@ -854,18 +854,18 @@ const TaskList = () => {
 
                         {row.state === 0 && (
                           <>
-                            <IconButton
-                              size="small"
-                              onClick={() => handleApprove(row.id)}
-                              sx={{
-                                color: '#1976d2',
-                                '&:hover': {
-                                  backgroundColor: 'rgba(25, 118, 210, 0.04)'
-                                }
-                              }}
-                            >
-                              <ApproveIcon fontSize="small" />
-                            </IconButton>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleApprove(row.id)}
+                            sx={{
+                              color: '#1976d2',
+                              '&:hover': {
+                                backgroundColor: 'rgba(25, 118, 210, 0.04)'
+                              }
+                            }}
+                          >
+                            <ApproveIcon fontSize="small" />
+                          </IconButton>
                             <IconButton
                               size="small"
                               onClick={() => handleReject(row.id)}
@@ -1133,31 +1133,31 @@ const TaskList = () => {
                           </TableCell>
                           <TableCell align="center">
                             <Stack direction="row" spacing={1} justifyContent="center">
-                              <IconButton
-                                size="small"
-                                component={Link}
-                                to={`/task/detail/${task.id}`}
+                            <IconButton
+                              size="small"
+                              component={Link}
+                              to={`/task/detail/${task.id}`}
                                 sx={{
                                   color: '#1976d2',
                                   '&:hover': {
                                     backgroundColor: 'rgba(25, 118, 210, 0.04)'
                                   }
                                 }}
-                              >
-                                <VisibilityIcon fontSize="small" />
-                              </IconButton>
-                              <IconButton
-                                size="small"
-                                onClick={() => handleApprove(task.id)}
+                            >
+                              <VisibilityIcon fontSize="small" />
+                            </IconButton>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleApprove(task.id)}
                                 sx={{
                                   color: '#2e7d32',
                                   '&:hover': {
                                     backgroundColor: 'rgba(46, 125, 50, 0.04)'
                                   }
                                 }}
-                              >
-                                <ApproveIcon fontSize="small" />
-                              </IconButton>
+                            >
+                              <ApproveIcon fontSize="small" />
+                            </IconButton>
                               <IconButton
                                 size="small"
                                 onClick={() => handleReject(task.id)}

@@ -1,29 +1,41 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, Row, Col, Statistic, Table, Progress, Select, Spin, Empty, Menu, Modal } from 'antd';
 import { TeamOutlined, ProjectOutlined, DollarOutlined, CheckCircleOutlined, ClockCircleOutlined, UserOutlined, BarChartOutlined } from "@ant-design/icons";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from "recharts";
 import { Snackbar, Alert as MuiAlert } from '@mui/material';
 import './../../styles/dashboard.css';
+import departmentService from '../../services/departmentService';
 
 const DepartmentStats = () => {
   const [selectedDepartment, setSelectedDepartment] = useState('all');
   const [loading, setLoading] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [showEmployeeModal, setShowEmployeeModal] = useState(false);
+  const [departments, setDepartments] = useState([]);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: '',
     severity: 'success'
   });
 
-  // Dữ liệu mẫu cho các phòng ban
-  const departments = [
-    { id: 1, name: 'Phòng Kỹ thuật' },
-    { id: 2, name: 'Phòng Kinh doanh' },
-    { id: 3, name: 'Phòng Nhân sự' },
-    { id: 4, name: 'Phòng Marketing' },
-    { id: 5, name: 'Phòng Tài chính' },
-  ];
+  // Fetch danh sách phòng ban khi component mount
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      try {
+        setLoading(true);
+        const response = await departmentService.getAll();
+        if (response.status === 200) {
+          setDepartments(response.data);
+        }
+      } catch (err) {
+        console.error('Error fetching departments:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDepartments();
+  }, []);
 
   const departmentDetails = {
     1: {
@@ -108,19 +120,32 @@ const DepartmentStats = () => {
     setSnackbar(prev => ({ ...prev, open: false }));
   };
 
-  const handleDepartmentSelect = (key) => {
+  const handleDepartmentSelect = async (key) => {
     try {
+      setLoading(true);
       setSelectedDepartment(key);
-      setSnackbar({
-        open: true,
-        severity: 'success'
-      });
+      
+      if (key !== 'all') {
+        const response = await departmentService.getAll();
+        if (response.status === 200) {
+          const departmentData = response.data.find(dept => dept.id === Number(key));
+          if (departmentData) {
+            // Cập nhật dữ liệu phòng ban
+            setDepartmentDetails(prev => ({
+              ...prev,
+              [key]: {
+                ...departmentData,
+                projectProgress: departmentData.projectProgress || [],
+                employeeList: departmentData.employeeList || []
+              }
+            }));
+          }
+        }
+      }
     } catch (err) {
-      setSnackbar({
-        open: true,
-        message: 'Không thể cập nhật thông tin phòng ban',
-        severity: 'error'
-      });
+      console.error('Error fetching department data:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -433,6 +458,7 @@ const DepartmentStats = () => {
           value={selectedDepartment}
           onChange={handleDepartmentSelect}
           placeholder="Chọn phòng ban"
+          loading={loading}
         >
           <Select.Option value="all" key="all">
             <TeamOutlined /> Tất cả phòng ban

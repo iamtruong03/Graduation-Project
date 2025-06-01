@@ -11,4 +11,7 @@ public interface IDepartmentService<E, F> extends IXDevBaseService<Department, D
 
   // Lấy danh sách phòng ban đang hoạt động với thông tin cơ bản
   List<Department> getActiveDepartments(String uid);
+
+  // Lấy tên phòng ban theo ID
+  String getDepartmentNameById(Long id);
 }

@@ -245,6 +245,11 @@ public class UserServiceImpl extends XDevBaseServiceImpl<User, UserFilter, UserR
     return userRepo.findByDepartmentIdAndStatus(departmentId, AppConstants.STATUS_ACTIVE);
   }
 
+  @Override
+  public List<User> allUser(String uid){
+    return userRepo.findAllByStatus(1);
+  }
+
   /**
    * Lấy danh sách trưởng phòng các phòng ban con.
    * - Admin: xem tất cả trưởng phòng

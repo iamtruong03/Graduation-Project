@@ -10,13 +10,8 @@ import org.springframework.data.domain.Pageable;
 import java.util.List;
 
 public interface IMessageService extends IXDevBaseService<Message, MessageFilter> {
-    
-    /**
-     * Gửi tin nhắn
-     * @param messageDTO Thông tin tin nhắn
-     * @return Tin nhắn đã gửi
-     */
-    MessageDTO sendMessage(MessageDTO messageDTO);
+
+    MessageDTO sendMessage(String uid, MessageDTO messageDTO);
     
     /**
      * Lấy cuộc trò chuyện giữa 2 người dùng

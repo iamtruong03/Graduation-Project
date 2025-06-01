@@ -358,12 +358,12 @@ const ProjectDetail = () => {
             setProjectHistory(historyResponse);
           }
 
-          setIsEditing(false);
-          setSnackbar({
-            open: true,
+        setIsEditing(false);
+        setSnackbar({
+          open: true,
             message: 'Cập nhật dự án thành công!',
-            severity: 'success'
-          });
+          severity: 'success'
+        });
         } catch (fetchError) {
           console.error('Error fetching updated data:', fetchError);
           setSnackbar({
@@ -527,17 +527,17 @@ const ProjectDetail = () => {
       await taskService.changeStatus(taskId);
 
       // Cập nhật lại danh sách task
-      const updatedTasks = project.tasks.filter(task => task.id !== taskId);
-      setProject({
-        ...project,
-        tasks: updatedTasks
-      });
+    const updatedTasks = project.tasks.filter(task => task.id !== taskId);
+    setProject({
+      ...project,
+      tasks: updatedTasks
+    });
 
-      setSnackbar({
-        open: true,
-        message: 'Xóa công việc thành công',
-        severity: 'success'
-      });
+    setSnackbar({
+      open: true,
+      message: 'Xóa công việc thành công',
+      severity: 'success'
+    });
     } catch (error) {
       console.error('Error deleting task:', error);
       setSnackbar({
@@ -689,11 +689,11 @@ const ProjectDetail = () => {
       taskData.projectId = Number(taskData.projectId);
 
       let response;
-      if (selectedTask) {
+    if (selectedTask) {
         // Xử lý cập nhật task
         console.log('Updating task with ID:', selectedTask.id);
         response = await taskService.updateTask(selectedTask.id, taskData);
-      } else {
+    } else {
         // Xử lý thêm task mới
         console.log('Creating new task');
         response = await taskService.createTask(taskData);
@@ -705,17 +705,17 @@ const ProjectDetail = () => {
           ? project.tasks.map(task => task.id === selectedTask.id ? response.data : task)
           : [...project.tasks, response.data];
 
-        setProject({
-          ...project,
-          tasks: updatedTasks
-        });
+    setProject({
+      ...project,
+      tasks: updatedTasks
+    });
 
-        handleCloseTaskDialog();
-        setSnackbar({
-          open: true,
-          message: selectedTask ? 'Cập nhật công việc thành công' : 'Thêm công việc mới thành công',
-          severity: 'success'
-        });
+    handleCloseTaskDialog();
+    setSnackbar({
+      open: true,
+      message: selectedTask ? 'Cập nhật công việc thành công' : 'Thêm công việc mới thành công',
+      severity: 'success'
+    });
       }
     } catch (error) {
       console.error('Error saving task:', error);
@@ -863,7 +863,7 @@ const ProjectDetail = () => {
             <CloseIcon />
           </IconButton>
           <Stack direction="row" alignItems="center" spacing={2}>
-            <Typography variant="h5" sx={{ fontWeight: 600 }}>Chi tiết dự án</Typography>
+          <Typography variant="h5" sx={{ fontWeight: 600 }}>Chi tiết dự án</Typography>
             {isEditing ? (
               <FormControl size="small" sx={{ minWidth: 150 }}>
                 <Select
@@ -996,9 +996,9 @@ const ProjectDetail = () => {
                   {isEditing ? (
                     <FormControl fullWidth size="small" sx={{ mt: 1 }}>
                       <Select
-                        name="managerId"
+                      name="managerId"
                         value={editedProject.managerId || ''}
-                        onChange={handleProjectChange}
+                      onChange={handleProjectChange}
                       >
                         <MenuItem value="">-- Chọn người quản lý --</MenuItem>
                         {managers && managers.length > 0 && managers.map((user) => (
@@ -1030,7 +1030,7 @@ const ProjectDetail = () => {
                     <FormControl fullWidth size="small" required>
                       <InputLabel>Phòng ban</InputLabel>
                       <Select
-                        name="departmentId"
+                      name="departmentId"
                         value={project.departmentId}
                         label="Phòng ban"
                         disabled

@@ -33,7 +33,7 @@ public class AppConstants {
 
   @Getter
   public enum State {
-     PENDING, REJECTED, IN_PROGRESS, COMPLETE, OVERDUE, CANCELEDs
+     PENDING, REJECTED, IN_PROGRESS, COMPLETE, OVERDUE, CANCELED
   }
 
   public static String getStatusName(Integer status) {

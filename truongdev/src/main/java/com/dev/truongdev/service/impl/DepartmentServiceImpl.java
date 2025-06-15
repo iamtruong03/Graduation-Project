@@ -1,9 +1,9 @@
 package com.dev.truongdev.service.impl;
 
-import com.dev.truongdev.dto.dashload.department.DepartmentStatsDTO;
-import com.dev.truongdev.dto.dashload.department.ProjectProgressDTO;
-import com.dev.truongdev.dto.dashload.department.UserPerformanceDataDTO;
-import com.dev.truongdev.dto.dashload.department.UserStatsDTO;
+import com.dev.truongdev.dto.dashboard.department.DepartmentStatsDTO;
+import com.dev.truongdev.dto.dashboard.department.ProjectProgressDTO;
+import com.dev.truongdev.dto.dashboard.department.UserPerformanceDataDTO;
+import com.dev.truongdev.dto.dashboard.department.UserStatsDTO;
 import com.dev.truongdev.entity.Department;
 import com.dev.truongdev.entity.User;
 import com.dev.truongdev.payload.filter.DepartmentFilter;

@@ -2,8 +2,8 @@ package com.dev.truongdev.service.impl;
 
 import com.dev.truongdev.dto.ProjectDTO;
 import com.dev.truongdev.dto.ProjectHistoryDTO;
-import com.dev.truongdev.dto.dashload.project.ProjectStatsDTO;
-import com.dev.truongdev.dto.dashload.project.UserProjectStatsDTO;
+import com.dev.truongdev.dto.dashboard.project.ProjectStatsDTO;
+import com.dev.truongdev.dto.dashboard.project.UserProjectStatsDTO;
 import com.dev.truongdev.entity.Project;
 import com.dev.truongdev.entity.ProjectHistory;
 import com.dev.truongdev.entity.Task;

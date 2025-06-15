@@ -1,4 +1,4 @@
-package com.dev.truongdev.dto.dashload.project;
+package com.dev.truongdev.dto.dashboard.project;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

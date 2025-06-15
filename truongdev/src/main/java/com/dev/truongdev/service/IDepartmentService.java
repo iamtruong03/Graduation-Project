@@ -1,6 +1,6 @@
 package com.dev.truongdev.service;
 
-import com.dev.truongdev.dto.dashload.department.DepartmentStatsDTO;
+import com.dev.truongdev.dto.dashboard.department.DepartmentStatsDTO;
 import com.dev.truongdev.entity.Department;
 import com.dev.truongdev.payload.filter.DepartmentFilter;
 import com.dev.truongdev.xdevbase.service.IXDevBaseService;

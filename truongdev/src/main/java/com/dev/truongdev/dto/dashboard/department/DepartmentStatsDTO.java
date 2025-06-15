@@ -1,4 +1,4 @@
-package com.dev.truongdev.dto.dashload.department;
+package com.dev.truongdev.dto.dashboard.department;
 
 import java.util.List;
 import lombok.AccessLevel;

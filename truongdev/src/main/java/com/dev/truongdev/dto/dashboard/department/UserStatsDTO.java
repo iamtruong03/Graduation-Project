@@ -1,6 +1,6 @@
-package com.dev.truongdev.dto.dashload.department;
+package com.dev.truongdev.dto.dashboard.department;
 
-import com.dev.truongdev.dto.dashload.department.UserPerformanceDataDTO;
+import com.dev.truongdev.dto.dashboard.department.UserPerformanceDataDTO;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Data;
